@@ -1,0 +1,170 @@
+# Makefile for DIKUrevy
+# 
+# Author: munter@diku.dk
+#
+# This file should be symlinked to in directories with songs and sketches.
+
+include config.mk
+
+# If there is a plan file, fetch all the lines ending with '.tex' and output them space separated into datadeps
+datadeps := $(shell if [ -f $(plan) ]; then sed -n '/\S*\.tex/p' $(plan) | sed ':b;N;s/\n/ /;bb'; fi)
+pdfdeps := $(subst .tex,.pdf,$(datadeps))
+
+.PHONY : all clean writable pdf dvi plan acts roles props signup contacts
+
+all: manus individual props signup
+
+plan: $(plan)
+acts: $(acts)
+roles: $(roles)
+contacts: $(contacts)
+signup: $(signup)
+props: $(props)
+manus: $(manus)
+pdf: $(pdfdeps)
+
+# Makes a complete manuscript
+$(manus): $(acts) $(roles) $(contacts) $(pdfdeps) $(scriptdir)/manus.pl
+	@rm -f $@
+	@echo "Generating $(@F): "
+	@$(scriptdir)/manus.pl config.mk $(json)
+	@chmod 664 $@
+	@echo "Done"
+	@echo ""
+
+# Make individual manuscripts
+individual: $(acts) $(roles) $(contacts) $(pdfdeps) config.mk
+	@mkdir -p $(individualdir)
+	@$(scriptdir)/individual.pl config.mk $(json)
+	
+
+# Makes plan file for the revue. Start by getting all .tex files in the material folders
+$(plan):
+	@echo -n "$(@F) - Adding all songs: "
+	@echo "Sange" > $@
+	@cd / && ls -1 $(songdir)/*.tex >> $@ && echo "Done"
+	@echo -n "$(@F) - Adding all sketches: "
+	@echo "" >> $@
+	@echo "Sketches" >> $@
+	@cd / && ls -1 $(sketchdir)/*.tex >> $@ && echo "Done"
+	@echo -n "$(@F) - Adding all videos: "
+	@echo "" >> $@
+	@echo "Video" >> $@
+	-@cd / && ls -1 $(videodir)/*.tex >> $@ && echo "Done"
+	@chmod 660 $@
+	@echo ""
+
+
+# Extract data from all TeX files for later use
+$(json) : $(plan) $(datadeps) $(scriptdir)/data.pl
+	@echo -n "Parsing material data: "
+	@$(scriptdir)/data.pl $(plan) > $(json)
+	@chmod 660 $(json)
+	@echo "Done"
+	@echo ""
+
+
+$(acts): $(json) $(scriptdir)/acts.pl
+	@echo -n "$(@F) - Generating tex: "
+	@cd $(scriptdir) && ./acts.pl $< > $(@F).tex
+	@echo "Done"
+	@echo -n "$(@F) - Texing: once"
+	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
+	@echo ", twice"
+	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
+	@echo "Done"
+	@mv $(scriptdir)/$(@F).pdf $@
+	@chmod 664 $@
+	@rm $(scriptdir)/$(@F).*
+	@echo ""
+	
+$(roles): $(json) $(scriptdir)/roles.pl
+	@echo -n "$(@F) - Generating tex: "
+	@cd $(scriptdir) && ./roles.pl $< > $(@F).tex
+	@echo "Done"
+	@echo -n "$(@F) - Texing: once"
+	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
+	@echo ", twice"
+	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
+	@echo "Done"
+	@mv $(scriptdir)/$(@F).pdf $@
+	@chmod 664 $@
+	@rm $(scriptdir)/$(@F).*
+	@echo ""
+
+$(contacts): $(scriptdir)/contacts.pl $(contactsdir)/*.vcf
+	@echo -n "$(@F) - Generating tex: "
+	@cd $(scriptdir) && ./contacts.pl config.mk $(contactsdir) > $(@F).tex
+	@echo "Done"
+	@echo -n "$(@F) - Texing: once"
+	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
+	@echo ", twice"
+	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
+	@echo "Done"
+	@mv $(scriptdir)/$(@F).pdf $@
+	@chmod 664 $@
+	@rm $(scriptdir)/$(@F).*
+	@echo ""
+
+$(signup): $(json) $(scriptdir)/signup.pl
+	@echo -n "$(@F) - Generating tex: "
+	@cd $(scriptdir) && ./signup.pl $< > $(@F).tex
+	@echo "Done"
+	@echo -n "$(@F) - Texing: once"
+	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
+	@echo ", twice"
+	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
+	@echo "Done"
+	@mv $(scriptdir)/$(@F).pdf $@
+	@chmod 664 $@
+	@rm $(scriptdir)/$(@F).*
+	@echo ""
+
+$(props): $(json) $(scriptdir)/props.pl
+	@echo -n "$(@F) - Generating tex: "
+	@cd $(scriptdir) && ./props.pl $< > $(@F).tex
+	@echo "Done"
+	@echo -n "$(@F) - Texing: once"
+	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
+	@echo ", twice"
+	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
+	@echo "Done"
+	@mv $(scriptdir)/$(@F).pdf $@
+	@chmod 664 $@
+	@rm $(scriptdir)/$(@F).*
+	@echo ""
+
+# Removes all target files. Use this if you want to rebuild everything.
+clean :
+	@echo -n "Cleaning: "
+	@echo -n "songs"
+	@cd $(songdir) && $(MAKE) -s clean
+	@echo -n ", sketches"
+	@cd $(sketchdir) && $(MAKE) -s clean
+	@echo -n ", json"
+	@rm -f $(json)
+	@echo ", boss pdfs"
+	@rm -f $(acts) $(roles) $(props) $(signup) $(manus) $(contacts)
+	@rm -rf $(individualdir)
+	@echo "Done"
+	@echo ""
+
+
+# Takes over ownership of all TeX files and makes them writable to the group.
+writable : 
+	@echo -n "songdir: "
+	@cd $(songdir) && $(MAKE) --no-print-directory writable
+	@echo ""
+	@echo -n "sketchdir: "
+	@cd $(sketchdir) && $(MAKE) --no-print-directory writable
+	@echo ""
+
+
+$(sketchdir)/%.pdf: $(sketchdir)/%.tex
+	@cd $(sketchdir) && $(MAKE) -s --no-print-directory $@
+
+$(songdir)/%.pdf: $(songdir)/%.tex
+	@cd $(songdir) && $(MAKE) -s --no-print-directory $@
+
+$(videodir)/%.pdf: $(videodir)/%.tex
+	@cd $(videodir) && $(MAKE) -s --no-print-directory $@

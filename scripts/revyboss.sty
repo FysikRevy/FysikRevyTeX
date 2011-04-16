@@ -1,0 +1,172 @@
+% revyboss.sty  Created 27.04.1994 by Arne John Glenstrup, DIKU,
+%                                         University of Copenhagen
+%               Changed 03.04.1995 by Arne John Glenstrup
+%                                     <panic@diku.dk>
+%                                  Added subfiles environment
+%               Changed 07.05.1995 by Martin Koch
+%                                     <myth@diku.dk>
+%                                  Changed \versioninfo
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% DIKU-revyboss style
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% This style enables one to extract information about revy-texts
+% from their auxillary files if these have been generated with
+% the DIKU-revy style (revy.sty).
+% It should also allow a rudimentary mechanism for creating song-
+% texts from several revy-files by using the subfiles environment.
+%
+%
+% The command
+%
+%       \getrevyinfo{<filename>}
+%
+% sets the commands \revytitle \revyversion \revydate \revyauthor
+% \revymelody and \revyaux to their respective values in the
+% <filename>.aux file (\revyaux is the sixth parameter to \revyinfo
+% in the auxillary file). These commands can then simply be put
+% where the information is to go. E.g.:
+%
+%       The song \getrevyinfo{kodmig} \revytitle is written
+%       by \revyauthor and goes on the melody \revymelody.
+%
+%
+% A special, frequently used format is defined through the command
+%
+%       \versioninfo{<filename>},
+%
+% that sets the commands above AND typesets the number of the sketch, the
+% name, the version and the date, all separated by &'s, so that it can be
+% used in a tabular environment, e.g.:
+%
+%       \begin{tabular}[t]{llll}
+%       \bf Titel & \bf version & \bf Dato      \\ \hline
+%         \versioninfo{basicViden}              \\
+%         \versioninfo{dat0Revision}            \\
+%         \versioninfo{egernpatruljen}          \\
+%         \versioninfo{eksamenssang}            \\
+%         \versioninfo{enPCpaEtBord}            \\
+%         \versioninfo{superbrugerdrillesangen} \\
+%         \versioninfo{voresXterminal}          \\
+%         \versioninfo{fangerne}                \\
+%         \versioninfo{kodmig}                  \\
+%       \end{tabular}
+%
+%
+% By writing
+% 
+%   \begin{revyfiles}
+%     \onecolumn
+%     \inputrevyfile sketch1.tex
+%     \onecolumn
+%     \inputrevyfile song2.tex
+%         :
+%         :
+%     \onecolumn
+%     \inputrevyfile sketchX.tex
+%   \end{revyfiles}
+%
+% one can input the sketch and song files as a part of a big file
+% without having to change the subfiles. The commands
+%
+% \includeenv{roles} \excludeenv{roles}
+% \includeenv{props} \excludeenv{props}
+%
+% control the inclusion of the roles and props lists.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\def\@revyinfo#1#2#3#4#5#6#7#8{\gdef\revytitle{#1}\gdef\revyversion{#2}\gdef
+  \revydate{#3}\gdef\revyauthor{#4}\gdef\revymelody{#5}\gdef
+  \revyaux{#6}\gdef\revyrevyname{#7}\gdef\revyrevyyear{#8}\global\let\revyinfo=\relax\ignorespaces\endinput}
+
+\def\revyversion{{\bf??}}
+\def\revydate{{\bf??}}
+\def\revyauthor{{\bf??}}
+\def\revymelody{{\bf??}}
+\def\revyaux{{\bf??}}
+\def\revyrevyname{{\bf??}}
+\def\revyrevyyear{{\bf??}}
+
+\def\getrevyinfo#1{\def\revytitle{#1}\expandafter\skipnonrevy
+  \@@input#1.aux\relax\revyinfo\let\revyinfo=\relax}
+\long\def\skipnonrevy#1\revyinfo{\@revyinfo}
+
+\newcounter{revynum}
+\setcounter{revynum}{0} 
+
+\def\versioninfo#1{\addtocounter{revynum}{1}{\arabic{revynum}}&
+  \getrevyinfo{#1}\revytitle&\revyversion&\revydate}
+
+\let\@roles=\roles
+\let\end@roles=\endroles
+\let\@props=\props
+\let\end@props=\endprops
+
+\long\def\rolescomment#1\end#2{\expandafter\ifx\csname#2\endcsname
+  \roles\let\next\endgroup\else\let\next\rolescomment\fi\next}
+\long\def\propscomment#1\end#2{\expandafter\ifx\csname#2\endcsname
+  \props\let\next\endgroup\else\let\next\propscomment\fi\next}
+\long\def\sketchcomment#1\end#2{\expandafter\ifx\csname#2\endcsname
+  \sketch\let\next\endgroup\else\let\next\sketchcomment\fi\next}
+
+\def\includeenv#1{%
+  \expandafter\expandafter\expandafter\let
+  \expandafter\expandafter\csname#1\endcsname\csname @#1\endcsname}
+\def\excludeenv#1{%
+  \expandafter\expandafter\expandafter\let
+  \expandafter\expandafter\csname#1\endcsname\csname#1comment\endcsname}
+
+{\catcode`\^^M=13 \gdef\@carriagereturn{\@ifnextchar^^M%
+  {\@newpartrue}{\@ifnextchar\end{}%
+    {\@ifnextchar\sings{\linebr@ak}{\@ifnextchar\scene{\linebr@ak}%
+        {\lin@break}}}}}}
+
+\let\s@vedscene=\scene
+\let\s@vedauthor=\author
+\let\s@vedact=\act
+\def\r@storesings{\egroup\endgroup\sings}
+\def\r@storesays{\egroup\endgroup\says}
+\def\r@storebegin{\egroup\endgroup\begin}
+\def\r@storeend{\egroup\endgroup\end}
+\def\r@storesection{\egroup\endgroup\section}
+\newbox\mybox
+\long\def\@gobblescene{\begingroup\setbox\mybox=\hbox\bgroup
+  \let\hrule\relax
+  \let\says\r@storesays\let\sings\r@storesings
+  \let\begin\r@storebegin\let\end\r@storeend
+  \let\pagebreak\relax\let\section\r@storesection\let\scene\relax}
+\def\noacting{\let\act\@gobble}
+\def\allacting{\let\act\s@vedact}
+\def\noscenes{\let\scene\@gobblescene}
+\def\allscenes{\let\scene\s@vedscene}
+\def\noauthors{\let\author\@gobble}
+\def\allauthors{\let\author\s@vedauthor}
+\def\noeta{\let\eta\@gobble}
+\def\nostatus{\let\status\@gobble}
+
+\def\@gobbleall[#1]#2{}
+
+\let\@savedpagebreak\pagebreak
+\renewcommand{\pagebreak}[1][4]{\ifnum#1=2
+\@savedpagebreak[4]\else\@savedpagebreak[#1]\fi}
+
+\newenvironment{revyfiles}{\let\oldbegin=\begin
+\def\begin##1{\expandafter\ifx\csname ##1\endcsname\document\let\next\relax
+\else\def\next{\oldbegin{##1}}%
+\fi\next}%
+\let\oldend=\end
+\def\end##1{\expandafter\ifx\csname end##1\endcsname\enddocument
+\else\oldend{##1}%
+\fi}%
+\def\documentclass{\endgroup\@ifnextchar[{\@gobbleall}
+{\@gobbleall[]}}\def\usepackage{\@ifnextchar[{\@gobbleall}
+{\@gobbleall[]}}\let\documentstyle=\documentclass
+\def\inputrevyfile{\@melodyfalse\@authorfalse\version{??}
+  \title{}\begingroup\catcode`æ=11\catcode`ø=11\catcode`å=11
+  \catcode`Æ=11\catcode`Ø=11\catcode`Å=11\catcode`ä=11\catcode`é=11\input}}
+{}
+
+\typeout{Dette er 0.2 p\protect å Glenstrup-skalaen}
