@@ -61,7 +61,7 @@ foreach $act (@{$revue->{acts}}) {
 	my @materials;
 
 	my $size = prStrWidth($act->{'title'}) + 8;
-	print "$size \n\n";
+#	print "$size \n\n";
 
 #	prText($offset + 4, 822, $act->{'title'});
 #	prAdd("$offset 818 $size 24 re\n0.5 0.5 0.5 rg\nb\n");
