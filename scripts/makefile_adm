@@ -10,7 +10,7 @@ include config.mk
 datadeps := $(shell if [ -f $(plan) ]; then sed -n '/\S*\.tex/p' $(plan) | sed ':b;N;s/\n/ /;bb'; fi)
 pdfdeps := $(subst .tex,.pdf,$(datadeps))
 
-.PHONY : all clean writable pdf dvi plan acts roles props signup contacts
+.PHONY : all clean writable pdf dvi
 
 all: manus individual props signup
 
@@ -25,12 +25,16 @@ pdf: $(pdfdeps)
 
 # Makes a complete manuscript
 $(manus): $(acts) $(roles) $(contacts) $(pdfdeps) $(scriptdir)/manus.pl
+ifeq ($(strip $(pdfdeps)),) 
+	@$(MAKE) -s --no-print-directory $@
+else
 	@rm -f $@
-	@echo "Generating $(@F): "
+	@echo -n "$(@F): "
 	@$(scriptdir)/manus.pl config.mk $(json)
 	@chmod 664 $@
-	@echo "Done"
+	@echo "OK"
 	@echo ""
+endif
 
 # Make individual manuscripts
 individual: $(acts) $(roles) $(contacts) $(pdfdeps) config.mk
@@ -40,17 +44,17 @@ individual: $(acts) $(roles) $(contacts) $(pdfdeps) config.mk
 
 # Makes plan file for the revue. Start by getting all .tex files in the material folders
 $(plan):
-	@echo -n "$(@F) - Adding all songs: "
+	@echo -n "$(@F) songs: "
 	@echo "Sange" > $@
-	@cd / && ls -1 $(songdir)/*.tex >> $@ && echo "Done"
-	@echo -n "$(@F) - Adding all sketches: "
+	@cd / && ls -1 $(songdir)/*.tex >> $@ && echo "OK"
+	@echo -n "$(@F) sketches: "
 	@echo "" >> $@
 	@echo "Sketches" >> $@
-	@cd / && ls -1 $(sketchdir)/*.tex >> $@ && echo "Done"
-	@echo -n "$(@F) - Adding all videos: "
+	@cd / && ls -1 $(sketchdir)/*.tex >> $@ && echo "OK"
+	@echo -n "$(@F) videos: "
 	@echo "" >> $@
 	@echo "Video" >> $@
-	-@cd / && ls -1 $(videodir)/*.tex >> $@ && echo "Done"
+	-@cd / && ls -1 $(videodir)/*.tex >> $@ && echo "OK"
 	@chmod 660 $@
 	@echo ""
 
@@ -60,75 +64,65 @@ $(json) : $(plan) $(datadeps) $(scriptdir)/data.pl
 	@echo -n "Parsing material data: "
 	@$(scriptdir)/data.pl $(plan) > $(json)
 	@chmod 660 $(json)
-	@echo "Done"
+	@echo "OK"
 	@echo ""
 
 
 $(acts): $(json) $(scriptdir)/acts.pl
-	@echo -n "$(@F) - Generating tex: "
+	@echo -n "$(@F).tex: "
 	@cd $(scriptdir) && ./acts.pl $< > $(@F).tex
-	@echo "Done"
-	@echo -n "$(@F) - Texing: once"
-	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
-	@echo ", twice"
-	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
-	@echo "Done"
+	@echo "OK"
+	@echo -n "$(@F).pdf: "
+	-@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
+	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null && echo "OK" || echo "ERROR"
 	@mv $(scriptdir)/$(@F).pdf $@
 	@chmod 664 $@
 	@rm $(scriptdir)/$(@F).*
 	@echo ""
 	
 $(roles): $(json) $(scriptdir)/roles.pl
-	@echo -n "$(@F) - Generating tex: "
+	@echo -n "$(@F).tex: "
 	@cd $(scriptdir) && ./roles.pl $< > $(@F).tex
-	@echo "Done"
-	@echo -n "$(@F) - Texing: once"
-	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
-	@echo ", twice"
-	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
-	@echo "Done"
+	@echo "OK"
+	@echo -n "$(@F).pdf: "
+	-@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
+	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null && echo "OK" || echo "ERROR"
 	@mv $(scriptdir)/$(@F).pdf $@
 	@chmod 664 $@
 	@rm $(scriptdir)/$(@F).*
 	@echo ""
 
 $(contacts): $(scriptdir)/contacts.pl $(contactsdir)/*.vcf
-	@echo -n "$(@F) - Generating tex: "
+	@echo -n "$(@F).tex: "
 	@cd $(scriptdir) && ./contacts.pl config.mk $(contactsdir) > $(@F).tex
-	@echo "Done"
-	@echo -n "$(@F) - Texing: once"
-	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
-	@echo ", twice"
-	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
-	@echo "Done"
+	@echo "OK"
+	@echo -n "$(@F).pdf: "
+	-@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
+	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null && echo "OK" || echo "ERROR"
 	@mv $(scriptdir)/$(@F).pdf $@
 	@chmod 664 $@
 	@rm $(scriptdir)/$(@F).*
 	@echo ""
 
 $(signup): $(json) $(scriptdir)/signup.pl
-	@echo -n "$(@F) - Generating tex: "
+	@echo -n "$(@F).tex: "
 	@cd $(scriptdir) && ./signup.pl $< > $(@F).tex
-	@echo "Done"
-	@echo -n "$(@F) - Texing: once"
-	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
-	@echo ", twice"
-	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
-	@echo "Done"
+	@echo "OK"
+	@echo -n "$(@F).pdf: "
+	-@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
+	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null && echo "OK" || echo "ERROR"
 	@mv $(scriptdir)/$(@F).pdf $@
 	@chmod 664 $@
 	@rm $(scriptdir)/$(@F).*
 	@echo ""
 
 $(props): $(json) $(scriptdir)/props.pl
-	@echo -n "$(@F) - Generating tex: "
+	@echo -n "$(@F).tex: "
 	@cd $(scriptdir) && ./props.pl $< > $(@F).tex
-	@echo "Done"
-	@echo -n "$(@F) - Texing: once"
-	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
-	@echo ", twice"
-	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
-	@echo "Done"
+	@echo "OK"
+	@echo -n "$(@F).pdf: "
+	-@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
+	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null && echo "OK" || echo "ERROR"
 	@mv $(scriptdir)/$(@F).pdf $@
 	@chmod 664 $@
 	@rm $(scriptdir)/$(@F).*
@@ -137,16 +131,13 @@ $(props): $(json) $(scriptdir)/props.pl
 # Removes all target files. Use this if you want to rebuild everything.
 clean :
 	@echo -n "Cleaning: "
-	@echo -n "songs"
 	@cd $(songdir) && $(MAKE) -s clean
-	@echo -n ", sketches"
 	@cd $(sketchdir) && $(MAKE) -s clean
-	@echo -n ", json"
+	@cd $(videodir) && $(MAKE) -s clean
 	@rm -f $(json)
-	@echo ", boss pdfs"
 	@rm -f $(acts) $(roles) $(props) $(signup) $(manus) $(contacts)
 	@rm -rf $(individualdir)
-	@echo "Done"
+	@echo "OK"
 	@echo ""
 
 
