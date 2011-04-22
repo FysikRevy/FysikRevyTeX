@@ -104,5 +104,3 @@ foreach (<FH>) {
 close(FH);
 
 print encode_json $revue
-
-#print JSON::XS->new->utf8->encode($revue)
