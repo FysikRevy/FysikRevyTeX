@@ -15,12 +15,6 @@ pdfdeps := $(subst .tex,.pdf,$(datadeps))
 all: $(manus) $(individualdir) $(props) $(signup)
 
 plan: $(plan)
-acts: $(acts)
-roles: $(roles)
-contacts: $(contacts)
-signup: $(signup)
-props: $(props)
-manus: $(manus)
 pdf: $(pdfdeps)
 
 # Makes a complete manuscript
