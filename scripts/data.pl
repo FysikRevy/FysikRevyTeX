@@ -4,17 +4,16 @@ use warnings;
 
 use Data::Dumper;
 use JSON::XS;
+use File::Slurp;
 
 # The acts.plan file path must be supplied as the first argument to the script
-my $plan = $ARGV[0];
+my $plan = $ARGV[1];
 
 if (!$plan) {
-	print "Usage: ./data.pl <plan>\n\n<plan> must be the acts.plan file.\n";
+	print "Usage: ./data.pl <jsonconfig> <plan>\n\n<plan> must be the acts.plan file.\n";
 	exit 0;
 }
-my %revue = (
-	acts => []
-);
+my $revue = decode_json(File::Slurp::read_file($ARGV[0]));
 my $currentact;
 my $actnumber = 1;
 my $materialnumber = 1;
@@ -27,7 +26,7 @@ sub newact {
 		length => 0,
 		materials => []
 	);
-	push @{$revue{acts}}, \%newact;
+	push @{$revue->{acts}}, \%newact;
 	$currentact = \%newact;
 }
 
@@ -104,6 +103,6 @@ foreach (<FH>) {
 }
 close(FH);
 
-print encode_json \%revue
+print encode_json $revue
 
 #print JSON::XS->new->utf8->encode($revue)

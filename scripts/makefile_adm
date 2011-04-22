@@ -4,7 +4,7 @@
 #
 # This file should be symlinked to in directories with songs and sketches.
 
-include config.mk
+include .config.mk
 
 # If there is a plan file, fetch all the lines ending with '.tex' and output them space separated into datadeps
 datadeps := $(shell if [ -f $(plan) ]; then sed -n '/\S*\.tex/p' $(plan) | sed ':b;N;s/\n/ /;bb'; fi)
@@ -25,23 +25,23 @@ pdf: $(pdfdeps)
 manus: $(manus)
 
 # Makes a complete manuscript
-$(manus): $(acts) $(roles) $(contacts) $(pdfdeps) $(scriptdir)/manus.pl config.mk
+$(manus): $(acts) $(roles) $(contacts) $(pdfdeps) $(scriptdir)/manus.pl .config.mk
 ifeq ($(strip $(pdfdeps)),) 
 	@$(MAKE) -s --no-print-directory $@
 else
 	@rm -f $@
 	@echo -n "$(@F): "
-	@$(scriptdir)/manus.pl config.mk $(json)
+	@$(scriptdir)/manus.pl .config.mk $(json)
 	@chmod 664 $@
 	@echo "OK"
 	@echo ""
 endif
 
 # Make individual manuscripts
-$(individualdir): $(acts) $(roles) $(contacts) $(pdfdeps) $(scriptdir)/individual.pl config.mk
+$(individualdir): $(acts) $(roles) $(contacts) $(pdfdeps) $(scriptdir)/individual.pl .config.mk
 	@rm -rf $(individualdir)
 	@mkdir -p $(individualdir)
-	@$(scriptdir)/individual.pl config.mk $(json)
+	@$(scriptdir)/individual.pl .config.mk $(json)
 	@echo ""
 
 # Makes plan file for the revue. Start by getting all .tex files in the material folders
@@ -65,7 +65,7 @@ $(plan):
 $(json) : $(plan) $(datadeps) $(scriptdir)/data.pl
 	@mkdir -p $(outputdir) $(individualdir)
 	@echo -n "Parsing material data: "
-	@$(scriptdir)/data.pl $(plan) > $(json)
+	@$(scriptdir)/data.pl .config.json $(plan) > $(json)
 	@chmod 660 $(json)
 	@echo "OK"
 	@echo ""
