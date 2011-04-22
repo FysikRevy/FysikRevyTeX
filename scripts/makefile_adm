@@ -155,13 +155,16 @@ writable :
 
 
 $(sketchdir)/%.pdf: $(sketchdir)/%.tex
-	@cd $(sketchdir) && $(MAKE) $@
+	@echo "Sketches:"
+	@cd $(sketchdir) && $(MAKE) -s --no-print-directory $@
 	@echo ""
 
 $(songdir)/%.pdf: $(songdir)/%.tex
-	@cd $(songdir) && $(MAKE) $@
+	@echo "Songs:"
+	@cd $(songdir) && $(MAKE) -s --no-print-directory $@
 	@echo ""
 
 $(videodir)/%.pdf: $(videodir)/%.tex
-	@cd $(videodir) && $(MAKE) $@
+	@echo "Videos:"
+	@cd $(videodir) && $(MAKE) -s --no-print-directory $@
 	@echo ""
