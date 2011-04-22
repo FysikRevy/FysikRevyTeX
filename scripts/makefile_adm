@@ -12,10 +12,17 @@ pdfdeps := $(subst .tex,.pdf,$(datadeps))
 
 .PHONY : all clean writable pdf dvi
 
-all: $(manus) $(individualdir) $(props) $(signup)
+# The default target will only make a manuscript if there is a $(plan) file. Otherwise it just builds all source pdfs
+all:
+ifeq ($(strip $(pdfdeps)),)
+	@$(MAKE) -s --no-print-directory $(subst .tex,.pdf,$(wildcard $(songdir)/*.tex $(sketchdir)/*.tex $(videodir)/*.tex))
+else
+	@$(MAKE) -s --no-print-directory $(manus) $(individualdir) $(props) $(signup)
+endif
 
 plan: $(plan)
 pdf: $(pdfdeps)
+manus: $(manus)
 
 # Makes a complete manuscript
 $(manus): $(acts) $(roles) $(contacts) $(pdfdeps) $(scriptdir)/manus.pl config.mk
