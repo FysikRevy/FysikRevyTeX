@@ -65,10 +65,10 @@ $(json) : $(plan) $(datadeps) $(scriptdir)/data.pl
 
 
 $(acts): $(json) $(scriptdir)/acts.pl
-	@echo -n "$(@F).tex: "
+	@echo -n "$(subst .pdf,.tex,$(@F)): "
 	@cd $(scriptdir) && ./acts.pl $< > $(@F).tex
 	@echo "OK"
-	@echo -n "$(@F).pdf: "
+	@echo -n "$(@F): "
 	-@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
 	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null && echo "OK" || echo "ERROR"
 	@mv $(scriptdir)/$(@F).pdf $@
@@ -77,10 +77,10 @@ $(acts): $(json) $(scriptdir)/acts.pl
 	@echo ""
 	
 $(roles): $(json) $(scriptdir)/roles.pl
-	@echo -n "$(@F).tex: "
+	@echo -n "$(subst .pdf,.tex,$(@F)): "
 	@cd $(scriptdir) && ./roles.pl $< > $(@F).tex
 	@echo "OK"
-	@echo -n "$(@F).pdf: "
+	@echo -n "$(@F): "
 	-@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
 	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null && echo "OK" || echo "ERROR"
 	@mv $(scriptdir)/$(@F).pdf $@
@@ -89,10 +89,10 @@ $(roles): $(json) $(scriptdir)/roles.pl
 	@echo ""
 
 $(contacts): $(scriptdir)/contacts.pl $(contactsdir)/*.vcf
-	@echo -n "$(@F).tex: "
+	@echo -n "$(subst .pdf,.tex,$(@F)): "
 	@cd $(scriptdir) && ./contacts.pl $(contactsdir) > $(@F).tex
 	@echo "OK"
-	@echo -n "$(@F).pdf: "
+	@echo -n "$(@F): "
 	-@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
 	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null && echo "OK" || echo "ERROR"
 	@mv $(scriptdir)/$(@F).pdf $@
@@ -101,10 +101,10 @@ $(contacts): $(scriptdir)/contacts.pl $(contactsdir)/*.vcf
 	@echo ""
 
 $(signup): $(json) $(scriptdir)/signup.pl
-	@echo -n "$(@F).tex: "
+	@echo -n "$(subst .pdf,.tex,$(@F)): "
 	@cd $(scriptdir) && ./signup.pl $< > $(@F).tex
 	@echo "OK"
-	@echo -n "$(@F).pdf: "
+	@echo -n "$(@F): "
 	-@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
 	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null && echo "OK" || echo "ERROR"
 	@mv $(scriptdir)/$(@F).pdf $@
@@ -113,10 +113,10 @@ $(signup): $(json) $(scriptdir)/signup.pl
 	@echo ""
 
 $(props): $(json) $(scriptdir)/props.pl
-	@echo -n "$(@F).tex: "
+	@echo -n "$(subst .pdf,.tex,$(@F)): "
 	@cd $(scriptdir) && ./props.pl $< > $(@F).tex
 	@echo "OK"
-	@echo -n "$(@F).pdf: "
+	@echo -n "$(@F): "
 	-@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
 	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null && echo "OK" || echo "ERROR"
 	@mv $(scriptdir)/$(@F).pdf $@
