@@ -24,7 +24,7 @@ manus: $(manus)
 pdf: $(pdfdeps)
 
 # Makes a complete manuscript
-$(manus): $(acts) $(roles) $(contacts) $(pdfdeps) $(scriptdir)/manus.pl
+$(manus): $(acts) $(roles) $(contacts) $(pdfdeps) $(scriptdir)/manus.pl config.mk
 ifeq ($(strip $(pdfdeps)),) 
 	@$(MAKE) -s --no-print-directory $@
 else
@@ -37,7 +37,7 @@ else
 endif
 
 # Make individual manuscripts
-individual: $(acts) $(roles) $(contacts) $(pdfdeps) config.mk
+individual: $(acts) $(roles) $(contacts) $(pdfdeps) $(scriptdir)/individual.pl config.mk
 	@mkdir -p $(individualdir)
 	@$(scriptdir)/individual.pl config.mk $(json)
 	
@@ -61,6 +61,7 @@ $(plan):
 
 # Extract data from all TeX files for later use
 $(json) : $(plan) $(datadeps) $(scriptdir)/data.pl
+	@mkdir -p $(outputdir) $(individualdir)
 	@echo -n "Parsing material data: "
 	@$(scriptdir)/data.pl $(plan) > $(json)
 	@chmod 660 $(json)
@@ -94,7 +95,7 @@ $(roles): $(json) $(scriptdir)/roles.pl
 
 $(contacts): $(scriptdir)/contacts.pl $(contactsdir)/*.vcf
 	@echo -n "$(@F).tex: "
-	@cd $(scriptdir) && ./contacts.pl config.mk $(contactsdir) > $(@F).tex
+	@cd $(scriptdir) && ./contacts.pl $(contactsdir) > $(@F).tex
 	@echo "OK"
 	@echo -n "$(@F).pdf: "
 	-@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null

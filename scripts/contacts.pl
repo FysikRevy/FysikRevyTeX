@@ -8,15 +8,14 @@ use Text::vCard;
 use Text::vCard::Addressbook;
 use Data::Dumper;
 
-if (!$ARGV[0] || !$ARGV[1]) {
-        print "Usage: ./individual.pl <MAKEFILE> <CONTACTDIR>\n\n<CONTACTDIR> must be a directory containin one or more vCards.\n";
+if (!$ARGV[0]) {
+        print "Usage: ./contacts.pl <CONTACTDIR>\n\n<CONTACTDIR> must be a directory containing one or more vCards.\n";
         exit 0;
 }
 
 my $parser = Makefile::Parser->new;
-my $make = $parser->parse($ARGV[0]) or die Makefile::Parser->error;
 
-my @files = <$ARGV[1]/*.vcf>;
+my @files = <$ARGV[0]/*.vcf>;
 my $abook = Text::vCard::Addressbook->load( \@files );
 
 print '
