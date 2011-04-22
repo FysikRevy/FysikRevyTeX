@@ -8,7 +8,7 @@
 revuedir := $(shell cd . && pwd -P)
 
 # Define where the scripts are placed.
-scriptdir := $(shell cd .. && pwd -P)/scripts
+scriptdir := SCRIPTDIR
 
 # The directories where original .tex materials will be placed
 sketchdir := $(revuedir)/sketches
