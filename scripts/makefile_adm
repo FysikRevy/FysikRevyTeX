@@ -12,7 +12,7 @@ pdfdeps := $(subst .tex,.pdf,$(datadeps))
 
 .PHONY : all clean writable pdf dvi
 
-all: manus individual props signup
+all: $(manus) $(individualdir) $(props) $(signup)
 
 plan: $(plan)
 acts: $(acts)
@@ -37,10 +37,11 @@ else
 endif
 
 # Make individual manuscripts
-individual: $(acts) $(roles) $(contacts) $(pdfdeps) $(scriptdir)/individual.pl config.mk
+$(individualdir): $(acts) $(roles) $(contacts) $(pdfdeps) $(scriptdir)/individual.pl config.mk
+	@rm -rf $(individualdir)
 	@mkdir -p $(individualdir)
 	@$(scriptdir)/individual.pl config.mk $(json)
-	
+	@echo ""
 
 # Makes plan file for the revue. Start by getting all .tex files in the material folders
 $(plan):
@@ -153,10 +154,13 @@ writable :
 
 
 $(sketchdir)/%.pdf: $(sketchdir)/%.tex
-	@cd $(sketchdir) && $(MAKE) -s --no-print-directory $@
+	@cd $(sketchdir) && $(MAKE) $@
+	@echo ""
 
 $(songdir)/%.pdf: $(songdir)/%.tex
-	@cd $(songdir) && $(MAKE) -s --no-print-directory $@
+	@cd $(songdir) && $(MAKE) $@
+	@echo ""
 
 $(videodir)/%.pdf: $(videodir)/%.tex
-	@cd $(videodir) && $(MAKE) -s --no-print-directory $@
+	@cd $(videodir) && $(MAKE) $@
+	@echo ""

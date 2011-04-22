@@ -51,8 +51,8 @@ dvi : $(dvideps)
 %.pdf : %.tex
 	@if [ -O $< ] ; then chmod 660 $<; fi
 	@rm -f $@
-	@echo -n $(<F) --\> $(@F):
-	-@pdflatex -halt-on-error $< > /dev/null && pdflatex -halt-on-error $< > /dev/null && echo " OK" || echo " ERROR"
+	@echo -n "	$(@F): "
+	-@pdflatex -halt-on-error $< > /dev/null && pdflatex -halt-on-error $< > /dev/null && echo "OK" || echo "ERROR"
 	@if [ -f $@ ] ; then chmod 660 $@; $(MAKE) -s --no-print-directory auxclean; fi
 
 # Target to compile a dvi file from the corresponding TeX file.
