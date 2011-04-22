@@ -54,7 +54,7 @@ foreach $actor (keys %actors) {
 	});
 
 	prText(292, 700, 'Manuskript', 'center');
-	prText(292, 660, $make->var('revuename'), 'center');
+	prText(292, 660, $revue->{name}.' '.$revue->{year}, 'center');
 	prText(292, 620, "Skuespiller: $actor", 'center');
 
 	prPage();	
@@ -84,12 +84,11 @@ foreach $actor (keys %actors) {
 		$pagecount += prDoc($pdf);
 	}
 
-    prBookmark({
-        text => 'Kontaktliste',
-        act => "$pagecount, 0, 0"
-    });
-    $pagecount += prDoc($make->var('contacts'));
-
+	prBookmark({
+		text => 'Kontaktliste',
+		act => "$pagecount, 0, 0"
+	});
+	$pagecount += prDoc($make->var('contacts'));
 
 	prEnd();
 

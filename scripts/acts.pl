@@ -20,11 +20,10 @@ print '\documentclass[danish]{article}
 \usepackage{anysize}
 
 \title{Aktoversigt}
-\author{\texttt{revyboss}}
 
 \version{'. strftime("%Y-%m-%d", localtime(time)) .'}
-\revyname{MolBioKemRevy}
-\revyyear{'. strftime("%Y", localtime(time)) .'}
+\revyname{'. $revue->{name} .'}
+\revyyear{'. $revue->{year} .'}
 
 \begin{document}
 

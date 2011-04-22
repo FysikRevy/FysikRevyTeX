@@ -47,8 +47,8 @@ print '\documentclass[landscape,a3paper]{article}
 \frenchspacing
 
 \title{\large{Rolleoversigt}}
-\author{Revyboss}
-\revyname{MolBioKemRevy}
+\revyname{'. $revue->{name} .'}
+\revyyear{'. $revue->{year} .'}
 \version{'. strftime("%Y-%m-%d", localtime(time)) .'}
 
 \textwidth 360mm

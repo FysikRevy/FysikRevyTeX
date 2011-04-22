@@ -34,7 +34,7 @@ prBookmark({
 });
 
 prText(292, 700, 'Manuskript', 'center');
-prText(292, 660, $make->var('revuename'), 'center');
+prText(292, 660, $revue->{name}.' '.$revue->{year}, 'center');
 prText(292, 620, "Skuespiller: _______________________", 'center');
 
 prPage();	

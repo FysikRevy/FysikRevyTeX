@@ -30,7 +30,6 @@ print '
 \frenchspacing
 \usepackage{longtable}
 \newcommand{\titel}[1]{\hline \multicolumn{3}{|l|}{\textbf{#1}} \\\\ \hline}
-%\author{RevyBoss \tt{revyboss@diku.dk}}
 \title{Rekvisitliste}
 \pagenumbering{arabic}
 

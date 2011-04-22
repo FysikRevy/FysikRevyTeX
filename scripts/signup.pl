@@ -36,7 +36,6 @@ print '
 \usepackage{longtable}
 \newcommand{\titel}[1]{\hline \multicolumn{5}{|l|}{\textbf{#1}} \\\\ \hline}
 \newcommand{\role}[1]{#1 & $\Box$ & $\Box$ & $\Box$  & \rule[-2mm]{5.5cm}{0.1pt} \\\\}
-\author{RevyBoss \tt{revyboss@diku.dk}}
 \title{Rolletilmelding}
 \pagenumbering{arabic}
 \begin{document}
