@@ -10,7 +10,7 @@ include .config.mk
 datadeps := $(shell if [ -f $(plan) ]; then sed -n '/\S*\.tex/p' $(plan) | sed ':b;N;s/\n/ /;bb'; fi)
 pdfdeps := $(subst .tex,.pdf,$(datadeps))
 
-.PHONY : all clean writable pdf dvi
+.PHONY : all clean writable
 
 # The default target will only make a manuscript if there is a $(plan) file. Otherwise it just builds all source pdfs
 all:
@@ -23,6 +23,7 @@ endif
 plan: $(plan)
 pdf: $(pdfdeps)
 manus: $(manus)
+%.pdf: name = $(subst .pdf,,$(@F))
 
 # Makes a complete manuscript
 $(manus): $(acts) $(roles) $(contacts) $(pdfdeps) $(scriptdir)/manus.pl .config.mk
@@ -30,7 +31,7 @@ ifeq ($(strip $(pdfdeps)),)
 	@$(MAKE) -s --no-print-directory $@
 else
 	@rm -f $@
-	@echo -n "$(@F): "
+	@echo -n "$(name).pdf: "
 	@$(scriptdir)/manus.pl .config.mk $(json)
 	@chmod 664 $@
 	@echo "OK"
@@ -48,15 +49,15 @@ $(individualdir): $(acts) $(roles) $(contacts) $(pdfdeps) $(scriptdir)/individua
 $(plan):
 	@echo -n "$(@F) songs: "
 	@echo "Sange" > $@
-	@cd / && ls -1 $(songdir)/*.tex >> $@ && echo "OK"
+	@ls -1 $(songdir)/*.tex >> $@ && echo "OK"
 	@echo -n "$(@F) sketches: "
 	@echo "" >> $@
 	@echo "Sketches" >> $@
-	@cd / && ls -1 $(sketchdir)/*.tex >> $@ && echo "OK"
+	@ls -1 $(sketchdir)/*.tex >> $@ && echo "OK"
 	@echo -n "$(@F) videos: "
 	@echo "" >> $@
 	@echo "Video" >> $@
-	-@cd / && ls -1 $(videodir)/*.tex >> $@ && echo "OK"
+	-@ls -1 $(videodir)/*.tex >> $@ && echo "OK"
 	@chmod 660 $@
 	@echo ""
 
@@ -72,63 +73,64 @@ $(json) : $(plan) $(datadeps) $(scriptdir)/data.pl
 
 
 $(acts): $(json) $(scriptdir)/acts.pl
-	@echo -n "$(subst .pdf,.tex,$(@F)): "
-	@cd $(scriptdir) && ./acts.pl $< > $(@F).tex
+	@echo -n "$(name).tex: "
+	@$(scriptdir)/acts.pl $< > $(name).tex
 	@echo "OK"
-	@echo -n "$(@F): "
-	-@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
-	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null && echo "OK" || echo "ERROR"
-	@mv $(scriptdir)/$(@F).pdf $@
+	@echo -n "$(name).pdf: "
+	-@pdflatex -halt-on-error $(name).tex > /dev/null
+	@pdflatex -halt-on-error $(name).tex > /dev/null && echo "OK" || echo "ERROR"
+	@mv $(name).pdf $@
 	@chmod 664 $@
-	@rm $(scriptdir)/$(@F).*
+	@rm $(name).*
 	@echo ""
+
 	
 $(roles): $(json) $(scriptdir)/roles.pl
-	@echo -n "$(subst .pdf,.tex,$(@F)): "
-	@cd $(scriptdir) && ./roles.pl $< > $(@F).tex
+	@echo -n "$(name).tex: "
+	@$(scriptdir)/roles.pl $< > $(name).tex
 	@echo "OK"
-	@echo -n "$(@F): "
-	-@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
-	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null && echo "OK" || echo "ERROR"
-	@mv $(scriptdir)/$(@F).pdf $@
+	@echo -n "$(name).pdf: "
+	-@pdflatex -halt-on-error $(name).tex > /dev/null
+	@pdflatex -halt-on-error $(name).tex > /dev/null && echo "OK" || echo "ERROR"
+	@mv $(name).pdf $@
 	@chmod 664 $@
-	@rm $(scriptdir)/$(@F).*
+	@rm $(name).*
 	@echo ""
 
 $(contacts): $(scriptdir)/contacts.pl $(contactsdir)/*.vcf
-	@echo -n "$(subst .pdf,.tex,$(@F)): "
-	@cd $(scriptdir) && ./contacts.pl $(contactsdir) > $(@F).tex
+	@echo -n "$(name).tex: "
+	@$(scriptdir)/contacts.pl $(contactsdir) > $(name).tex
 	@echo "OK"
-	@echo -n "$(@F): "
-	-@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
-	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null && echo "OK" || echo "ERROR"
-	@mv $(scriptdir)/$(@F).pdf $@
+	@echo -n "$(name).pdf: "
+	-@pdflatex -halt-on-error $(name).tex > /dev/null
+	@pdflatex -halt-on-error $(name).tex > /dev/null && echo "OK" || echo "ERROR"
+	@mv $(name).pdf $@
 	@chmod 664 $@
-	@rm $(scriptdir)/$(@F).*
+	@rm $(name).*
 	@echo ""
 
 $(signup): $(json) $(scriptdir)/signup.pl
-	@echo -n "$(subst .pdf,.tex,$(@F)): "
-	@cd $(scriptdir) && ./signup.pl $< > $(@F).tex
+	@echo -n "$(name).tex: "
+	@$(scriptdir)/signup.pl $< > $(name).tex
 	@echo "OK"
-	@echo -n "$(@F): "
-	-@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
-	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null && echo "OK" || echo "ERROR"
-	@mv $(scriptdir)/$(@F).pdf $@
+	@echo -n "$(name).pdf: "
+	-@pdflatex -halt-on-error $(name).tex > /dev/null
+	@pdflatex -halt-on-error $(name).tex > /dev/null && echo "OK" || echo "ERROR"
+	@mv $(name).pdf $@
 	@chmod 664 $@
-	@rm $(scriptdir)/$(@F).*
+	@rm $(name).*
 	@echo ""
 
 $(props): $(json) $(scriptdir)/props.pl
-	@echo -n "$(subst .pdf,.tex,$(@F)): "
-	@cd $(scriptdir) && ./props.pl $< > $(@F).tex
+	@echo -n "$(name).tex: "
+	@$(scriptdir)/props.pl $< > $(name).tex
 	@echo "OK"
-	@echo -n "$(@F): "
-	-@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null
-	@cd $(scriptdir) && pdflatex -halt-on-error $(@F).tex > /dev/null && echo "OK" || echo "ERROR"
-	@mv $(scriptdir)/$(@F).pdf $@
+	@echo -n "$(name).pdf: "
+	-@pdflatex -halt-on-error $(name).tex > /dev/null
+	@pdflatex -halt-on-error $(name).tex > /dev/null && echo "OK" || echo "ERROR"
+	@mv $(name).pdf $@
 	@chmod 664 $@
-	@rm $(scriptdir)/$(@F).*
+	@rm $(name).*
 	@echo ""
 
 # Removes all target files. Use this if you want to rebuild everything.
@@ -155,10 +157,10 @@ writable :
 
 
 $(sketchdir)/%.pdf: $(sketchdir)/%.tex
-	@cd $(sketchdir) && $(MAKE) -s --no-print-directory $@
+	@cd $(sketchdir) && $(MAKE) -s --no-print-directory $(@F)
 
 $(songdir)/%.pdf: $(songdir)/%.tex
-	@cd $(songdir) && $(MAKE) -s --no-print-directory $@
+	@cd $(songdir) && $(MAKE) -s --no-print-directory $(@F)
 
 $(videodir)/%.pdf: $(videodir)/%.tex
-	@cd $(videodir) && $(MAKE) -s --no-print-directory $@
+	@cd $(videodir) && $(MAKE) -s --no-print-directory $(@F)
