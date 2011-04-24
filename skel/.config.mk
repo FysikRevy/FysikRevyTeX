@@ -4,24 +4,21 @@
 #
 # This file should be copied and adapted to your local environment
 
-# Get revue working directory, ignore symlinks
-revuedir := $(shell cd . && pwd -P)
-
 # Define where the scripts are placed.
 scriptdir := SCRIPTDIR
 
 # The directories where original .tex materials will be placed
-sketchdir := $(revuedir)/sketches
-songdir := $(revuedir)/sange
-videodir := $(revuedir)/video
-bitsdir := $(revuedir)/brokker
-contactsdir := $(revuedir)/kontakter
+sketchdir := sketches
+songdir := sange
+videodir := video
+bitsdir := brokker
+contactsdir := kontakter
 
 # The acts plan. A cleartext file with act headings and material order
-plan := $(revuedir)/aktoversigt.plan
+plan := aktoversigt.plan
 
 # Define where to place output files
-outputdir := $(revuedir)/www
+outputdir := www
 
 # Where to put the datafile
 json := $(outputdir)/json.js
