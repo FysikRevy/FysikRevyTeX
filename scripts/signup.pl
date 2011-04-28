@@ -27,7 +27,7 @@ print '
 \usepackage{charter,euler}
 \usepackage[danish]{babel,varioref}
 \usepackage[T1]{fontenc}
-\usepackage[latin1]{inputenc}
+\usepackage[utf8]{inputenc}
 \frenchspacing
 \usepackage{verbatim,moreverb}
 \usepackage{multirow}

@@ -16,7 +16,7 @@ my $material;
 print '\documentclass[danish]{article}
 \usepackage{revy}
 \usepackage{babel}
-\usepackage[latin1]{inputenc}
+\usepackage[utf8]{inputenc}
 \usepackage{anysize}
 
 \title{Aktoversigt}
