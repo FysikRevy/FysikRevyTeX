@@ -28,7 +28,7 @@ my $role;
 my %actors;
 my $actor;
 my $pdf;
-my $pagecount = 0;
+my $pagecount = 1;
 
 # Also get all actor names while we are at it
 foreach $act (@{$revue->{acts}}) {
@@ -43,6 +43,24 @@ foreach $act (@{$revue->{acts}}) {
 }
 
 prDocDir($make->var('individualdir'));
+
+sub material {
+	my $title = shift;
+	my $pdf = shift;
+
+	prBookmark({
+		text => $title,
+		act => "$pagecount, 0, 0"
+	});
+
+	prFontSize(10);
+	my $left = 1;
+	while ($left) {
+		$pagecount += 1;
+		prText( 550, 30, "Side ".$pagecount, 'right');
+		$left = prSinglePage($pdf);
+	}
+}
 
 foreach $actor (keys %actors) {
 	print "$actor: ";
@@ -60,37 +78,18 @@ foreach $actor (keys %actors) {
 	prText(292, 620, "Skuespiller: $actor", 'center');
 
 	prPage();	
-	$pagecount = 1;
 
-	prBookmark({
-		text => 'Aktoversigt',
-		act => "$pagecount, 0, 0"
-	});
-	$pagecount += prDoc($make->var('acts'));
-
-	prBookmark({
-		text => 'Rolleoversigt',
-		act => "$pagecount, 0, 0"
-	});
-	$pagecount += prDoc($make->var('roles'));
+	material('Aktoversigt', $make->var('acts'));
+	material('Rolleoversigt', $make->var('roles'));
 
 	foreach $material (@{$actors{$actor}}) {
 		$pdf = $material->{'location'};
 		$pdf =~ s/\.tex$/.pdf/;
 
-		prBookmark({
-			text => $material->{'title'},
-			act => "$pagecount, 0, 0"
-		});
-
-		$pagecount += prDoc($pdf);
+		material($material->{'title'}, $pdf);
 	}
 
-	prBookmark({
-		text => 'Kontaktliste',
-		act => "$pagecount, 0, 0"
-	});
-	$pagecount += prDoc($make->var('contacts'));
+	material('Kontaktliste', $make->var('contacts'));
 
 	prEnd();
 
