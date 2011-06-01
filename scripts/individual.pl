@@ -9,6 +9,8 @@ use Makefile::Parser;
 use PDF::Reuse;
 use Data::Dumper;
 
+binmode STDOUT, ":utf8";
+
 if (!$ARGV[0] || !$ARGV[1]) {
         print "Usage: ./individual.pl <MAKEFILE> <DATAFILE>\n\n<DATAFILE> must be the revue json file generated from 
 data.pl.\n";

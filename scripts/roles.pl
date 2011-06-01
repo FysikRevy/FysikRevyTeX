@@ -7,8 +7,10 @@ use JSON::XS;
 use File::Slurp;
 use Data::Dumper;
 
+binmode STDOUT, ":utf8";
+
 if (!$ARGV[0]) {
-        print "Usage: ./data2roles.pl <FILEPATH>\n\n<FILEPATH> must be the revue json file generated from data.pl.\n";
+        print "Usage: ./roles.pl <FILEPATH>\n\n<FILEPATH> must be the revue json file generated from data.pl.\n";
         exit 0;
 }
 
@@ -41,6 +43,7 @@ print '\documentclass[landscape,a3paper]{article}
 \usepackage{revy}
 \usepackage[danish]{babel}
 \usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
 \usepackage{graphicx}
 \usepackage[a3paper]{geometry} 
 

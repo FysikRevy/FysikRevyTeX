@@ -7,6 +7,8 @@ use JSON::XS;
 use File::Slurp;
 use Data::Dumper;
 
+binmode STDOUT, ":utf8";
+
 if (!$ARGV[0]) {
         print "Usage: ./props.pl <FILEPATH>\n\n<FILEPATH> must be the revue json file generated from data.pl.\n";
         exit 0;

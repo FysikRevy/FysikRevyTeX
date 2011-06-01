@@ -6,6 +6,8 @@ use Data::Dumper;
 use JSON::XS;
 use File::Slurp;
 
+#binmode STDOUT, ":utf8";
+
 # The acts.plan file path must be supplied as the first argument to the script
 my $plan = $ARGV[1];
 
@@ -59,7 +61,7 @@ foreach (<FH>) {
 			props => []
 		);
 
-                open(FILE, $_) or die ("Could not open $_");
+                open(FILE, "<:utf8", $_) or die ("Could not open $_");
                 foreach (<FILE>) {
 			$material{revuename} = $1 if (m/\\revyname\{(.*)\}/);
 			$material{revueyear} = $1 if (m/\\revyyear\{(.*)\}/);

@@ -4,9 +4,10 @@ use warnings;
 use POSIX;
 use JSON::XS;
 use File::Slurp;
+binmode STDOUT, ":utf8";
 
 if (!$ARGV[0]) {
-        print "Usage: ./data2acts.pl <FILEPATH>\n\n<FILEPATH> must be the revue json file generated from data.pl.\n";
+        print "Usage: ./acts.pl <FILEPATH>\n\n<FILEPATH> must be the revue json file generated from data.pl.\n";
         exit 0;
 }
 my $revue = decode_json(File::Slurp::read_file($ARGV[0]));
