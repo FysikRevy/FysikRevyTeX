@@ -7,7 +7,7 @@ use JSON::XS;
 use File::Slurp;
 use Makefile::Parser;
 use PDF::Reuse;
-use Data::Dumper;
+use PDF::API2::Util;
 
 if (!$ARGV[0] || !$ARGV[1]) {
 	print "Usage: ./individual.pl <MAKEFILE> <DATAFILE>\n\n<DATAFILE> must be the revue json file generated from data.pl.\n";
@@ -24,6 +24,64 @@ my $material;
 my $pdf;
 my $pagecount = 1;
 
+use constant WIDTH     => 595.28;
+use constant HEIGHT    => 841.89;
+use constant FONT_SIZE => 10;
+
+sub rect {
+	my ($args) = @_;
+	my @c = namecolor($args->{color});
+
+	my $str = "q\n";                                                       # save the graphic state
+	$str   .= "$c[0] $c[1] $c[2] rg\n";                                    # a fill color
+	$str   .= "$args->{x} $args->{y} $args->{width} $args->{height} re\n"; # a rectangle
+	$str   .= "b\n";                                                       # fill (and a little more)
+	$str   .= "Q\n";                                                       # restore the graphic state
+
+	prAdd($str);
+};
+
+sub prColor {
+	my @c = namecolor(shift);
+	prAdd("$c[0] $c[1] $c[2] rg");
+};
+
+my $taboffset = 10;
+my $oldtabtext = '';
+sub indexTab {
+	my ($args) = @_;
+
+	$args->{paddingTop} //= 15;
+	$args->{paddingRight} //= 5;
+	$args->{paddingBottom} //= 5;
+	$args->{paddingLeft} //= 5;
+	$args->{noIncrement} //= 0;
+
+	my $width = prStrWidth( $args->{text}, 'C', FONT_SIZE ) + $args->{paddingRight} + $args->{paddingLeft};
+	my $height = FONT_SIZE + $args->{paddingTop} + $args->{paddingBottom};
+
+	if ( $oldtabtext ne $args->{text} ) {
+		$taboffset += $width;
+		$oldtabtext = $args->{text};
+	}
+
+	rect({
+		color => 'black',
+		width => $width,
+		height => $height,
+		x => $taboffset,
+		y => HEIGHT - $height
+	});
+
+	prColor('white');
+	prFont("C");
+	prFontSize(FONT_SIZE);
+
+	prText($taboffset + $args->{paddingLeft}, HEIGHT - $height + $args->{paddingBottom}, $args->{text});
+
+	prColor('black');
+};
+
 sub material {
 	my $title = shift;
 	my $pdf = shift;
@@ -37,11 +95,13 @@ sub material {
 	my $left = 1;
 	while ($left) {
 		$pagecount += 1;
+		indexTab({
+			text => $title
+		});
 		prText( 550, 30, "Side ".$pagecount, 'right');
 		$left = prSinglePage($pdf);
 	}
-}
-
+};
 
 prFile($make->var('manus'));
 prFontSize(24);
@@ -77,6 +137,9 @@ foreach $act (@{$revue->{acts}}) {
 		$pdf =~ s/\.tex$/.pdf/;
 		my $left = 1;
 		while ($left) {
+			indexTab({
+				text => $act->{title}
+			});
 			$pagecount += 1;
 			prText( 550, 30, "Side ".$pagecount, 'right');
 			$left = prSinglePage($pdf);

@@ -4,4 +4,4 @@ Dependencies:
 	libmakefile-parser-perl
 	libtext-vcard-perl
 	libpdf-reuse-perl
-
+	libpdf-api2-perl
