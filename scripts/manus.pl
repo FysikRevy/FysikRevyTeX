@@ -46,8 +46,9 @@ sub prColor {
 	prAdd("$c[0] $c[1] $c[2] rg");
 };
 
-my $taboffset = 10;
+my $taboffset = 85;
 my $oldtabtext = '';
+my $oldtabwidth = 0;
 sub indexTab {
 	my ($args) = @_;
 
@@ -61,8 +62,9 @@ sub indexTab {
 	my $height = FONT_SIZE + $args->{paddingTop} + $args->{paddingBottom};
 
 	if ( $oldtabtext ne $args->{text} ) {
-		$taboffset += $width;
+		$taboffset += $oldtabwidth;
 		$oldtabtext = $args->{text};
+		$oldtabwidth = $width;
 	}
 
 	rect({
@@ -94,11 +96,10 @@ sub material {
 	prFontSize(10);
 	my $left = 1;
 	while ($left) {
-		$pagecount += 1;
 		indexTab({
 			text => $title
 		});
-		prText( 550, 30, "Side ".$pagecount, 'right');
+		prText( 550, 30, "Side ".++$pagecount, 'right');
 		$left = prSinglePage($pdf);
 	}
 };
@@ -118,7 +119,20 @@ prText(292, 620, "Skuespiller: _______________________", 'center');
 prPage();
 
 material('Aktoversigt', $make->var('acts'));
-material('Rolleoversigt', $make->var('roles'));
+#material('Rolleoversigt', $make->var('roles'));
+
+prPage();
+prForm({
+	file => $make->var('roles'),
+	size => (1/sqrt(2)),
+	rotate => 90,
+	x => WIDTH
+});
+indexTab({
+	text => 'Rolleoversigt'
+});
+prText( 550, 30, "Side ".++$pagecount, 'right');
+prPage();
 
 my $materialCount = 0;
 
