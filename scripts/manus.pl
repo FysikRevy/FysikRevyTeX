@@ -56,7 +56,6 @@ sub indexTab {
 	$args->{paddingRight} //= 5;
 	$args->{paddingBottom} //= 5;
 	$args->{paddingLeft} //= 5;
-	$args->{noIncrement} //= 0;
 
 	my $width = prStrWidth( $args->{text}, 'C', FONT_SIZE ) + $args->{paddingRight} + $args->{paddingLeft};
 	my $height = FONT_SIZE + $args->{paddingTop} + $args->{paddingBottom};
@@ -85,11 +84,10 @@ sub indexTab {
 };
 
 sub material {
-	my $title = shift;
-	my $pdf = shift;
+	my ($args) = shift;
 
 	prBookmark({
-		text => $title,
+		text => $args->{title},
 		act => "$pagecount, 0, 0"
 	});
 
@@ -97,19 +95,21 @@ sub material {
 	my $left = 1;
 	while ($left) {
 		indexTab({
-			text => $title
+			text => $args->{title}
 		});
 		prText( 550, 30, "Side ".++$pagecount, 'right');
-		$left = prSinglePage($pdf);
+		$left = prSinglePage($args->{pdf});
 	}
 };
+
+### Document start ###
 
 prFile($make->var('manus'));
 prFontSize(24);
 
 prBookmark({
 	text => 'Forside',
-	act => "$pagecount, 0, 0"
+	act => "0, 0, 0"
 });
 
 prText(292, 700, 'Manuskript', 'center');
@@ -118,8 +118,10 @@ prText(292, 620, "Skuespiller: _______________________", 'center');
 
 prPage();
 
-material('Aktoversigt', $make->var('acts'));
-#material('Rolleoversigt', $make->var('roles'));
+material({
+	title => 'Aktoversigt',
+	pdf => $make->var('acts')
+});
 
 prPage();
 prForm({
@@ -130,6 +132,10 @@ prForm({
 });
 indexTab({
 	text => 'Rolleoversigt'
+});
+prBookmark({
+	text => 'Rolleoversigt',
+	act => "$pagecount, 0, 0"
 });
 prText( 550, 30, "Side ".++$pagecount, 'right');
 prPage();
@@ -156,6 +162,38 @@ foreach $act (@{$revue->{acts}}) {
 			});
 			$pagecount += 1;
 			prText( 550, 30, "Side ".$pagecount, 'right');
+
+			### Material index tab start
+			my $height = prStrWidth("$materialCount - $material->{'title'}", 'C', FONT_SIZE ) + 7 + 7;
+			my $width = FONT_SIZE + 5 + 5;
+			my $x = WIDTH - $width - 10;
+			my $y = HEIGHT - (110 + ($materialCount - 1) * 20);
+
+			rect({
+				color => 'black',
+				width => $width,
+				height => $height,
+				x => $x,
+				y => $y - $height
+			});
+
+			rect({
+				color => 'black',
+				width => 20,
+				height => 20,
+				x => WIDTH - 15,
+				y => $y - 20
+			});
+
+			prColor('white');
+			prFont("C");
+			prFontSize(FONT_SIZE);
+
+			prText($x + 7, $y - 7, "$materialCount - $material->{'title'}", '', 270);
+
+			prColor('black');
+			### Material index tab end
+
 			$left = prSinglePage($pdf);
 		}
 	}
@@ -167,6 +205,9 @@ foreach $act (@{$revue->{acts}}) {
 	});
 }
 
-material('Kontaktliste', $make->var('contacts'));
+material({
+	title => 'Kontaktliste',
+	pdf => $make->var('contacts')
+});
 
 prEnd();
