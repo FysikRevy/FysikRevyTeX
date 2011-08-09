@@ -1,10 +1,13 @@
 #!/bin/bash
 
 pages=`pdftk $1 dump_data output | grep NumberOfPages | grep -oP "\d+"`
-pages=`echo "$pages + ((4 - ($pages % 4)) % 4)" | bc`
+missingpages=`echo "(4 - ($pages % 4)) % 4" | bc`
 args=""
+blanks=""
 
-for (( i = 0; i <= $pages/2-1; i++ ))
+pages=`echo "$pages + $missingpages" | bc`
+
+for (( i = 0; i <= ($pages + $missingpages)/2-1; i++ ))
 do
 	s1=`expr $pages - $i`
 	s2=`expr $i + 1`
@@ -16,4 +19,11 @@ do
 	fi
 done
 
-pdftk $1 cat $args output - | pdfnup --outfile ${1}.booklet.pdf
+for (( i = 0; i< $missingpages; i++ ))
+do
+    blanks="$blanks B1"
+done
+
+pdftk A=$1 B=blank.pdf cat A $blanks output - |
+    pdftk - cat $args output - |
+    pdfnup --outfile ${1%.pdf}.booklet.pdf
