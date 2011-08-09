@@ -28,6 +28,7 @@ do
     blanks="$blanks B1"
 done
 
-pdftk A=$1 B=blank.pdf cat A $blanks output - |
-    pdftk - cat $args output - |
-    pdfnup --outfile ${1%.pdf}.booklet.pdf
+pdftk A=$1 B=blank.pdf cat A $blanks output - | pdftk - cat $args output ${1}.temp.pdf
+pdfnup --outfile ${1%.pdf}.booklet.pdf ${1}.temp.pdf
+
+rm ${1}.temp.pdf
