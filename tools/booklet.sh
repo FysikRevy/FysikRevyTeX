@@ -1,5 +1,9 @@
 #!/bin/bash
 
+if test $# -lt 1; then
+echo "Missing argument: ./booklet.sh <FILENAME>"; exit 0
+fi
+
 pages=`pdftk $1 dump_data output | grep NumberOfPages | grep -oP "\d+"`
 missingpages=`echo "(4 - ($pages % 4)) % 4" | bc`
 args=""
