@@ -11,7 +11,7 @@ blanks=""
 
 pages=`echo "$pages + $missingpages" | bc`
 
-for (( i = 0; i <= ($pages + $missingpages)/2-1; i++ ))
+for (( i = 0; i <= ($pages)/2-1; i++ ))
 do
 	s1=`expr $pages - $i`
 	s2=`expr $i + 1`
