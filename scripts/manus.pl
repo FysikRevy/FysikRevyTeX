@@ -10,18 +10,27 @@ use PDF::Reuse;
 use PDF::API2::Util;
 use Getopt::Long;
 
-my %options;
+my ($help, $contacts, $make, $revue, $outfile);
+my $usage = "usage: program [--help|-h] [--contacts] [--outfile FILENAME] --config MAKEFILE --data JSON\n";
 
-my $ok = GetOptions(\%options, 'contacts');
-
-if (!$ARGV[0] || !$ARGV[1]) {
-	print "Usage: ./manus.pl <MAKEFILE> <DATAFILE>\n\n<DATAFILE> must be the revue json file generated from data.pl.\n";
-	exit 0;
-}
-
-my $parser = Makefile::Parser->new;
-my $make = $parser->parse($ARGV[0]) or die Makefile::Parser->error;
-my $revue = decode_json(File::Slurp::read_file($ARGV[1]));
+if (! GetOptions(
+        'help|h' => sub {
+            print $usage; exit;
+        },
+        'contacts' => \$contacts,
+        'config=s' => sub {
+            $make = Makefile::Parser->new->parse($_[1]) or die Makefile::Parser->error;
+        },
+        'data=s' => sub {
+            $revue = decode_json(File::Slurp::read_file($_[1]));
+        },
+        'outfile=s' => \$outfile
+    )
+) {
+  print "Unknown option: @_\n" if ( @_ );
+  print $usage;
+  exit;
+};
 
 my $act;
 my $material;
@@ -109,7 +118,7 @@ sub material {
 
 ### Document start ###
 
-prFile($make->var('manus'));
+prFile($outfile);
 prFontSize(24);
 
 prBookmark({
@@ -209,7 +218,7 @@ foreach $act (@{$revue->{acts}}) {
 		kids => \@materials
 	});
 }
-if ($options{contacts}) {
+if ($contacts) {
     material({
     	title => 'Kontaktliste',
     	pdf => $make->var('contacts')

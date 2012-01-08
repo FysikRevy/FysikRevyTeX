@@ -26,13 +26,13 @@ manus: $(manus)
 %.pdf: name = $(subst .pdf,,$(@F))
 
 # Makes a complete manuscript
-$(manus): $(acts) $(roles) $(contacts) $(pdfdeps) $(scriptdir)/manus.pl .config.mk
-ifeq ($(strip $(pdfdeps)),) 
+$(manus): $(scriptdir)/manus.pl $(acts) $(roles) $(contacts) $(pdfdeps) .config.mk
+ifeq ($(strip $(pdfdeps)),)
 	@$(MAKE) -s --no-print-directory $@
 else
 	@rm -f $@
 	@echo -n "$(name).pdf: "
-	@$(scriptdir)/manus.pl --contacts .config.mk $(json)
+	@$< --contacts --config .config.mk --data $(json) > $@
 	@chmod 664 $@
 	@echo "OK"
 	@echo ""
