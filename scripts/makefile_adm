@@ -32,7 +32,7 @@ ifeq ($(strip $(pdfdeps)),)
 else
 	@rm -f $@
 	@echo -n "$(name).pdf: "
-	@$(scriptdir)/manus.pl .config.mk $(json)
+	@$(scriptdir)/manus.pl --contacts .config.mk $(json)
 	@chmod 664 $@
 	@echo "OK"
 	@echo ""

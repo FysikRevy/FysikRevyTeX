@@ -8,9 +8,14 @@ use File::Slurp;
 use Makefile::Parser;
 use PDF::Reuse;
 use PDF::API2::Util;
+use Getopt::Long;
+
+my %options;
+
+my $ok = GetOptions(\%options, 'contacts');
 
 if (!$ARGV[0] || !$ARGV[1]) {
-	print "Usage: ./individual.pl <MAKEFILE> <DATAFILE>\n\n<DATAFILE> must be the revue json file generated from data.pl.\n";
+	print "Usage: ./manus.pl <MAKEFILE> <DATAFILE>\n\n<DATAFILE> must be the revue json file generated from data.pl.\n";
 	exit 0;
 }
 
@@ -204,10 +209,11 @@ foreach $act (@{$revue->{acts}}) {
 		kids => \@materials
 	});
 }
-
-material({
-	title => 'Kontaktliste',
-	pdf => $make->var('contacts')
-});
+if ($options{contacts}) {
+    material({
+    	title => 'Kontaktliste',
+    	pdf => $make->var('contacts')
+    });
+}
 
 prEnd();
