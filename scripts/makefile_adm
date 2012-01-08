@@ -1,5 +1,5 @@
 # Makefile for DIKUrevy
-# 
+#
 # Author: munter@diku.dk
 #
 # This file should be symlinked to in directories with songs and sketches.
@@ -84,7 +84,7 @@ $(acts): $(json) $(scriptdir)/acts.pl
 	@rm $(name).*
 	@echo ""
 
-	
+
 $(roles): $(json) $(scriptdir)/roles.pl
 	@echo -n "$(name).tex: "
 	@$(scriptdir)/roles.pl $< > $(name).tex
@@ -147,7 +147,7 @@ clean :
 
 
 # Takes over ownership of all TeX files and makes them writable to the group.
-writable : 
+writable :
 	@echo -n "songdir: "
 	@cd $(songdir) && $(MAKE) --no-print-directory writable
 	@echo ""
