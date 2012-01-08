@@ -137,7 +137,7 @@ public: $(datadeps) $(pdfdeps) $(json) $(acts) $(roles)
 	@mkdir -p $@
 	@cp -t $@ --parents $(datadeps) $(pdfdeps)
 	@cp -t $@ $(json) $(acts) $(roles)
-	$(scriptdir)/manus.pl --config .config.mk --data $(json) > $(subst ${outputdir},$@,$(manus))
+	@$(scriptdir)/manus.pl --config .config.mk --data $(json) > $(subst ${outputdir},$@,$(manus))
 
 
 # Removes all target files. Use this if you want to rebuild everything.
