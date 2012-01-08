@@ -10,7 +10,7 @@ include .config.mk
 datadeps := $(shell if [ -f $(plan) ]; then sed -n '/\S*\.tex/p' $(plan) | sed ':b;N;s/\n/ /;bb'; fi)
 pdfdeps := $(subst .tex,.pdf,$(datadeps))
 
-.PHONY : all clean writable
+.PHONY : all public clean writable
 
 # The default target will only make a manuscript if there is a $(plan) file. Otherwise it just builds all source pdfs
 all:
@@ -132,6 +132,13 @@ $(props): $(json) $(scriptdir)/props.pl
 	@chmod 664 $@
 	@rm $(name).*
 	@echo ""
+
+public: $(datadeps) $(pdfdeps) $(json) $(acts) $(roles)
+	@mkdir -p $@
+	@cp -t $@ --parents $(datadeps) $(pdfdeps)
+	@cp -t $@ $(json) $(acts) $(roles)
+	$(scriptdir)/manus.pl --config .config.mk --data $(json) > $(subst ${outputdir},$@,$(manus))
+
 
 # Removes all target files. Use this if you want to rebuild everything.
 clean :
