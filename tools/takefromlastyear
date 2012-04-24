@@ -1,0 +1,29 @@
+#/bin/sh
+#
+# Get unused material from the previous year that was not itself taken
+# from the year before that.
+
+set -e # Die on error.
+
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 <this-years-revyfolder>"
+    exit 1
+fi
+
+thisrevydir="$(dirname $1)/$(basename "$1")"/
+prevrevydir="$(dirname $1)/$(($(basename "$1")-1))"/
+prevprevrevydir="$(dirname $1)/$(($(basename "$1")-2))"/
+
+unchosen="$(dirname $0)/unchosen"
+oldies="$($unchosen "$prevprevrevydir")"
+$unchosen "$prevrevydir" | while read -r x; do
+    if ! (echo "$oldies" | fgrep -x "$x" > /dev/null); then
+        if [ -f "$thisrevydir$x" ]; then
+            echo "$thisrevydir$x findes allerede - kopierer ikke over."
+        else
+            echo "Kopierer $x"
+            mkdir -p "$thisrevydir/$(dirname "$x")"
+            cp "$prevrevydir/$x" "$thisrevydir/$x"
+        fi
+    fi
+done
