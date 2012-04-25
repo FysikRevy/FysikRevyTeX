@@ -17,7 +17,7 @@ all:
 ifeq ($(strip $(pdfdeps)),)
 	@$(MAKE) -s --no-print-directory $(subst .tex,.pdf,$(wildcard $(songdir)/*.tex $(sketchdir)/*.tex $(videodir)/*.tex))
 else
-	@$(MAKE) -s --no-print-directory $(manus) $(individualdir) $(props) $(signup)
+	@$(MAKE) -s --no-print-directory $(manus) $(songs) $(individualdir) $(props) $(signup)
 endif
 
 plan: $(plan)
@@ -131,6 +131,11 @@ $(props): $(json) $(scriptdir)/props.pl
 	@mv $(name).pdf $@
 	@chmod 664 $@
 	@rm $(name).*
+	@echo ""
+
+$(songs): $(json) $(scriptdir)/songs.pl $(pdfdeps)
+	@rm -f $(songs)
+	@$(scriptdir)/songs.pl .config.mk $(json)
 	@echo ""
 
 public: $(datadeps) $(pdfdeps) $(json) $(acts) $(roles)

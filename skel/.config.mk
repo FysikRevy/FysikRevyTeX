@@ -29,5 +29,6 @@ acts := $(outputdir)/Aktoversigt.pdf
 roles := $(outputdir)/Rolleoversigt.pdf
 signup := $(outputdir)/Rolletilmelding.pdf
 props := $(outputdir)/Rekvisitliste.pdf
+songs := $(outputdir)/Sangmanuskript.pdf
 contacts := $(outputdir)/Kontaktliste.pdf
 individualdir := $(outputdir)/Individuelt
