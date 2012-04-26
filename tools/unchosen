@@ -1,0 +1,24 @@
+#!/bin/sh
+#
+# Print a list of all files not chosen for the year.
+
+set -e # Die on error.
+
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 <revyfolder>"
+    exit 1
+fi
+
+revydir="$(dirname $1)/$(basename "$1")"/
+material() {
+    grep '\.tex' $revydir/aktoversigt.plan
+}
+
+material | sed 's,[^/]*$,,' | sort | uniq | while read -r dir; do
+    for material in $revydir$dir*tex; do
+        # This loop is slow.
+        if ! (material | fgrep -x "$dir$(basename "$material")" > /dev/null); then
+            echo $dir$(basename "$material")
+        fi
+    done
+done

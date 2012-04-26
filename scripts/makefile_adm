@@ -10,7 +10,7 @@ include .config.mk
 datadeps := $(shell if [ -f $(plan) ]; then sed -n '/\S*\.tex/p' $(plan) | sed ':b;N;s/\n/ /;bb'; fi)
 pdfdeps := $(subst .tex,.pdf,$(datadeps))
 
-.PHONY : all public clean writable
+.PHONY : all clean writable
 
 # The default target will only make a manuscript if there is a $(plan) file. Otherwise it just builds all source pdfs
 all:
@@ -32,7 +32,11 @@ ifeq ($(strip $(pdfdeps)),)
 else
 	@rm -f $@
 	@echo -n "$(name).pdf: "
+<<<<<<< HEAD
 	@$< --contacts --config .config.mk --data $(json) > $@
+=======
+	@$(scriptdir)/manus.pl .config.mk $(json)
+>>>>>>> 9fef627f51d0b2c7926398d6dbd4cf3f2c330b2e
 	@chmod 664 $@
 	@echo "OK"
 	@echo ""
@@ -84,7 +88,11 @@ $(acts): $(json) $(scriptdir)/acts.pl
 	@rm $(name).*
 	@echo ""
 
+<<<<<<< HEAD
 
+=======
+	
+>>>>>>> 9fef627f51d0b2c7926398d6dbd4cf3f2c330b2e
 $(roles): $(json) $(scriptdir)/roles.pl
 	@echo -n "$(name).tex: "
 	@$(scriptdir)/roles.pl $< > $(name).tex
