@@ -32,11 +32,7 @@ ifeq ($(strip $(pdfdeps)),)
 else
 	@rm -f $@
 	@echo -n "$(name).pdf: "
-<<<<<<< HEAD
 	@$< --contacts --config .config.mk --data $(json) > $@
-=======
-	@$(scriptdir)/manus.pl .config.mk $(json)
->>>>>>> 9fef627f51d0b2c7926398d6dbd4cf3f2c330b2e
 	@chmod 664 $@
 	@echo "OK"
 	@echo ""
@@ -88,11 +84,7 @@ $(acts): $(json) $(scriptdir)/acts.pl
 	@rm $(name).*
 	@echo ""
 
-<<<<<<< HEAD
 
-=======
-	
->>>>>>> 9fef627f51d0b2c7926398d6dbd4cf3f2c330b2e
 $(roles): $(json) $(scriptdir)/roles.pl
 	@echo -n "$(name).tex: "
 	@$(scriptdir)/roles.pl $< > $(name).tex
