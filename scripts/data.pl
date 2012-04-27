@@ -58,7 +58,8 @@ foreach (<FH>) {
 			title => '',
 			author => '',
 			roles => [],
-			props => []
+			props => [],
+			instructors => []
 		);
 
                 open(FILE, "<:encoding(utf8)", $_) or die ("Could not open $_");
@@ -82,6 +83,11 @@ foreach (<FH>) {
 				responsible => $2,
 				description => $3
 			} if (m/\\prop\{(.*?)}\[(.*?)\]\s*(.*?)\s*$/);
+
+			push @{$material{instructors}}, {
+				name => $1,
+				description => $2,
+			} if (m/\\instructor\[(.*?)\]\s*(.*?)\s*$/);
 
                         if (m/\\melody\{(.*)\}/) {
 				$material{type} = 'song';

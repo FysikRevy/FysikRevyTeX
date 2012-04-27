@@ -204,6 +204,9 @@
 \def\@rolename{Roller:}
 \def\rolename#1{\def\rolename{#1}}
 
+\def\@instructorname{Instrukt\o{}rer:}
+\def\instructorname#1{\def\instructorname{#1}}
+
 \def\@writtenbyname{skrevet af}
 \def\writtenbyname#1{\def\@writtenbyname{#1}}
 
@@ -249,6 +252,7 @@
 \def\role#1{\@ifnextchar [{\@roleas{#1}}{\@role{#1}}}
 \let\prop=\role
 \let\mic=\role
+\def\instructor[#1]{\item [{\bf #1} \hfill] }
 
 \def\scene{\medskip\par\it\noindent\relax}
 
@@ -334,6 +338,19 @@
                        \end{list}\smallskip\hfil\rule{6cm}{0.1mm}\medskip\par}
 
 \newenvironment{props}{{\smallskip\noindent\Large\bf\@propname}
+                       \begin{list}{}{
+                       \labelwidth 8em 
+                       \leftmargin 10em 
+                       \rightmargin 0em 
+                       \labelsep 1em 
+                       \listparindent 0em 
+                       \topsep 1ex 
+                       \partopsep 0ex 
+                       \parsep 1ex 
+                       \itemsep -1ex\relax}}{
+                       \end{list}\smallskip\hfil\rule{6cm}{0.1mm}\medskip\par}
+
+\newenvironment{instructors}{{\bigskip\noindent\Large\bf\@instructorname}
                        \begin{list}{}{
                        \labelwidth 8em 
                        \leftmargin 10em 
