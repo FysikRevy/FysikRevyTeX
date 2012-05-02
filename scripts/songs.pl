@@ -69,6 +69,10 @@ prText(292, 620, "Indehaver: _______________________", 'center');
 
 prPage();
 
+material('Aktoversigt', $make->var('acts'));
+
+prPage();
+
 foreach $material (@songs) {
     $pdf = $material->{'location'};
     $pdf =~ s/\.tex$/.pdf/;
