@@ -26,6 +26,7 @@ print '
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{longtable}
+\pdfminorversion=4
 \begin{document}
 
 %\evensidemargin 0pt
