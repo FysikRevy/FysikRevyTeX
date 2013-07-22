@@ -36,7 +36,7 @@ foreach $act (@{$revue->{acts}}) {
 	print '\section*{'. $act->{title} .'  \small{\textbf{\emph{(Tidsestimat: '. $act->{length} .' minutter)}}}}'."\n";
 	print '\begin{enumerate}'."\n";
         foreach $material (@{$act->{materials}}) {
-		print '\item \textbf{'. $material->{title} .'} ';
+		print '    \item \textbf{'. $material->{title} .'} ';
 		if ($material->{composer}) {
 			print "($material->{composer}: ``$material->{melody}'') ";
 		} elsif ($material->{melody}) {
@@ -44,7 +44,7 @@ foreach $act (@{$revue->{acts}}) {
 		}
 		print '\emph{'. $material->{revuename} .' '. $material->{revueyear} .'} \\\\'."\n";
 #		print '\emph{Version '. $material->{version} .'} \\\\'."\n";
-		print '\small{Status: '. $material->{status} .', \emph{Tidsestimat: '. $material->{length} .' minutter}}'."\n";
+		print '        \small{Status: '. $material->{status} .', \emph{Tidsestimat: '. $material->{length} .' minutter}}'."\n";
         }
 	print '\end{enumerate}'."\n\n";
 }
