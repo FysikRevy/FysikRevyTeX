@@ -7,7 +7,8 @@ use JSON::XS;
 use File::Slurp;
 use Data::Dumper;
 
-binmode STDOUT, ":utf8";
+# Make sure output is UTF-8
+binmode STDOUT, ":encoding(utf8)";
 
 if (!$ARGV[0]) {
         print "Usage: ./roles.pl <FILEPATH>\n\n<FILEPATH> must be the revue json file generated from data.pl.\n";
@@ -42,7 +43,6 @@ my %saw;
 print '\documentclass[landscape,a3paper]{article}
 \usepackage{revy}
 \usepackage[danish]{babel}
-\usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{graphicx}
 \usepackage[a3paper]{geometry} 
@@ -75,7 +75,7 @@ print '\documentclass[landscape,a3paper]{article}
 \gdef@#1@{\def\tempa{}\def\tempb{#1}\ifx\tempa\tempb
 \let\next\relax\else\def\next{&\actor{#1}@}\fi\next}}
 
-
+\pdfminorversion=4
 
 \begin{document}
 \begin{center}

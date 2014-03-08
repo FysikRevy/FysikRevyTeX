@@ -6,8 +6,9 @@ use POSIX;
 use JSON::XS;
 use File::Slurp;
 use Data::Dumper;
-
-binmode STDOUT, ":utf8";
+#
+# Make sure output is UTF-8
+binmode(STDOUT, ":utf8");
 
 if (!$ARGV[0]) {
         print "Usage: ./props.pl <FILEPATH>\n\n<FILEPATH> must be the revue json file generated from data.pl.\n";
@@ -34,6 +35,7 @@ print '
 \newcommand{\titel}[1]{\hline \multicolumn{3}{|l|}{\textbf{#1}} \\\\ \hline}
 \title{Rekvisitliste}
 \pagenumbering{arabic}
+\pdfminorversion=4
 
 \textwidth 190mm
 \textheight 270mm

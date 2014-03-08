@@ -7,7 +7,8 @@ use JSON::XS;
 use File::Slurp;
 use Data::Dumper;
 
-binmode STDOUT, ":utf8";
+# Make sure output is UTF-8
+binmode STDOUT, ":encoding(utf8)";
 
 if (!$ARGV[0]) {
         print "Usage: ./signup.pl <FILEPATH>\n\n<FILEPATH> must be the revue json file generated from data.pl.\n";
@@ -39,6 +40,9 @@ print '
 \newcommand{\role}[1]{#1 & $\Box$ & $\Box$ & $\Box$  & \rule[-2mm]{5.5cm}{0.1pt} \\\\}
 \title{Rolletilmelding}
 \pagenumbering{arabic}
+
+\pdfminorversion=4
+
 \begin{document}
 
 \setlength\LTleft{0pt}

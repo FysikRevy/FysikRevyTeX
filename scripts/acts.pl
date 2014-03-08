@@ -4,7 +4,9 @@ use warnings;
 use POSIX;
 use JSON::XS;
 use File::Slurp;
-binmode STDOUT, ":utf8";
+
+# Make sure output is UTF-8
+binmode(STDOUT, ":utf8");
 
 if (!$ARGV[0]) {
         print "Usage: ./acts.pl <FILEPATH>\n\n<FILEPATH> must be the revue json file generated from data.pl.\n";
@@ -19,6 +21,7 @@ print '\documentclass[danish]{article}
 \usepackage{babel}
 \usepackage[utf8]{inputenc}
 \usepackage{anysize}
+\pdfminorversion=4
 
 \title{Aktoversigt}
 
