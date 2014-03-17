@@ -9,17 +9,24 @@ class Prop:
 class Role:
     def __init__(self, abbreviation, name, role):
         self.abbreviation = abbreviation
-        self.name = name
+        self.actor = name
         self.role = role
+        self.material = ""
 
     def __repr__(self):
-        return "{} ({}): {}".format(self.role, self.abbreviation, self.name)
+        return "{} ({}): {}".format(self.role, self.abbreviation, self.actor)
+
+    def add_material(self, material):
+        "Add the title of the sketch/song the role appears in."
+        self.material = material
 
 class Actor:
-    # FIXME: Unneeded?
     def __init__(self, name):
         self.name = name
         self.roles = []
+
+    def __repr__(self):
+        return "{}".format(self.name)
 
     def add_role(self, role):
         self.roles.append(role)

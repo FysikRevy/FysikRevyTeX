@@ -94,7 +94,7 @@ $(roles): $(json) $(scriptdir)/roles.pl
 	@pdflatex -halt-on-error $(name).tex > /dev/null && echo "OK" || echo "ERROR"
 	@mv $(name).pdf $@
 	@chmod 664 $@
-	@rm $(name).*
+	#@rm $(name).*
 	@echo ""
 
 $(contacts): $(scriptdir)/contacts.pl $(contactsdir)/*.vcf

@@ -132,7 +132,9 @@ def parsetexfile(filename, encoding='utf-8'):
                                 abbreviation = keyword
                                 name = opt_re.findall(line)[0]
                                 role = eol_re.findall(line)[0]
-                                info["roles"].append(Role(abbreviation, name, role))
+                                if len(name) > 0:
+                                    # Only store the role if it is not empty:
+                                    info["roles"].append(Role(abbreviation, name, role))
 
                             elif command == "sings" or command == "says":
                                 # We count how many abbreviations actually appear in the sketch/song

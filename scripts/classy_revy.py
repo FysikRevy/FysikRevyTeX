@@ -2,15 +2,20 @@ import json
 from IPython import embed
 
 from funky_revy import parsetexfile 
+import base_classes as bc
 
 class Material:
     def __init__(self, info_dict):
         "Extract data from dictionary returned by parsetexfile()."
         self.title = info_dict["title"]
         self.status = info_dict["status"]
-        self.roles = info_dict["roles"]
         self.props = info_dict["props"]
         self.length = info_dict["eta"].replace('$','').split()[0]
+        self.roles = info_dict["roles"]
+
+        for role in self.roles:
+            # Add the title of this material to the roles:
+            role.add_material(self.title)
 
         try:
             self.melody = info_dict["melody"]
@@ -23,7 +28,7 @@ class Material:
         # To be deprecated (most likely):
         self.author = info_dict["author"]
         self.year = info_dict["revyyear"]
-        self.revy = info_dict["revyname"]
+        self.revue = info_dict["revyname"]
         self.version = info_dict["version"]
     
     @classmethod
@@ -34,6 +39,21 @@ class Material:
 
     def __repr__(self):
         return "{} ({} min): {}".format(self.title, self.length, self.status)
+
+    def register_actors(self, list_of_actors):
+        "Takes a list of actors and updates it with the actors in the sketch/song."
+
+        for role in self.roles:
+            for actor in list_of_actors:
+                if role.actor == actor.name:
+                    # If the actor exists in the list, we add this role to him/her:
+                    actor.add_role(role)
+                    break
+            else:
+                # If not, we create a new actor and update the list:
+                actor = bc.Actor(role.actor)
+                actor.add_role(role)
+                list_of_actors.append(actor)
 
 
 class Act:
@@ -83,12 +103,19 @@ class Act:
 class Revue:
     def __init__(self, acts, config_file = ".config.json"):
         self.acts = acts
+        self.actors = []
 
         # Load variables from the configuration:
         with open(config_file) as f:
             config = json.load(f)
         self.name = config["revue_name"]
         self.year = config["revue_year"]
+
+        # Make a list of all actors:
+        for act in self.acts:
+            for material in act.materials:
+                material.register_actors(self.actors)
+        self.actors.sort(key=lambda actor: actor.name)
 
 
     @classmethod
