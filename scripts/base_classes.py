@@ -1,7 +1,8 @@
 class Prop:
-    def __init__(self, prop, responsible):
+    def __init__(self, prop, responsible, description):
         self.prop = prop
         self.responsible = responsible
+        self.description = description
 
     def __repr__(self):
         return "{} ({})".format(self.prop, self.responsible)

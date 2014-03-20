@@ -1,3 +1,4 @@
+import os
 import json
 from IPython import embed
 
@@ -11,11 +12,16 @@ class Material:
         self.status = info_dict["status"]
         self.props = info_dict["props"]
         self.length = info_dict["eta"].replace('$','').split()[0]
+        self.path = os.path.abspath(info_dict["path"])
         self.roles = info_dict["roles"]
 
         for role in self.roles:
             # Add the title of this material to the roles:
             role.add_material(self.title)
+        
+        # Extract the category (which is the directory):
+        self.category = self.path.split("/")[-2]
+        self.file_name = self.path.split("/")[-1]
 
         try:
             self.melody = info_dict["melody"]
@@ -35,6 +41,7 @@ class Material:
     def fromfile(cls, filename):
         "Parse file using parsetexfile()."
         info_dict = parsetexfile(filename)
+        info_dict["path"] = filename
         return cls(info_dict)
 
     def __repr__(self):

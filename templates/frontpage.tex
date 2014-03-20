@@ -1,0 +1,126 @@
+\documentclass[11pt]{article}
+\usepackage[danish]{babel}
+\usepackage[latin1]{inputenc}
+%\usepackage{a4}                          % A4 papirstørrelse
+%\usepackage{fullpage}
+\usepackage{vmargin}
+\setpapersize{A4}
+%argumenter:{hleftmargini}{htopmargini}{hrightmargini}{hbottommargini}{headheight}{headsep}{footheight}{footskip}
+\setmarginsrb{20mm}{15mm}{20mm}{20mm}{12pt}{11mm}{0pt}{11mm}
+\usepackage[T1]{fontenc}                 % æøåÆØÅ
+\usepackage{color}                       % farver
+\usepackage{verbatim}
+\usepackage{amsmath}                     % Matematiske kommandoer
+\usepackage{amssymb}                     % Matematiske symboler
+%\usepackage{longtable}
+\usepackage{array,booktabs,longtable}
+\usepackage{multicol}
+%\usepackage{isolatin1}
+%\usepackage{t1enc}
+%\usepackage{fancyhdr}
+%\usepackage{bbold}
+\usepackage{float}
+
+% Floats_______________________________________
+\floatstyle{plain}
+\newfloat{song}{H}{eks}
+\floatname{song}{Sang}
+
+\floatsep=1pt
+
+%-----------------------------------------------------%
+%                   KOMMANDOER                        %
+%-----------------------------------------------------%
+\newcommand{\sang}[2]{\begin{song}[h!]
+\caption[#1]{\LARGE\sffamily #1}\end{song}\begin{center} Melodi: #2 \end{center}}
+
+\newcommand{\rp}[1]{\textsf{#1}: }
+\newcommand{\rg}[1]{\emph{(#1)}}
+\newcommand{\rgsang}[2]{\multicolumn{2}{#1 c}{\emph{(#2)}}}
+\newcommand{\overskrift}[1]{\begin{center}\LARGE\sffamily #1 \end{center}}
+
+\newcommand{\FysikRevy}{$\textrm{\textsf{FysikRevy}}^{\textrm{\textsf{\tiny{TM}}}}$}
+\newcommand{\Kairsten}{K$\frac{a}{i}$rsten}
+\newcommand{\Simon}{$\psi$-mon}
+\newcommand{\p}{$\Psi$}
+
+%\newcommand{\rol}{\subsection*{\ref{#1}}}
+
+\setlongtables
+
+\addtolength{\topmargin}{-10pt}
+\addtolength{\textheight}{20pt}
+
+\newfont{\cmfnt}{ecssdc10.pk at 50pt}
+\newfont{\cmfntt}{ecssdc10.pk at 30pt}
+\newfont{\cmfnttt}{ecssdc10.pk at 20pt}
+%\newfont{\frfont}{ecssdc10.pk at 80pt}
+%\newfont{\frfontii}{ecssdc10.pk at 30pt}
+\newfont{\frfont}{eclq8.pk at 80pt}
+\newfont{\frfontii}{eclq8.pk at 30pt}
+
+\parindent=0pt
+\parskip=5pt
+%\marginparwidth=10pt
+%\textwidth=450pt
+%\hoffset=-0.25in
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%			Start dokument		%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+\thispagestyle{empty}
+
+\begin{flushright}
+	{\tiny Per Hedegård $\neq$ Baconost}
+\end{flushright}
+\hrule
+\begin{center}
+%{\cmfnt Fysikrevyen 2009 \\ Tekster\\}
+{\frfont $\textrm{\frfont{FysikRevy}}^{\textrm{\frfontii{{TM}}}}$}
+\\ --- {\frfontii tekster} ---
+\vspace{2cm}
+
+{\cmfntt{Ver. 0011000100110000}}\\ %\Huge{\textbf{$|5+i\sqrt{11}|$}}}}\\
+\vspace{5mm}
+{\cmfnttt{\today}}\\
+\vspace{1cm}
+%de næste versions numre er:
+%
+\end{center}
+
+
+\begin{center}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% INDLEDENDE MORALPRï¿½IKEN
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\Large
+Du holder nu i hånden de guddommelige \TeX ster til \FysikRevy{} 2011. Dette indebærer (som tidligere år) følgende:
+\begin{itemize}
+\item Du (\TeX)hæfter for disse \TeX ster med dit liv.
+\item Hvis du mister dem vil du blive chapset i osten med et vådt hestebrød!
+\item Hvis du viser dem til ikke-indviede er dit liv ødelagt, og du kan lige så 
+godt lade dig indskrive på datalogi og tage menneske-datamaskine interaktion.
+\item Hvis du gerne vil undgå, at andre tager dit \TeX hæfte som gidsel,
+skal du skrive dit navn på forsiden. Så er du sikker på at andre ikke vil kunne
+finde på at stjæle DIT \TeX hæfte. 
+\item Hvis du ikke skriver navn på dit \TeX hæfte, må du først gå hjem, når du har fået eduroam til at fungere.
+\end{itemize}
+\end{center}
+\vfill
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% FORSIDEBILLEDE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%\begin{center}
+%\epsfig{file=60meterhest.eps,width=5cm}\\
+%\end{center}
+
+\vfill
+Årets \TeX hæfte er sat i \LaTeXe.
+\begin{center}
+	{\tiny ``Hvis ikke jeg havde haft den ugentlige dosis Rage Against the Machine på Caféen?, var jeg nok aldrig blevet prodekan''}
+\end{center}
+\end{document}

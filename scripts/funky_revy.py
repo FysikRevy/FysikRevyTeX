@@ -1,4 +1,5 @@
-import re, sys
+import re
+import sys
 from IPython import embed
 
 from base_classes import Prop, Role
@@ -122,11 +123,14 @@ def parsetexfile(filename, encoding='utf-8'):
 
                                 try:
                                     responsible = opt_re.findall(line)[0]
+                                    index = line.rfind("]")
                                 except IndexError:
                                     # There is no responsible for this item.
                                     responsible = ""
+                                    index = line.rfind("}")
 
-                                info["props"].append(Prop(prop, responsible))
+                                description = line[index+1:].strip()
+                                info["props"].append(Prop(prop, responsible, description))
 
                             elif command == "role":
                                 abbreviation = keyword

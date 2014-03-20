@@ -30,9 +30,12 @@ if config["revue_name"] == "":
 if config["revue_year"] == "":
     config["revue_year"] = strftime("%Y", gmtime())
 
-os.symlink("{}/scripts/".format(src_dir), "{}/scripts".format(sys.argv[1]), target_is_directory=True)
+os.symlink("{}/templates".format(src_dir), "{}/templates".format(sys.argv[1]), target_is_directory=True)
+os.symlink("{}/scripts".format(src_dir), "{}/scripts".format(sys.argv[1]), target_is_directory=True)
 os.symlink("{}/create.py".format(src_dir), "{}/create.py".format(sys.argv[1]))
 os.symlink("{}/scripts/revy.sty".format(src_dir), "{}/revy.sty".format(sys.argv[1]))
+os.symlink("{}/scripts/revy.sty".format(src_dir), "{}/sange/revy.sty".format(sys.argv[1]))
+os.symlink("{}/scripts/revy.sty".format(src_dir), "{}/sketches/revy.sty".format(sys.argv[1]))
 
 ## NOTE: The following is for testing only and should be removed!
 os.mkdir("{}/sange".format(sys.argv[1]))

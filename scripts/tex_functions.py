@@ -1,38 +1,4 @@
-import subprocess
-import os
-import tempfile
-import shutil
-import uuid
 from time import localtime, strftime
-
-def generate_pdf(pdfname, tex, repetitions=2):
-    "Generates a pdf from a TeX string."
-
-    current_dir = os.getcwd()
-    temp = tempfile.mkdtemp()
-    os.chdir(temp)
-    os.symlink("{}/revy.sty".format(current_dir), "revy.sty")
-
-    #tempname = "{}{}".format(uuid.uuid4(), ".tex") 
-    tempname = uuid.uuid4() 
-    texfile = "{}.tex".format(tempname)
-    pdffile = "{}.pdf".format(tempname)
-
-    with open(texfile,'w') as f:
-        f.write(tex)
-
-    for i in range(repetitions):
-        subprocess.call(["pdflatex", texfile])
-
-    # proc=subprocess.Popen(['pdflatex','cover.tex'])
-    # subprocess.Popen(['pdflatex',tex])
-    # proc.communicate()
-
-    os.rename(pdffile, pdfname)
-    shutil.copy(pdfname, "{}/pdf".format(current_dir))
-    os.chdir(current_dir)
-    shutil.rmtree(temp)
-
 
 def create_act_outline(revue):
     tex = r"""\documentclass[danish]{{article}}
@@ -154,5 +120,64 @@ def create_role_overview(revue):
 \end{center}
 \end{document}
 """
+
+    return tex
+
+
+def create_props_list(revue):
+
+    tex = r"""\documentclass[a4paper,11pt,oneside]{article}
+\usepackage[left=0cm,top=0cm,right=0cm,nohead,nofoot]{geometry}
+\usepackage{a4wide}
+\usepackage{tabularx}
+\usepackage{charter,euler}
+\usepackage[danish]{babel,varioref}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\frenchspacing
+\usepackage{longtable}
+\newcommand{\mtitle}[1]{\hline \multicolumn{3}{|l|}{\textbf{#1}} \\ \hline}
+\title{Rekvisitliste}
+\pagenumbering{arabic}
+
+\textwidth 190mm
+\textheight 270mm
+\evensidemargin 0pt
+\oddsidemargin -15mm
+\topmargin -2cm
+\headsep 0.5cm
+
+\begin{document}
+
+\maketitle
+
+\setlength\LTleft{0pt}
+\setlength\LTright{0pt}
+"""
+
+    for act in revue.acts:
+        tex += r"""
+
+\begin{{longtable}}{{|p{{7cm}}|p{{4cm}}|p{{7cm}}|}}
+\hline
+\textbf{{{act_title}}} & Ansvarlig & Status \\
+\endfirsthead
+
+\hline
+\textbf{{{act_title} (fortsat)}} & Ansvarlig & Status  \\
+\endhead
+
+\hline \endfoot
+""".format(act_title=act.name)
+    
+        for m in act.materials:
+            tex += "\n\\mtitle{{{m_title}}}\n".format(m_title = m.title)
+            for prop in m.props:
+                tex += r"\textbf{{{prop}}} & {responsible} & \\ {description} & & \\ \hline".format(prop=prop.prop, responsible=prop.responsible, description=prop.description)
+                tex += "\n"
+
+        tex += "\\end{longtable}\n\n"
+    
+    tex += "\\end{document}\n\n"
 
     return tex
