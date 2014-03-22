@@ -99,9 +99,12 @@ class Act:
                 except KeyError:
                     n[m.length] = 1
         
-        l = "{}".format(t)
+        l = "{:4.2f}".format(t)
         for key in n:
-            l += " + {}{}".format(n[key],key)
+            if n[key] != 1:
+                l += " + {}{}".format(n[key],key)
+            else:
+                l += " + {}".format(key)
 
         return l
 
