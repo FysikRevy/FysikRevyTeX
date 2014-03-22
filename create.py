@@ -1,3 +1,4 @@
+from configparser import ConfigParser
 import os
 import sys
 sys.path.append("scripts/")
@@ -5,6 +6,8 @@ sys.path.append("scripts/")
 import classy_revy as cr
 import tex_functions as tex
 import helper_functions as hf
+import setup_functions as sf
+           
 
 def create_material_pdfs(revue):
     file_list = []
@@ -14,19 +17,35 @@ def create_material_pdfs(revue):
             file_list.append(material.path)
 
     hf.generate_multiple_pdfs(file_list)
-    return 0
+
+def create_individual_pdfs(revue):
+    # TODO: Make this run in parallel for all actors.
+    for actor in revue.actors:
+        file_list = ["pdf/frontpage.pdf", 
+                     "pdf/aktoversigt.pdf", 
+                     "pdf/rolleliste.pdf",
+                     actor,
+                     "pdf/rekvisitliste.pdf"]
+        hf.merge_pdfs(file_list, "pdf/{}.pdf".format(actor.name))
 
 
 if __name__ == "__main__":
 
+    if "plan" in sys.argv or not os.path.isfile("aktoversigt.plan"):
+        sf.create_plan_file("aktoversigt.plan")
+        sys.exit("Plan file 'aktoversigt.plan' created successfully.")
+            
+
     revue = cr.Revue.fromfile("aktoversigt.plan")
+    conf = ConfigParser()
+    conf.read("revytex.conf")
 
     if len(sys.argv) < 2 or "manus" in sys.argv:
         # Create everything.
         
         # Front page
-        hf.generate_pdf_from_file("templates/frontpage.tex")
-        os.replace("templates/frontpage.pdf", "pdf/frontpage.pdf")
+        frontpage = tex.create_frontpage(revue, config=conf)
+        hf.generate_pdf("frontpage.pdf", frontpage)
 
         # Aktoversigt:
         aktoversigt = tex.create_act_outline(revue)
@@ -65,9 +84,13 @@ if __name__ == "__main__":
             create_material_pdfs(revue)
 
         if "frontpage" in sys.argv:
-            hf.generate_pdf_from_file("templates/frontpage.tex")
-            os.replace("templates/frontpage.pdf", "pdf/frontpage.pdf")
+            frontpage = tex.create_frontpage(revue, config=conf)
+            hf.generate_pdf("frontpage.pdf", frontpage)
         
         if "props" in sys.argv:
             props = tex.create_props_list(revue)
             hf.generate_pdf("rekvisitliste.pdf", props)
+
+        if "individual" in sys.argv:
+            create_individual_pdfs(revue)
+

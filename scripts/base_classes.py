@@ -12,14 +12,19 @@ class Role:
         self.abbreviation = abbreviation
         self.actor = name
         self.role = role
-        self.material = ""
+        self.material = None
+        self.material_path = ""
 
     def __repr__(self):
         return "{} ({}): {}".format(self.role, self.abbreviation, self.actor)
 
     def add_material(self, material):
-        "Add the title of the sketch/song the role appears in."
+        "Add the Material of the sketch/song the role appears in."
         self.material = material
+
+    def add_material_path(self, path):
+        "Add the path of the sketch/song the role appears in."
+        self.material_path = path
 
 class Actor:
     def __init__(self, name):

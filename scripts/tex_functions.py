@@ -108,7 +108,7 @@ def create_role_overview(revue):
             tex += "\n{:2d} & {:<{width}}".format(m+1, mat.title, width=pad)
             for actor in revue.actors:
                 for role in actor.roles:
-                    if role.material == mat.title:
+                    if role.material.title == mat.title:
                         tex += "&{:>3}".format(role.abbreviation)
                         break
                 else:
@@ -179,5 +179,103 @@ def create_props_list(revue):
         tex += "\\end{longtable}\n\n"
     
     tex += "\\end{document}\n\n"
+
+    return tex
+
+
+def create_frontpage(revue, config):
+    c = config["Frontpage"]
+    tex = r"""
+\documentclass[11pt]{{article}}
+\usepackage[danish]{{babel}}
+\usepackage[utf8]{{inputenc}}
+\usepackage{{vmargin}}
+\setpapersize{{A4}}
+\setmarginsrb{{20mm}}{{15mm}}{{20mm}}{{20mm}}{{12pt}}{{11mm}}{{0pt}}{{11mm}}
+\usepackage[T1]{{fontenc}}                 % æøåÆØÅ
+\usepackage{{amsmath}}                     % Matematiske kommandoer
+\usepackage{{amssymb}}                     % Matematiske symboler
+
+
+%-----------------------------------------------------%
+%                   KOMMANDOER                        %
+%-----------------------------------------------------%
+\newcommand{{\FysikRevy}}{{$\textrm{{\textsf{{FysikRevy}}}}^{{\textrm{{\textsf{{\tiny{{TM}}}}}}}}$}}
+\newcommand{{\Kairsten}}{{K$\frac{{a}}{{i}}$rsten}}
+\newcommand{{\Simon}}{{$\psi$-mon}}
+\newcommand{{\p}}{{$\Psi$}}
+
+\addtolength{{\topmargin}}{{-10pt}}
+\addtolength{{\textheight}}{{20pt}}
+
+\newfont{{\cmfnt}}{{ecssdc10.pk at 50pt}}
+\newfont{{\cmfntt}}{{ecssdc10.pk at 30pt}}
+\newfont{{\cmfnttt}}{{ecssdc10.pk at 20pt}}
+\newfont{{\frfont}}{{eclq8.pk at 80pt}}
+\newfont{{\frfontii}}{{eclq8.pk at 30pt}}
+
+\parindent=0pt
+\parskip=5pt
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%			Start dokument		%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{{document}}
+\thispagestyle{{empty}}
+
+\begin{{flushright}}
+	{{\tiny {top_quote}}}
+\end{{flushright}}
+\hrule
+\begin{{center}}
+{{\frfont $\textrm{{\frfont{{FysikRevy}}}}^{{\textrm{{\frfontii{{{{TM}}}}}}}}$}}
+\\ --- {{\frfontii tekster}} ---
+\vspace{{2cm}}
+
+{{\cmfntt{{Ver. {version}}}}}\\ %\Huge{{\textbf{{$|5+i\sqrt{{11}}|$}}}}}}}}\\
+\vspace{{5mm}}
+{{\cmfnttt{{\today}}}}\\
+\vspace{{1cm}}
+\end{{center}}
+
+
+\begin{{center}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% INDLEDENDE MORALPRÆDIKEN
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\Large
+Du holder nu i hånden de guddommelige \TeX ster til {name} {year}. Dette indebærer (som tidligere år) følgende:
+\begin{{itemize}}
+\item Du (\TeX)hæfter for disse \TeX ster med dit liv.
+\item Hvis du mister dem vil du blive chapset i osten med et vådt hestebrød!
+\item Hvis du viser dem til ikke-indviede er dit liv ødelagt, og du kan lige så 
+godt lade dig indskrive på datalogi og tage menneske-datamaskine interaktion.
+\item Hvis du gerne vil undgå, at andre tager dit \TeX hæfte som gidsel,
+skal du skrive dit navn på forsiden. Så er du sikker på at andre ikke vil kunne
+finde på at stjæle DIT \TeX hæfte. 
+\item Hvis du ikke skriver navn på dit \TeX hæfte, må du først gå hjem, når du har fået eduroam til at fungere.
+\end{{itemize}}
+\end{{center}}
+\vfill
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% FORSIDEBILLEDE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%\begin{{center}}
+%\epsfig{{file=60meterhest.eps,width=5cm}}\\
+%\end{{center}}
+
+\vfill
+Årets \TeX hæfte er sat i \LaTeXe.
+\begin{{center}}
+	{{\tiny {bottom_quote}}}
+\end{{center}}
+\end{{document}}""".format(version = c["version"],
+                           top_quote = c["top quote"],
+                           bottom_quote = c["bottom quote"],
+                           name=revue.name, 
+                           year=revue.year)
 
     return tex

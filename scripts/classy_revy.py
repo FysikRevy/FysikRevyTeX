@@ -1,6 +1,5 @@
 import os
-import json
-from IPython import embed
+from configparser import ConfigParser
 
 from funky_revy import parsetexfile 
 import base_classes as bc
@@ -17,7 +16,8 @@ class Material:
 
         for role in self.roles:
             # Add the title of this material to the roles:
-            role.add_material(self.title)
+            #role.add_material(self.title)
+            role.add_material_path(self.path)
         
         # Extract the category (which is the directory):
         self.category = self.path.split("/")[-2]
@@ -108,15 +108,15 @@ class Act:
 
 
 class Revue:
-    def __init__(self, acts, config_file = ".config.json"):
+    def __init__(self, acts, config_file = "revytex.conf"):
         self.acts = acts
         self.actors = []
 
         # Load variables from the configuration:
-        with open(config_file) as f:
-            config = json.load(f)
-        self.name = config["revue_name"]
-        self.year = config["revue_year"]
+        self.config = ConfigParser()
+        self.config.read(config_file)
+        self.name = self.config["Revue info"]["revue name"]
+        self.year = self.config["Revue info"]["revue year"]
 
         # Make a list of all actors:
         for act in self.acts:
@@ -126,7 +126,7 @@ class Revue:
 
 
     @classmethod
-    def fromfile(cls, filename, encoding='utf-8', config_file = ".config.json"):
+    def fromfile(cls, filename, encoding='utf-8', config_file = "revytex.conf"):
         "Takes a plan file and extracts the information for each material."
         
         acts = []
@@ -135,7 +135,7 @@ class Revue:
         with open(filename, mode='r', encoding=encoding) as f:
             for line in f.readlines():
                 line = line.rstrip()
-                if len(line) > 0:
+                if len(line) > 0 and line[0] != "#":
                     if line[-3:] != 'tex':
                         # If not a TeX file, it must be the name of the new act:
                         if act.is_empty():
@@ -148,7 +148,10 @@ class Revue:
                             act.add_name(line)
                     else:
                         try:
-                            act.add_material(Material.fromfile(line))
+                            m = Material.fromfile(line)
+                            for role in m.roles:
+                                role.add_material(m)
+                            act.add_material(m)
                         except NameError as err:
                             print("You need a name for the act before any TeX file.")
                             print("Problematic file: {}".format(filename))

@@ -30,6 +30,7 @@ def generate_pdf(pdfname, tex, repetitions=2):
         f.write(tex)
 
     for i in range(repetitions):
+        #rc = subprocess.call(["pdflatex", texfile])
         rc = subprocess.call(["pdflatex", texfile], stdout=subprocess.DEVNULL)
 
     if rc == 0:
@@ -88,6 +89,12 @@ def merge_pdfs(file_list, pdfname):
             for act in f.acts:
                 for m in act.materials:
                     merger.append("{}/{}.pdf".format(m.category,m.file_name[:-4]))
+        
+        elif type(f).__name__ == "Actor":
+            print(f.name)
+            for role in f.roles:
+                merger.append("{}/{}.pdf".format(role.material.category,role.material.file_name[:-4]))
+
 
     output = open(pdfname, "wb")
     merger.write(output)
