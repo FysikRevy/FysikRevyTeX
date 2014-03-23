@@ -26,7 +26,7 @@ def create_individual_pdfs(revue):
                      "pdf/rolleliste.pdf",
                      actor,
                      "pdf/rekvisitliste.pdf"]
-        hf.merge_pdfs(file_list, "pdf/{}.pdf".format(actor.name))
+        hf.merge_pdfs(file_list, "pdf/individuals/{}.pdf".format(actor.name))
 
 
 if __name__ == "__main__":
