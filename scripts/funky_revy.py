@@ -152,9 +152,4 @@ def parsetexfile(filename, encoding='utf-8'):
     return info
 
 
-if __name__ == "__main__":
 
-    info = parsetexfile("/home/ks/documents/fysikrevy/jubilæumsrevy13/2013/sange/YBCO.tex")
- 
-    for key in info.keys():
-        print("{}: {}".format(key, info[key]))

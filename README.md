@@ -83,6 +83,10 @@ Creates the role/sketch matrix. Look for `rolleliste.pdf` in the `pdf/` director
 * **`python create.py props`**<br />
 Creates the list of props. Look for `rekvisitliste.pdf` in the `pdf/` directory.
 
+* **`python create.py contacts`**<br />
+Creates the contacts list. Look for `kontaktliste.pdf` in the `pdf/` directory.
+To add contacts, edit `templates/contacts.csv` with your favourite text editor. 
+
 * **`python create.py frontpage`**<br />
 Creates the front page for the manuscript. Look for `frontpage.pdf` in the `pdf/` directory.
 

@@ -61,12 +61,17 @@ if __name__ == "__main__":
         
         # PDFs for sketches/songs:
         create_material_pdfs(revue)
+        
+        # Contacts list:
+        contacts = tex.create_contacts_list("templates/contacts.csv")
+        hf.generate_pdf("kontaktliste.pdf", contacts)
             
         hf.merge_pdfs(["pdf/frontpage.pdf", 
                        "pdf/aktoversigt.pdf", 
                        "pdf/rolleliste.pdf", 
                        revue, 
-                       "pdf/rekvisitliste.pdf"], 
+                       "pdf/rekvisitliste.pdf", 
+                       "pdf/kontaktliste.pdf"], 
                        "pdf/manuskript.pdf")
 
         print("Manuscript created successfully!")
@@ -93,4 +98,8 @@ if __name__ == "__main__":
 
         if "individual" in sys.argv:
             create_individual_pdfs(revue)
+
+        if "contacts" in sys.argv:
+            contacts = tex.create_contacts_list("templates/contacts.csv")
+            hf.generate_pdf("kontaktliste.pdf", contacts)
 

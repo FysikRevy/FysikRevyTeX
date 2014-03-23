@@ -279,3 +279,87 @@ finde på at stjæle DIT \TeX hæfte.
                            year=revue.year)
 
     return tex
+
+
+def create_contacts_list(fname):
+    """Parses a CSV file to create the contacts list. Comments starting with # will be interpreted as section headings. 
+Comments starting with ## will be interpreted as column headers in the list."""
+
+    tex = r"""
+\documentclass[a4paper,9pt,oneside]{article}
+%\usepackage[left=0cm,top=1cm,right=0cm,nohead,nofoot]{geometry}
+\usepackage[a4paper,hmargin=2.5cm,nohead,nofoot]{geometry}
+\usepackage{charter,euler}
+\usepackage[danish]{babel,varioref}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{longtable}
+\usepackage{booktabs}
+\begin{document}
+"""
+    
+    first_table = True
+
+    with open(fname, 'r') as f:
+        for line in f.readlines():
+            line = line.strip()
+
+            if len(line) > 0:
+                if line[0] == '#' and line[1] != '#':
+                    # Line is a heading.
+
+                    # We should end the previous table, if any:
+                    if not first_table:
+                        tex += "\n\\end{longtable}\\vspace*{1em}\n"
+
+                    tex += "{{\Large\\bfseries {heading}}}\n".format(heading=line.strip("# "))
+
+                elif line[0] == '#' and line[1] == '#':
+                    # Line specifies column headers.
+                    first_table = False
+
+                    split_line = line.strip('# ').split(';')
+                    n_cols = len(split_line)
+                    
+                    tex += "\\begin{{longtable}}{{*{{{n}}}{{l}}}}\n".format(n=n_cols)
+
+                    headers = ""
+                    for i,word in enumerate(split_line):
+                        if i == 0:
+                            headers += "\\textbf{{{word}}}".format(word=word.strip())
+                        else:
+                            headers += " & \\textbf{{{word}}}".format(word=word.strip())
+                    headers += "\\\\\n"
+                    tex += r"""
+\toprule
+{headers}
+\midrule
+\endfirsthead
+
+\toprule
+{headers}
+\midrule
+\endhead
+
+\bottomrule
+\endfoot
+""".format(headers=headers)
+
+                else:
+                    # Line contains contact information:
+                    split_line = line.strip().split(';')
+                    if len(split_line) != n_cols:
+                        print("Warning! Line does not have the right number of columns! Line: {}".format(line))
+
+                    for i,word in enumerate(split_line):
+                        if i == 0:
+                            tex += "{word}".format(word=word.strip())
+                        else:
+                            tex += " & {word}".format(word=word.strip())
+
+                    tex += "\\\\\n"
+
+    tex += "\\end{longtable}\n\\end{document}"
+
+    return tex
+

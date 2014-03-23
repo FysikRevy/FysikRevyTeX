@@ -53,6 +53,7 @@ os.mkdir("{}/templates".format(dst_dir))
 # Create templates:
 sf.create_sketch_template("{}/templates".format(dst_dir), config)
 sf.create_song_template("{}/templates".format(dst_dir), config)
+shutil.copy("{}/templates/contacts.csv".format(src_dir),"{}/templates/contacts.csv".format(dst_dir))
 
 # Create symbolic links for system scripts and directories:
 os.symlink("{}/scripts".format(src_dir), "{}/scripts".format(dst_dir), target_is_directory=True)
