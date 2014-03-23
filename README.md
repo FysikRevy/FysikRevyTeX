@@ -71,23 +71,23 @@ To use it, run the file with an optional argument:
 
 The possible arguments are described below, and more than one argument can be specified at a time.
 
-#### `python create.py` or `python create.py manus`
+* **`python create.py`** or **`python create.py manus`**<br />
 Creates the whole manuscript. Look for `manuskript.pdf` in the `pdf/` directory.
 
-#### `python create.py aktoversigt`
+* **`python create.py aktoversigt`**<br />
 Creates the act outline (a "table of contents") for the revue. Look for `aktoversigt.pdf` in the `pdf/` directory.
 
-#### `python create.py roles`
+* **`python create.py roles`**<br />
 Creates the role/sketch matrix. Look for `rolleliste.pdf` in the `pdf/` directory.
 
-#### `python create.py props`
+* **`python create.py props`**<br />
 Creates the list of props. Look for `rekvisitliste.pdf` in the `pdf/` directory.
 
-#### `python create.py frontpage`
+* **`python create.py frontpage`**<br />
 Creates the front page for the manuscript. Look for `frontpage.pdf` in the `pdf/` directory.
 
-#### `python create.py material`
+* **`python create.py material`**<br />
 Creates PDFs of all songs and sketches. Look for them in the `sange/` and `sketches/` directories.
 
-#### `python create.py individual`
+* **`python create.py individual`**<br/>
 Creates PDFs for each actor containing only the sketches and songs the actor participates in. Look for the file in the `pdf/individuals` directory.
