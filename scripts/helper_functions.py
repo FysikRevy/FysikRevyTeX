@@ -6,7 +6,6 @@ import tempfile
 import uuid
 from multiprocessing import Pool, cpu_count
 
-from IPython import embed
 from PyPDF2 import PdfFileMerger
 
 def wildcard_copy(src, dst):

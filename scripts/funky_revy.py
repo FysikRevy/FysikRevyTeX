@@ -1,6 +1,5 @@
 import re
 import sys
-from IPython import embed
 
 from base_classes import Prop, Role
 
