@@ -28,10 +28,10 @@ config["Revue info"] = {}
 try:
     os.mkdir(dst_dir)
 except:
-    #sys.exit("Directory already exists. Please remove it and rerun this script. Exiting.")
-    print("\033[0;31mRemoving and recreating directory {} - be careful and remember to remove this feature before release!\033[0m".format(dst_dir))
-    shutil.rmtree(dst_dir)
-    os.mkdir(dst_dir)
+    sys.exit("Directory already exists. Please remove it and rerun this script. Exiting.")
+    #print("\033[0;31mRemoving and recreating directory {} - be careful and remember to remove this feature before release!\033[0m".format(dst_dir))
+    #shutil.rmtree(dst_dir)
+    #os.mkdir(dst_dir)
 
 
 # Add to config:
@@ -66,12 +66,9 @@ os.symlink("{}/scripts/revy.sty".format(src_dir), "{}/sketches/revy.sty".format(
 os.chdir(dst_dir)
 
 ### NOTE: The following is for testing only and should be removed!
-wildcard_copy("/home/ks/documents/fysikrevy/jubilæumsrevy13/2013/sange/*.tex", "{}/sange/".format(dst_dir))
-wildcard_copy("/home/ks/documents/fysikrevy/jubilæumsrevy13/2013/sketches/*.tex", "{}/sketches/".format(dst_dir))
-wildcard_copy("/home/ks/documents/fysikrevy/jubilæumsrevy13/2013/sketches/*.jpg", "{}/sketches/".format(dst_dir))
-##shutil.copytree("test_files/sange", "{}/sange".format(dst_dir))
-##shutil.copytree("test_files/sketches", "{}/sketches".format(dst_dir))
-#shutil.copy("test_files/aktoversigt.plan", "{}/aktoversigt.plan".format(dst_dir))
+#wildcard_copy("/home/ks/documents/fysikrevy/jubilæumsrevy13/2013/sange/*.tex", "{}/sange/".format(dst_dir))
+#wildcard_copy("/home/ks/documents/fysikrevy/jubilæumsrevy13/2013/sketches/*.tex", "{}/sketches/".format(dst_dir))
+#wildcard_copy("/home/ks/documents/fysikrevy/jubilæumsrevy13/2013/sketches/*.jpg", "{}/sketches/".format(dst_dir))
 
 with open("revytex.conf", 'w') as configfile:
     config.write(configfile)
