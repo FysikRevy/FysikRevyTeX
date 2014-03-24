@@ -8,7 +8,7 @@
 ## Set up instructions
 FysikRevyTeX have only very few dependencies:
 
-* Python 3.3 and above.
+* Python 3.3 or above.
 * [PyPDF2][] for the PDF magic.
 
 When dependencies are met, just put the contents of FysikRevyTeX in a directory of your choice. No installation is required.
