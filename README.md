@@ -32,7 +32,7 @@ Enter your newly created directory (`cd path/to/directory`) and do the following
 TeX files for songs and sketches should go into the directories `sange` and `sketches`, respectively. If you need to create the files, look at the templates in the `templates` directory.
 
 #### 2. Create a new plan file
-A plan file stores the "layout" of the revue. To create a default file, run
+A plan file defines the "layout" of the revue. To create a default file, run
 
     $ python create.py plan
 
