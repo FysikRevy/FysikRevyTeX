@@ -30,11 +30,11 @@ def create_individual_pdfs(revue):
         hf.merge_pdfs(file_list, "pdf/individuals/{}.pdf".format(actor.name))
 
 def create_song_manus_pdf(revue):
-    file_list = []
+    file_list = ["pdf/frontpage.pdf"]
     for act in revue.acts:
         for material in act.materials:
             if material.category == "sange":
-                file_list.append("{}.pdf".format(material.path[-4:]))
+                file_list.append("{}.pdf".format(material.path[:-4]))
     hf.merge_pdfs(file_list, "pdf/sangmanuskript.pdf")
 
 
@@ -115,3 +115,7 @@ if __name__ == "__main__":
 
         if "songmanus" in sys.argv:
             create_song_manus_pdf(revue)
+        
+        if "signup" in sys.argv:
+            contacts = tex.create_signup_form(revue)
+            hf.generate_pdf("rolletilmelding.pdf", contacts)

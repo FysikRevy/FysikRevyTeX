@@ -363,3 +363,56 @@ Comments starting with ## will be interpreted as column headers in the list."""
 
     return tex
 
+
+
+def create_signup_form(revue):
+
+    tex = r"""
+\documentclass[a4paper,11pt,oneside]{article}
+\usepackage[left=0cm,top=0cm,right=0cm,nohead,nofoot]{geometry}
+\usepackage{a4wide}
+\usepackage{tabularx}
+\usepackage{charter,euler}
+\usepackage[danish]{babel,varioref}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\frenchspacing
+\usepackage{verbatim,moreverb}
+\usepackage{multirow}
+\usepackage{hhline}
+\usepackage{latexsym}
+\usepackage{longtable}
+\newcommand{\mtitle}[1]{\hline \multicolumn{5}{|l|}{\textbf{#1}} \\ \hline}
+\newcommand{\role}[1]{#1 & $\Box$ & $\Box$ & $\Box$  & \rule[-2mm]{5.5cm}{0.1pt} \\}
+\title{Rolletilmelding}
+\pagenumbering{arabic}
+
+\begin{document}
+
+\setlength\LTleft{0pt}
+\setlength\LTright{0pt}
+"""
+
+    for act in revue.acts:
+        tex += "\n\n\\begin{longtable}{|p{7cm}|cccl|}\n"
+
+        tex += "\\hline\n"
+        tex += r"\textbf{{{title}}} & ++ & + & - & Kommentar \\".format(title = act.name)
+        tex += "\n\\endfirsthead\n\n"
+
+        tex += "\\hline\\endfoot\n"
+
+        for material in act.materials:
+            tex += "\n\\mtitle{{{title}}}\n".format(title=material.title)
+
+            for role in material.roles:
+                if role.role == "":
+                    tex += "\\role{{{title}}}\n".format(title=role.abbreviation)
+                else:
+                    tex += "\\role{{{title}}}\n".format(title=role.role)
+
+        tex += "\\end{longtable}\n\n"
+
+    tex += r"\end{document}"
+
+    return tex

@@ -98,3 +98,6 @@ Creates PDFs of all songs and sketches. Look for them in the `sange/` and `sketc
 
 * **`python create.py individual`**<br/>
 Creates PDFs for each actor containing only the sketches and songs the actor participates in. Look for the file in the `pdf/individuals` directory.
+
+* **`python create.py signup`**<br/>
+Create a sign-up form for all sketches and songs. Look for `rolletilmelding.pdf` in the `pdf/` directory.
