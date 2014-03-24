@@ -74,11 +74,9 @@ def parsetexfile(filename, encoding='utf-8'):
 
     # List of keywords/commands to ignore, i.e. that are not relevant to extract:
     ignore_list = ["documentclass", "usepackage", "begin", "end", "maketitle", "act"]
-    # TODO: Should \act really be ignored?
 
     # List of important keywords/commands:
     important_list = ["prop", "role", "sings", "says"]
-    # TODO: Handle \scene in a nice way.
 
     with open(filename, mode='r', encoding=encoding) as f:
         lines = f.readlines()

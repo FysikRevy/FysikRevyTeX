@@ -2,7 +2,7 @@
 from configparser import ConfigParser
 import os
 import sys
-sys.path.append("scripts/")
+sys.path.append("scripts")
 
 import classy_revy as cr
 import tex_functions as tex
@@ -21,21 +21,23 @@ def create_material_pdfs(revue):
 
 def create_individual_pdfs(revue):
     # TODO: Make this run in parallel for all actors.
+    path = revue.config["Paths"]
     for actor in revue.actors:
-        file_list = ["pdf/frontpage.pdf", 
-                     "pdf/aktoversigt.pdf", 
-                     "pdf/rolleliste.pdf",
+        file_list = [os.path.join(path["pdf"],"frontpage.pdf"), 
+                     os.path.join(path["pdf"],"aktoversigt.pdf"), 
+                     os.path.join(path["pdf"],"rolleliste.pdf"),
                      actor,
-                     "pdf/rekvisitliste.pdf"]
-        hf.merge_pdfs(file_list, "pdf/individuals/{}.pdf".format(actor.name))
+                     os.path.join(path["pdf"],"rekvisitliste.pdf")]
+        hf.merge_pdfs(file_list, os.path.join(path["individual pdf"], "{}.pdf".format(actor.name)))
 
 def create_song_manus_pdf(revue):
-    file_list = ["pdf/frontpage.pdf"]
+    path = revue.config["Paths"]
+    file_list = [os.path.join(path["pdf"],"frontpage.pdf")]
     for act in revue.acts:
         for material in act.materials:
             if material.category == "sange":
                 file_list.append("{}.pdf".format(material.path[:-4]))
-    hf.merge_pdfs(file_list, "pdf/sangmanuskript.pdf")
+    hf.merge_pdfs(file_list, os.path.join(path["pdf"],"sangmanuskript.pdf"))
 
 
 
@@ -47,14 +49,13 @@ if __name__ == "__main__":
             
 
     revue = cr.Revue.fromfile("aktoversigt.plan")
-    conf = ConfigParser()
-    conf.read("revytex.conf")
+    path = revue.config["Paths"]
 
     if len(sys.argv) < 2 or "manus" in sys.argv:
         # Create everything.
         
         # Front page
-        frontpage = tex.create_frontpage(revue, config=conf)
+        frontpage = tex.create_frontpage(revue)
         hf.generate_pdf("frontpage.pdf", frontpage)
 
         # Aktoversigt:
@@ -73,16 +74,16 @@ if __name__ == "__main__":
         create_material_pdfs(revue)
         
         # Contacts list:
-        contacts = tex.create_contacts_list("templates/contacts.csv")
+        contacts = tex.create_contacts_list("contacts.csv")
         hf.generate_pdf("kontaktliste.pdf", contacts)
             
-        hf.merge_pdfs(["pdf/frontpage.pdf", 
-                       "pdf/aktoversigt.pdf", 
-                       "pdf/rolleliste.pdf", 
+        hf.merge_pdfs([os.path.join(path["pdf"],"frontpage.pdf"), 
+                       os.path.join(path["pdf"],"aktoversigt.pdf"), 
+                       os.path.join(path["pdf"],"rolleliste.pdf"), 
                        revue, 
-                       "pdf/rekvisitliste.pdf", 
-                       "pdf/kontaktliste.pdf"], 
-                       "pdf/manuskript.pdf")
+                       os.path.join(path["pdf"],"rekvisitliste.pdf"), 
+                       os.path.join(path["pdf"],"kontaktliste.pdf")], 
+                       os.path.join(path["pdf"],"manuskript.pdf"))
 
         print("Manuscript created successfully!")
 
@@ -110,7 +111,7 @@ if __name__ == "__main__":
             create_individual_pdfs(revue)
 
         if "contacts" in sys.argv:
-            contacts = tex.create_contacts_list("templates/contacts.csv")
+            contacts = tex.create_contacts_list("contacts.csv")
             hf.generate_pdf("kontaktliste.pdf", contacts)
 
         if "songmanus" in sys.argv:

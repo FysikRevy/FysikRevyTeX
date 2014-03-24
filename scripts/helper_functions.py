@@ -13,24 +13,24 @@ def wildcard_copy(src, dst):
         shutil.copy(file, dst)
 
 
-def generate_pdf(pdfname, tex, repetitions=2):
+def generate_pdf(pdfname, tex, repetitions=2, encoding='utf-8'):
     "Generates a pdf from a TeX string."
 
     current_dir = os.getcwd()
     temp = tempfile.mkdtemp()
     os.chdir(temp)
-    os.symlink("{}/revy.sty".format(current_dir), "revy.sty")
+    os.symlink(os.path.join(current_dir,"revy.sty"), "revy.sty")
 
     tempname = uuid.uuid4() 
     texfile = "{}.tex".format(tempname)
     pdffile = "{}.pdf".format(tempname)
 
-    with open(texfile,'w') as f:
+    with open(texfile, 'w', encoding=encoding) as f:
         f.write(tex)
 
     for i in range(repetitions):
-        #rc = subprocess.call(["pdflatex", texfile])
-        rc = subprocess.call(["pdflatex", texfile], stdout=subprocess.DEVNULL)
+        #rc = subprocess.call(["pdflatex", "-halt-on-error", texfile])
+        rc = subprocess.call(["pdflatex", "-halt-on-error", texfile], stdout=subprocess.DEVNULL)
 
     if rc == 0:
         print("{}: Success!".format(pdfname))
@@ -38,7 +38,7 @@ def generate_pdf(pdfname, tex, repetitions=2):
         print("{}: Failed!".format(pdfname))
 
     os.rename(pdffile, pdfname)
-    shutil.copy(pdfname, "{}/pdf".format(current_dir))
+    shutil.copy(pdfname, os.path.join(current_dir,"pdf"))
     os.chdir(current_dir)
     shutil.rmtree(temp)
 
@@ -46,7 +46,7 @@ def generate_pdf(pdfname, tex, repetitions=2):
 def generate_pdf_from_file(fname, repetitions=2):
     "Generates a pdf from a TeX file."
 
-    path, filename = fname.rsplit('/', 1)
+    path, filename = os.path.split(fname)
     pdfname = "{}.pdf".format(filename[:-4])
 
     current_dir = os.getcwd()
@@ -83,16 +83,15 @@ def merge_pdfs(file_list, pdfname):
             fo = open(f, "rb")
             merger.append(fileobj = fo)
 
-
         elif type(f).__name__ == "Revue":
             for act in f.acts:
                 for m in act.materials:
-                    merger.append("{}/{}.pdf".format(m.category,m.file_name[:-4]))
+                    merger.append(os.path.join(m.category, "{}.pdf".format(m.file_name[:-4])))
         
         elif type(f).__name__ == "Actor":
             print(f.name)
             for role in f.roles:
-                merger.append("{}/{}.pdf".format(role.material.category,role.material.file_name[:-4]))
+                merger.append(os.path.join(role.material.category, "{}.pdf".format(role.material.file_name[:-4])))
 
 
     output = open(pdfname, "wb")

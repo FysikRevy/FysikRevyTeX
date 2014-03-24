@@ -20,8 +20,8 @@ class Material:
             role.add_material_path(self.path)
         
         # Extract the category (which is the directory):
-        self.category = self.path.split("/")[-2]
-        self.file_name = self.path.split("/")[-1]
+        path, self.file_name = os.path.split(self.path)
+        self.category = os.path.split(path)[1]
 
         try:
             self.melody = info_dict["melody"]

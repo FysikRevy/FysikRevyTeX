@@ -183,8 +183,8 @@ def create_props_list(revue):
     return tex
 
 
-def create_frontpage(revue, config):
-    c = config["Frontpage"]
+def create_frontpage(revue):
+    c = revue.config["Frontpage"]
     tex = r"""
 \documentclass[11pt]{{article}}
 \usepackage[danish]{{babel}}
@@ -245,7 +245,7 @@ def create_frontpage(revue, config):
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \Large
-Du holder nu i hånden de guddommelige \TeX ster til {name} {year}. Dette indebærer (som tidligere år) følgende:
+Du holder nu i hånden de guddommelige \TeX ster til {name}\ {year}. Dette indebærer (som tidligere år) følgende:
 \begin{{itemize}}
 \item Du (\TeX)hæfter for disse \TeX ster med dit liv.
 \item Hvis du mister dem vil du blive chapset i osten med et vådt hestebrød!
@@ -281,7 +281,7 @@ finde på at stjæle DIT \TeX hæfte.
     return tex
 
 
-def create_contacts_list(fname):
+def create_contacts_list(fname, encoding='utf-8'):
     """Parses a CSV file to create the contacts list. Comments starting with # will be interpreted as section headings. 
 Comments starting with ## will be interpreted as column headers in the list."""
 
@@ -300,7 +300,7 @@ Comments starting with ## will be interpreted as column headers in the list."""
     
     first_table = True
 
-    with open(fname, 'r') as f:
+    with open(fname, 'r', encoding=encoding) as f:
         for line in f.readlines():
             line = line.strip()
 

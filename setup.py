@@ -5,7 +5,7 @@ import subprocess
 import sys
 from time import gmtime, strftime
 
-sys.path.append("scripts/")
+sys.path.append("scripts")
 from helper_functions import wildcard_copy
 import setup_functions as sf
 
@@ -17,13 +17,6 @@ dst_dir = os.path.abspath(sys.argv[1])
 # Get the current working directory:
 src_dir = os.getcwd()
 
-# Setting up configuration:
-config = ConfigParser()
-config["Frontpage"] = {"version": "0011000100110000",
-                       "top quote": r"Per Hedegård $\neq$ Baconost",
-                       "bottom quote": "``Hvis ikke jeg havde haft den ugentlige dosis Rage Against the Machine på Caféen?, var jeg nok aldrig blevet prodekan''"}
-config["Revue info"] = {}
-
 # Try creating the directory:
 try:
     os.mkdir(dst_dir)
@@ -34,45 +27,62 @@ except:
     #os.mkdir(dst_dir)
 
 
-# Add to config:
-config["Revue info"]["revue name"] = input("Enter revue name (enter for FysikRevy\\texttrademark): ")
-config["Revue info"]["revue year"] = input("Enter year (enter for {}): ".format(strftime("%Y", gmtime())))
 
-if config["Revue info"]["revue name"] == "":
-    config["Revue info"]["revue name"] = r"FysikRevy\texttrademark"
-if config["Revue info"]["revue year"] == "":
-    config["Revue info"]["revue year"] = strftime("%Y", gmtime())
+# Ask for name and year:
+revue_name = input("Enter revue name (enter for FysikRevy\\texttrademark): ")
+revue_year = input("Enter year (enter for {}): ".format(strftime("%Y", gmtime())))
+
+if revue_name == "":
+    revue_name = r"FysikRevy\texttrademark"
+if revue_year == "":
+    revue_year = strftime("%Y", gmtime())
+
+
+
+# Copy configuration:
+with open(os.path.join(src_dir, "templates", "revytex.conf"), 'r', encoding='utf-8') as f:
+    conf = f.read()
+conf = conf.replace("REVUENAME", revue_name)
+conf = conf.replace("REVUEYEAR", revue_year)
+
+with open(os.path.join(dst_dir, "revytex.conf"), 'w', encoding='utf-8') as f:
+    f.write(conf)
+
+# Load the config file to get the correct directory names to be created:
+conf = ConfigParser()
+conf.read(os.path.join(dst_dir, "revytex.conf"))
+paths = conf["Paths"]
+
 
 # Create new directories:
-os.mkdir("{}/pdf".format(dst_dir))
-os.mkdir("{}/pdf/individuals".format(dst_dir))
-os.mkdir("{}/sange".format(dst_dir))
-os.mkdir("{}/sketches".format(dst_dir))
-os.mkdir("{}/templates".format(dst_dir))
+os.mkdir(os.path.join(dst_dir, paths["pdf"]))
+os.mkdir(os.path.join(dst_dir, paths["individual pdf"]))
+os.mkdir(os.path.join(dst_dir, paths["songs"]))
+os.mkdir(os.path.join(dst_dir, paths["sketches"]))
+os.mkdir(os.path.join(dst_dir, paths["templates"]))
 
 # Create templates:
-sf.create_sketch_template("{}/templates".format(dst_dir), config)
-sf.create_song_template("{}/templates".format(dst_dir), config)
-shutil.copy("{}/templates/contacts.csv".format(src_dir),"{}/templates/contacts.csv".format(dst_dir))
+sf.create_sketch_template(os.path.join(dst_dir, paths["templates"]), conf)
+sf.create_song_template(os.path.join(dst_dir, paths["templates"]), conf)
+shutil.copy(os.path.join(src_dir, paths["templates"], "contacts.csv"), 
+            os.path.join(dst_dir, "contacts.csv"))
 
 # Create symbolic links for system scripts and directories:
-os.symlink("{}/scripts".format(src_dir), "{}/scripts".format(dst_dir), target_is_directory=True)
-os.symlink("{}/create.py".format(src_dir), "{}/create.py".format(dst_dir))
-os.symlink("{}/scripts/revy.sty".format(src_dir), "{}/revy.sty".format(dst_dir))
-os.symlink("{}/scripts/revy.sty".format(src_dir), "{}/sange/revy.sty".format(dst_dir))
-os.symlink("{}/scripts/revy.sty".format(src_dir), "{}/sketches/revy.sty".format(dst_dir))
+os.symlink(os.path.join(src_dir, "scripts"), os.path.join(dst_dir, "scripts"), target_is_directory=True)
+os.symlink(os.path.join(src_dir, "create.py"), os.path.join(dst_dir, "create.py"))
+os.symlink(os.path.join(src_dir, "scripts", "revy.sty"), os.path.join(dst_dir, "revy.sty"))
+os.symlink(os.path.join(src_dir, "scripts", "revy.sty"), os.path.join(dst_dir, paths["songs"], "revy.sty"))
+os.symlink(os.path.join(src_dir, "scripts", "revy.sty"), os.path.join(dst_dir, paths["sketches"], "revy.sty"))
 
 
 # Change to the new directory:
 os.chdir(dst_dir)
 
 ### NOTE: The following is for testing only and should be removed!
-#wildcard_copy("/home/ks/documents/fysikrevy/jubilæumsrevy13/2013/sange/*.tex", "{}/sange/".format(dst_dir))
-#wildcard_copy("/home/ks/documents/fysikrevy/jubilæumsrevy13/2013/sketches/*.tex", "{}/sketches/".format(dst_dir))
-#wildcard_copy("/home/ks/documents/fysikrevy/jubilæumsrevy13/2013/sketches/*.jpg", "{}/sketches/".format(dst_dir))
+wildcard_copy("/home/ks/documents/fysikrevy/jubilæumsrevy13/2013/sange/*.tex", "{}/sange/".format(dst_dir))
+wildcard_copy("/home/ks/documents/fysikrevy/jubilæumsrevy13/2013/sketches/*.tex", "{}/sketches/".format(dst_dir))
+wildcard_copy("/home/ks/documents/fysikrevy/jubilæumsrevy13/2013/sketches/*.jpg", "{}/sketches/".format(dst_dir))
 
-with open("revytex.conf", 'w') as configfile:
-    config.write(configfile)
 
 
 print("\nCongratulations! FysikRevyTeX is now successfully set up and ready to run!")
