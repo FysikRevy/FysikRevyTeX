@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from configparser import ConfigParser
 import os
 import sys
@@ -27,6 +28,15 @@ def create_individual_pdfs(revue):
                      actor,
                      "pdf/rekvisitliste.pdf"]
         hf.merge_pdfs(file_list, "pdf/individuals/{}.pdf".format(actor.name))
+
+def create_song_manus_pdf(revue):
+    file_list = []
+    for act in revue.acts:
+        for material in act.materials:
+            if material.category == "sange":
+                file_list.append("{}.pdf".format(material.path[-4:]))
+    hf.merge_pdfs(file_list, "pdf/sangmanuskript.pdf")
+
 
 
 if __name__ == "__main__":
@@ -103,3 +113,5 @@ if __name__ == "__main__":
             contacts = tex.create_contacts_list("templates/contacts.csv")
             hf.generate_pdf("kontaktliste.pdf", contacts)
 
+        if "songmanus" in sys.argv:
+            create_song_manus_pdf(revue)
