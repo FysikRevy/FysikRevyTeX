@@ -6,7 +6,7 @@
 [revytex]: https://github.com/dikurevy/RevyTeX
 
 ## Set up instructions
-FysikRevyTeX have only very few dependencies:
+FysikRevyTeX has very few dependencies:
 
 * Python 3.3 or above.
 * [PyPDF2][] for the PDF magic.
