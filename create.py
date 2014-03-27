@@ -5,9 +5,9 @@ import sys
 sys.path.append("scripts")
 
 import classy_revy as cr
-import tex_functions as tex
-import helper_functions as hf
 import setup_functions as sf
+import converters as cv
+import tex as tex
            
 
 def create_material_pdfs(revue):
@@ -50,6 +50,7 @@ if __name__ == "__main__":
 
     revue = cr.Revue.fromfile("aktoversigt.plan")
     path = revue.config["Paths"]
+    converter = cv.Converter(revue.conf)
 
     if len(sys.argv) < 2 or "manus" in sys.argv:
         # Create everything.
@@ -89,8 +90,7 @@ if __name__ == "__main__":
 
     else:
         if "aktoversigt" in sys.argv:
-            aktoversigt = tex.create_act_outline(revue)
-            hf.generate_pdf("aktoversigt.pdf", aktoversigt)
+            revue.create_act_outline("aktoversigt.pdf")
 
         if "roles" in sys.argv:
             roles = tex.create_role_overview(revue)
@@ -111,8 +111,9 @@ if __name__ == "__main__":
             create_individual_pdfs(revue)
 
         if "contacts" in sys.argv:
-            contacts = tex.create_contacts_list("contacts.csv")
-            hf.generate_pdf("kontaktliste.pdf", contacts)
+            tex = tex.TeX(revue.conf)
+            tex.create_contacts_list("contacts.csv")
+            tex.topdf("kontaktliste.pdf")
 
         if "songmanus" in sys.argv:
             create_song_manus_pdf(revue)

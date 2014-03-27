@@ -1,0 +1,50 @@
+\documentclass[landscape,a3paper]{article}
+\usepackage{revy}
+\usepackage[danish]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage[a3paper]{geometry} 
+
+\frenchspacing
+
+\title{\large{Rolleoversigt}}
+
+\version{<+VERSION+>}
+\revyname{<+REVUENAME+>}
+\revyyear{<+REVUEYEAR+>}
+
+\textwidth 360mm
+\textheight 260mm
+
+\evensidemargin 0pt
+\oddsidemargin 0pt
+
+\headsep 1cm
+
+\renewcommand{\baselinestretch}{1.0}
+\newcommand{\q}{\rule{5.5mm}{0mm}}
+
+\newcommand{\actor}[1]{\rotatebox{90}{#1\ }}
+\def\makeatactive{\catcode`\@=\active}
+\newcount\savedcat
+{\makeatactive\catcode`\|=\active\global\let|\ignorespaces
+\gdef\actors{\makeatactive\savedcat=\the\catcode`\|\catcode`\|=\active\@actors}
+\long\gdef\@actors#1{#1@@\makeatother\catcode`\|=\savedcat}
+\gdef@#1@{\def\tempa{}\def\tempb{#1}\ifx\tempa\tempb
+\let\next\relax\else\def\next{&\actor{#1}@}\fi\next}}
+
+\begin{document}
+\begin{center}
+
+\maketitle
+
+\begin{tabular}{|rl|*{<+NACTORS+>}{@{}c@{}|}}
+\hline
+
+&Sketch / Navn
+
+<+ROLEMATRIX+>
+
+\end{tabular}
+\end{center}
+\end{document}

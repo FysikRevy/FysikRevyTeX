@@ -1,5 +1,11 @@
+import glob
 import os
+import shutil
 import sys
+
+def wildcard_copy(src, dst):
+    for file in glob.glob(src):
+        shutil.copy(file, dst)
 
 def create_sketch_template(dir, config, encoding='utf-8'):
     with open(os.path.join(config["Paths"]["templates"], "sketchskabelon.tex"), 'r', encoding=encoding) as f:

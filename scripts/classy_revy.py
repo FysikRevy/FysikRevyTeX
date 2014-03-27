@@ -1,5 +1,6 @@
 import os
 from configparser import ConfigParser
+from time import localtime, strftime
 
 from funky_revy import parsetexfile 
 import base_classes as bc
@@ -171,4 +172,6 @@ class Revue:
             acts = "{}\n{}".format(acts, self.acts[i])
 
         return acts
+
+
 
