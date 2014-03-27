@@ -6,7 +6,6 @@ import sys
 from time import gmtime, strftime
 
 sys.path.append("scripts")
-from helper_functions import wildcard_copy
 import setup_functions as sf
 
 if len(sys.argv) < 2:
@@ -64,7 +63,10 @@ os.mkdir(os.path.join(dst_dir, paths["templates"]))
 # Create templates:
 sf.create_sketch_template(os.path.join(dst_dir, paths["templates"]), conf)
 sf.create_song_template(os.path.join(dst_dir, paths["templates"]), conf)
-shutil.copy(os.path.join(src_dir, paths["templates"], "contacts.csv"), 
+# Copy templates to the right directories:
+sf.wildcard_copy(os.path.join(src_dir, "templates", "*_template.tex"), 
+                 os.path.join(dst_dir, paths["templates"]))
+shutil.copy(os.path.join(src_dir, "templates", "contacts.csv"), 
             os.path.join(dst_dir, "contacts.csv"))
 
 # Create symbolic links for system scripts and directories:
@@ -79,9 +81,9 @@ os.symlink(os.path.join(src_dir, "scripts", "revy.sty"), os.path.join(dst_dir, p
 os.chdir(dst_dir)
 
 ### NOTE: The following is for testing only and should be removed!
-wildcard_copy("/home/ks/documents/fysikrevy/jubilæumsrevy13/2013/sange/*.tex", "{}/sange/".format(dst_dir))
-wildcard_copy("/home/ks/documents/fysikrevy/jubilæumsrevy13/2013/sketches/*.tex", "{}/sketches/".format(dst_dir))
-wildcard_copy("/home/ks/documents/fysikrevy/jubilæumsrevy13/2013/sketches/*.jpg", "{}/sketches/".format(dst_dir))
+sf.wildcard_copy("/home/ks/documents/fysikrevy/jubilæumsrevy13/2013/sange/*.tex", "{}/sange/".format(dst_dir))
+sf.wildcard_copy("/home/ks/documents/fysikrevy/jubilæumsrevy13/2013/sketches/*.tex", "{}/sketches/".format(dst_dir))
+sf.wildcard_copy("/home/ks/documents/fysikrevy/jubilæumsrevy13/2013/sketches/*.jpg", "{}/sketches/".format(dst_dir))
 
 
 

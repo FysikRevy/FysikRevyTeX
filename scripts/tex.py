@@ -291,16 +291,16 @@ class TeX:
         with open(templatefile, 'r', encoding=encoding) as f:
             template = f.read()
 
-        self.tex = template.replace("<+VERSION+>", self.revue.conf["Frontpage"]["version"])
+        self.tex = template.replace("<+VERSION+>", self.conf["Frontpage"]["version"])
 
-        if self.revue.conf["Revue info"]["revue name"] == "\\FysikRevy\\texttrademark":
+        if self.conf["Revue info"]["revue name"] == "\\FysikRevy\\texttrademark":
             self.tex = self.tex.replace("<+REVUENAME+>", "\\FysikRevy")
         else:
             self.tex = self.tex.replace("<+REVUENAME+>", self.revue.name)
 
         self.tex = self.tex.replace("<+REVUEYEAR+>", self.revue.year)
-        self.tex = self.tex.replace("<+TOPQUOTE+>", self.revue.conf["Frontpage"]["top quote"])
-        self.tex = self.tex.replace("<+BOTTOMQUOTE+>", self.revue.conf["Frontpage"]["bottom quote"])
+        self.tex = self.tex.replace("<+TOPQUOTE+>", self.conf["Frontpage"]["top quote"])
+        self.tex = self.tex.replace("<+BOTTOMQUOTE+>", self.conf["Frontpage"]["bottom quote"])
 
 
     #----------------------------------------------------------------------
