@@ -2,7 +2,6 @@ import os
 from configparser import ConfigParser
 from time import localtime, strftime
 
-from funky_revy import parsetexfile 
 import base_classes as bc
 
 class Material:
@@ -117,8 +116,8 @@ class Revue:
         self.actors = []
 
         # Load variables from the configuration:
-        self.config = ConfigParser()
-        self.config.read(config_file)
+        self.conf = ConfigParser()
+        self.conf.read(config_file)
         self.name = self.config["Revue info"]["revue name"]
         self.year = self.config["Revue info"]["revue year"]
 

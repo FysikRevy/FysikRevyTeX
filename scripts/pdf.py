@@ -30,8 +30,8 @@ class PDF:
                         "{}.pdf".format(role.material.file_name[:-4])))
 
             else:
-                raise TypeError("List must only contain PDF file paths,
-                        a Revue object or an Actor object.")
+                raise TypeError("List must only contain PDF file paths, "
+                                "a Revue object or an Actor object.")
 
         output = open(pdfname, "wb")
         merger.write(output)

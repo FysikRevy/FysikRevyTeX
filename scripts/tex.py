@@ -63,9 +63,21 @@ def extract_multiple_lines(lines, line_number, start_delimiter='{', end_delimite
 
 
 class TeX:
-    def __init__(self, revue):
-        self.revue = revue
-        self.conf = self.revue.conf
+    def __init__(self, arg):
+        if type(arg) == str and arg[-4] == 'conf':
+            # Load variables from the configuration:
+            self.conf = ConfigParser()
+            self.conf.read(config_file)
+            self.revue = None
+
+        elif type(arg).__name__ == "Revue":
+            # Load configuration from revue:
+            self.revue = revue
+            self.conf = self.revue.conf
+
+        else:
+            raise TypeError("Argument must be either a config file "
+                            "or a Revue object.")
 
         self.tex = ""
         self.fname = ""
@@ -174,9 +186,17 @@ class TeX:
 
     #----------------------------------------------------------------------
 
-    def create_act_outline(self, templatefile='templates/act_outline_template.tex', encoding='utf-8'):
+    def create_act_outline(self, templatefile="", encoding='utf-8'):
         "Create act outline from Revue object."
         
+        if self.revue == None:
+            raise RuntimeError("The TeX object needs to be instantiated with "
+                    "a Revue object in order to use create_act_outline().")
+
+        if templatefile == "":
+            templatefile = os.path.join(self.conf["Paths"]["template"],
+                                        "act_outline_template.tex")
+
         self.tex = ""
 
         with open(templatefile, 'r', encoding=encoding) as f:
@@ -187,7 +207,9 @@ class TeX:
         template[0] = template[0].replace("<+REVUEYEAR+>", self.year)
 
         for act in self.revue.acts:
-            self.tex += "\\section*{{{act_title} \\small{{\\textbf{{\\emph{{(Tidsestimat: {act_length} minutter)}}}}}}}}\n".format(act_title=act.name, act_length=act.get_length())
+            self.tex += ("\\section*{{{act_title} \\small{{\\textbf{{"
+                        "\\emph{{(Tidsestimat: {act_length} minutter)}}"
+                        "}}}}}}\n".format(act_title=act.name, act_length=act.get_length()))
             self.tex += "\\begin{enumerate}\n"
 
             for m in act.materials:
@@ -207,8 +229,15 @@ class TeX:
 
     #----------------------------------------------------------------------
 
-    def create_role_overview(self, templatefile='templates/role_overview_template.tex', encoding='utf-8'):
+    def create_role_overview(self, templatefile="", encoding='utf-8'):
+        
+        if self.revue == None:
+            raise RuntimeError("The TeX object needs to be instantiated with "
+                    "a Revue object in order to use create_role_overview().")
 
+        if templatefile == "":
+            templatefile = os.path.join(self.conf["Paths"]["template"],
+                                        "role_overview_template.tex")
         self.tex = ""
 
         with open(templatefile, 'r', encoding=encoding) as f:
@@ -233,7 +262,8 @@ class TeX:
         self.tex += r"}\\\hline"
 
         for act in self.revue.acts:
-            self.tex += r"\multicolumn{{{width}}}{{|l|}}{{\textbf{{{title}}}}}\\".format(width=len(self.revue.actors)+2, title=act.name)
+            self.tex += r"\multicolumn{{{width}}}{{|l|}}{{\textbf{{{title}}}}}\\".format(
+                    width=len(self.revue.actors)+2, title=act.name)
             self.tex += "\n\\hline\n"
 
             for m, mat in enumerate(act.materials):
@@ -253,7 +283,15 @@ class TeX:
 
     #----------------------------------------------------------------------
 
-    def create_props_list(self, templatefile='templates/props_list_template.tex', encoding='utf-8'):
+    def create_props_list(self, templatefile="", encoding='utf-8'):
+        
+        if self.revue == None:
+            raise RuntimeError("The TeX object needs to be instantiated with "
+                    "a Revue object in order to use create_props_list().")
+
+        if templatefile == "":
+            templatefile = os.path.join(self.conf["Paths"]["template"],
+                                        "props_list_template.tex")
 
         self.tex = ""
 
@@ -288,7 +326,15 @@ class TeX:
 
     #----------------------------------------------------------------------
 
-    def create_frontpage(self, templatefile='templates/frontpage_template.tex', encoding='utf-8'):
+    def create_frontpage(self, templatefile="", encoding='utf-8'):
+        
+        if self.revue == None:
+            raise RuntimeError("The TeX object needs to be instantiated with "
+                    "a Revue object in order to use create_frontpage().")
+
+        if templatefile == "":
+            templatefile = os.path.join(self.conf["Paths"]["template"],
+                                        "frontpage_template.tex")
 
         self.tex = ""
 
@@ -303,13 +349,23 @@ class TeX:
             self.tex = self.tex.replace("<+REVUENAME+>", self.revue.name)
 
         self.tex = self.tex.replace("<+REVUEYEAR+>", self.revue.year)
-        self.tex = self.tex.replace("<+TOPQUOTE+>", self.conf["Frontpage"]["top quote"])
-        self.tex = self.tex.replace("<+BOTTOMQUOTE+>", self.conf["Frontpage"]["bottom quote"])
+        self.tex = self.tex.replace("<+TOPQUOTE+>", 
+                            self.conf["Frontpage"]["top quote"])
+        self.tex = self.tex.replace("<+BOTTOMQUOTE+>", 
+                            self.conf["Frontpage"]["bottom quote"])
 
 
     #----------------------------------------------------------------------
 
-    def create_signup_form(self, templatefile='templates/signup_form_template.tex', encoding='utf-8'):
+    def create_signup_form(self, templatefile="", encoding='utf-8'):
+        
+        if self.revue == None:
+            raise RuntimeError("The TeX object needs to be instantiated with "
+                    "a Revue object in order to use create_signup_form().")
+        
+        if templatefile == "":
+            templatefile = os.path.join(self.conf["Paths"]["template"],
+                    "signup_form_template.tex")
 
         self.tex = ""
 
