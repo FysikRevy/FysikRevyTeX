@@ -30,9 +30,12 @@ class Converter:
 
         elif type(tex).__name__ == "TeX":
             # Object is a TeX object.
-            tempname = uuid.uuid4() # Generate unique name
-            texfile = "{}.tex".format(tempname)
-            pdffile = "{}.pdf".format(tempname)
+            if tex.fname:
+                fname = tex.fname
+            else:
+                fname = uuid.uuid4() # Generate unique name
+            texfile = "{}.tex".format(fname)
+            pdffile = "{}.pdf".format(fname)
             tex.write(os.path.join(temp,texfile), encoding=encoding)
 
 
@@ -58,4 +61,16 @@ class Converter:
         shutil.copy(pdfname, os.path.join(current_dir,self.conf["Paths"]["pdf"]))
         os.chdir(current_dir)
         shutil.rmtree(temp)
+
+    def _textopdf_unpack(self, args):
+        self.textopdf(args[0], args[1], args[2])
+
+    def parallel_textopdf(self, file_list, repetitions=2, encoding='utf-8'):
+
+        new_file_list = []
+        for el in file_list:
+            new_file_list.append(el, repetitions, encoding)
+
+        with Pool(processes = cpu_count()) as pool:
+            result = pool.starmap(self._textopdf_unpack, new_file_list)
 

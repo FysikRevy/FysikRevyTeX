@@ -7,28 +7,34 @@ sys.path.append("scripts")
 import classy_revy as cr
 import setup_functions as sf
 import converters as cv
-import tex as tex
+import tex 
+import pdf 
            
 
 def create_material_pdfs(revue):
     file_list = []
     for act in revue.acts:
         for material in act.materials:
-            #if material.category in ["sange", "sketches"]:
             file_list.append(material.path)
 
-    hf.generate_multiple_pdfs(file_list)
+    conv = Converter(revue.conf)
+    conv.parallel_textopdf(file_list)
 
 def create_individual_pdfs(revue):
-    # TODO: Make this run in parallel for all actors.
     path = revue.config["Paths"]
+    total_list = []
     for actor in revue.actors:
-        file_list = [os.path.join(path["pdf"],"frontpage.pdf"), 
-                     os.path.join(path["pdf"],"aktoversigt.pdf"), 
-                     os.path.join(path["pdf"],"rolleliste.pdf"),
-                     actor,
-                     os.path.join(path["pdf"],"rekvisitliste.pdf")]
-        hf.merge_pdfs(file_list, os.path.join(path["individual pdf"], "{}.pdf".format(actor.name)))
+        individual_list = (os.path.join(path["pdf"],"frontpage.pdf"), 
+                             os.path.join(path["pdf"],"aktoversigt.pdf"), 
+                             os.path.join(path["pdf"],"rolleliste.pdf"),
+                             actor,
+                             os.path.join(path["pdf"],"rekvisitliste.pdf"))
+        total_list.append((individual_list, 
+                           os.path.join(path["individual pdf"],
+                                       "{}.pdf".format(actor.name))))
+
+    pdf = PDF(revue.conf)
+    pdf.parallel_pdfmerge(total_list)
 
 def create_song_manus_pdf(revue):
     path = revue.config["Paths"]
@@ -37,7 +43,46 @@ def create_song_manus_pdf(revue):
         for material in act.materials:
             if material.category == "sange":
                 file_list.append("{}.pdf".format(material.path[:-4]))
-    hf.merge_pdfs(file_list, os.path.join(path["pdf"],"sangmanuskript.pdf"))
+    
+    pdf = PDF(revue.conf)
+    pdf.pdfmerge(file_list, os.path.join(path["pdf"],"sangmanuskript.pdf"))
+
+
+def create_parts(revue, args):
+    tex = TeX(revue)
+
+    if "aktoversigt" in sys.argv:
+        tex.create_act_outline()
+        tex.topdf("aktoversigt.pdf")
+
+    elif "roles" in sys.argv:
+        tex.create_role_overview()
+        tex.topdf("rolleliste.pdf")
+
+    elif "material" in sys.argv:
+        create_material_pdfs(revue)
+
+    elif "frontpage" in sys.argv:
+        tex.create_frontpage()
+        tex.topdf("forside.pdf")
+    
+    elif "props" in sys.argv:
+        tex.create_props_list()
+        tex.topdf("rekvisitliste.pdf")
+
+    elif "individual" in sys.argv:
+        create_individual_pdfs(revue)
+
+    elif "contacts" in sys.argv:
+        tex.create_contacts_list("contacts.csv")
+        tex.topdf("kontaktliste.pdf")
+
+    elif "songmanus" in sys.argv:
+        create_song_manus_pdf(revue)
+    
+    elif "signup" in sys.argv:
+        tex.create_signup_form()
+        tex.topdf("rolletilmelding.pdf")
 
 
 
@@ -46,78 +91,29 @@ if __name__ == "__main__":
     if "plan" in sys.argv or not os.path.isfile("aktoversigt.plan"):
         sf.create_plan_file("aktoversigt.plan")
         sys.exit("Plan file 'aktoversigt.plan' created successfully.")
-            
 
     revue = cr.Revue.fromfile("aktoversigt.plan")
     path = revue.config["Paths"]
-    converter = cv.Converter(revue.conf)
+    conv = cv.Converter(revue.conf)
 
     if len(sys.argv) < 2 or "manus" in sys.argv:
-        # Create everything.
-        
-        # Front page
-        frontpage = tex.create_frontpage(revue)
-        hf.generate_pdf("frontpage.pdf", frontpage)
-
-        # Aktoversigt:
-        aktoversigt = tex.create_act_outline(revue)
-        hf.generate_pdf("aktoversigt.pdf", aktoversigt)
-        
-        # Role overview:
-        roles = tex.create_role_overview(revue)
-        hf.generate_pdf("rolleliste.pdf", roles)
-        
-        # Props list:
-        props = tex.create_props_list(revue)
-        hf.generate_pdf("rekvisitliste.pdf", props)
-        
-        # PDFs for sketches/songs:
-        create_material_pdfs(revue)
-        
-        # Contacts list:
-        contacts = tex.create_contacts_list("contacts.csv")
-        hf.generate_pdf("kontaktliste.pdf", contacts)
-            
-        hf.merge_pdfs([os.path.join(path["pdf"],"frontpage.pdf"), 
-                       os.path.join(path["pdf"],"aktoversigt.pdf"), 
-                       os.path.join(path["pdf"],"rolleliste.pdf"), 
-                       revue, 
-                       os.path.join(path["pdf"],"rekvisitliste.pdf"), 
-                       os.path.join(path["pdf"],"kontaktliste.pdf")], 
-                       os.path.join(path["pdf"],"manuskript.pdf"))
-
-        print("Manuscript created successfully!")
-
+        arglist = ("material", "aktoversigt", "roles", "frontpage", "props",
+                   "contacts", "individual", "songmanus")
     else:
-        if "aktoversigt" in sys.argv:
-            revue.create_act_outline("aktoversigt.pdf")
+        arglist = sys.argv[1:]
 
-        if "roles" in sys.argv:
-            roles = tex.create_role_overview(revue)
-            hf.generate_pdf("rolleliste.pdf", roles)
+    for arg in arglist:
+        create_parts(revue, arg)
 
-        if "material" in sys.argv:
-            create_material_pdfs(revue)
 
-        if "frontpage" in sys.argv:
-            frontpage = tex.create_frontpage(revue, config=conf)
-            hf.generate_pdf("frontpage.pdf", frontpage)
-        
-        if "props" in sys.argv:
-            props = tex.create_props_list(revue)
-            hf.generate_pdf("rekvisitliste.pdf", props)
+    if len(sys.argv) < 2 or "manus" in sys.argv:
+        pdf = PDF(revue.conf)
+        pdf.pdfmerge((os.path.join(path["pdf"],"forside.pdf"), 
+                      os.path.join(path["pdf"],"aktoversigt.pdf"), 
+                      os.path.join(path["pdf"],"rolleliste.pdf"), 
+                      revue, 
+                      os.path.join(path["pdf"],"rekvisitliste.pdf"), 
+                      os.path.join(path["pdf"],"kontaktliste.pdf")), 
+                      os.path.join(path["pdf"],"manuskript.pdf"))
 
-        if "individual" in sys.argv:
-            create_individual_pdfs(revue)
-
-        if "contacts" in sys.argv:
-            tex = tex.TeX(revue.conf)
-            tex.create_contacts_list("contacts.csv")
-            tex.topdf("kontaktliste.pdf")
-
-        if "songmanus" in sys.argv:
-            create_song_manus_pdf(revue)
-        
-        if "signup" in sys.argv:
-            contacts = tex.create_signup_form(revue)
-            hf.generate_pdf("rolletilmelding.pdf", contacts)
+        print("Manuscript successfully created!")

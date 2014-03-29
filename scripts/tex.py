@@ -1,3 +1,4 @@
+import os
 import re
 import sys
 
@@ -67,6 +68,7 @@ class TeX:
         self.conf = self.revue.conf
 
         self.tex = ""
+        self.fname = ""
         
         # Create dictionary to store relevant information:
         self.info = {}
@@ -74,6 +76,7 @@ class TeX:
 
     def read(self, fname, encoding='utf-8'):
         "Read a TeX file without parsing it."
+        self.fname = os.path.split(fname)[1]
         with open(fname, 'r', encoding=encoding) as f:
             self.tex = f.read()
 
@@ -87,6 +90,7 @@ class TeX:
     def parse(self, fname, encoding='utf-8'):
         "Parse a TeX file and extract revue relevant information to a dictionary."
         
+        self.fname = os.path.split(fname)[1]
         # Create lists for other stuff:
         self.info["props"] = []
         self.info["roles"] = []
