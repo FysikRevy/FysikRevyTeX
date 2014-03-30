@@ -1,8 +1,12 @@
 import os
 import re
 import sys
+from time import localtime, strftime
+
+from IPython import embed
 
 from base_classes import Prop, Role
+import converters as cv
 
 # Regular expression that extracts everything between \ and {:
 cmd_re = re.compile(r"^.*\\(.*){.*$")
@@ -63,21 +67,26 @@ def extract_multiple_lines(lines, line_number, start_delimiter='{', end_delimite
 
 
 class TeX:
-    def __init__(self, arg):
+    def __init__(self, arg = None):
         if type(arg) == str and arg[-4] == 'conf':
             # Load variables from the configuration:
             self.conf = ConfigParser()
-            self.conf.read(config_file)
+            self.conf.read(arg)
             self.revue = None
 
         elif type(arg).__name__ == "Revue":
             # Load configuration from revue:
-            self.revue = revue
+            self.revue = arg
             self.conf = self.revue.conf
 
+        elif arg == None:
+            self.revue = None
+            self.conf = None
+            
         else:
-            raise TypeError("Argument must be either a config file "
-                            "or a Revue object.")
+            raise TypeError("The optional argument must be either "
+                            "a config file or a Revue object.")
+
 
         self.tex = ""
         self.fname = ""
@@ -114,73 +123,79 @@ class TeX:
         # List of important keywords/commands:
         important_list = ["prop", "role", "sings", "says"]
 
-        with open(filename, mode='r', encoding=encoding) as f:
+        with open(fname, mode='r', encoding=encoding) as f:
             lines = f.readlines()
-            for n,line in enumerate(lines):
-                line = line.strip() # Remove leading and trailing whitespaces
-                if len(line) > 0 and line[0] == '\\': # only look for a command
 
-                    if "{" not in line:
-                        # If it is a strange line, extract the first part (everything until the
-                        # first non-alphanumeric character that isn't '\':
-                        first_part = re.findall("\w+", line)[0]
+        for n,line in enumerate(lines):
+            line = line.strip() # Remove leading and trailing whitespaces
+            if len(line) > 0 and line[0] == '\\': # only look for a command
 
-                        if first_part not in ignore_list:
-                            # Find also the second part, i.e. whatever follows the first part (including
-                            # the non-alphanumeric character):
-                            end_part = re.findall("^.\w+(.*)", line)[0]
+                if "{" not in line:
+                    # If it is a strange line, extract the first part (everything until the
+                    # first non-alphanumeric character that isn't '\':
+                    first_part = re.findall("\w+", line)[0]
 
-                            # Store the info:
-                            self.info[first_part] = end_part
+                    if first_part not in ignore_list:
+                        # Find also the second part, i.e. whatever follows the first part (including
+                        # the non-alphanumeric character):
+                        end_part = re.findall("^.\w+(.*)", line)[0]
 
-                    else:
-                        command = re.findall("\w+", line)[0] # Extract (the first) command using regex
+                        # Store the info:
+                        self.info[first_part] = end_part
 
-                        if command not in ignore_list:
+                else:
+                    command = re.findall("\w+", line)[0] # Extract (the first) command using regex
 
-                            try:
-                                keyword = kw_re.findall(line)[0] # Extract (the first) keyword using regex
-                            except IndexError:
-                                # There is no ending '}' in the line.
-                                keyword = extract_multiple_lines(lines, n)
-                            
-                            # Now check whether the command is one of the important ones:
-                            if command in important_list:
-                                if command == "prop":
-                                    prop = keyword
+                    if command not in ignore_list:
 
-                                    try:
-                                        responsible = opt_re.findall(line)[0]
-                                        index = line.rfind("]")
-                                    except IndexError:
-                                        # There is no responsible for this item.
-                                        responsible = ""
-                                        index = line.rfind("}")
+                        try:
+                            keyword = kw_re.findall(line)[0] # Extract (the first) keyword using regex
+                        except IndexError:
+                            # There is no ending '}' in the line.
+                            keyword = extract_multiple_lines(lines, n)
+                        
+                        # Now check whether the command is one of the important ones:
+                        if command in important_list:
+                            if command == "prop":
+                                prop = keyword
 
-                                    description = line[index+1:].strip()
-                                    self.info["props"].append(Prop(prop, responsible, description))
+                                try:
+                                    responsible = opt_re.findall(line)[0]
+                                    index = line.rfind("]")
+                                except IndexError:
+                                    # There is no responsible for this item.
+                                    responsible = ""
+                                    index = line.rfind("}")
 
-                                elif command == "role":
-                                    abbreviation = keyword
-                                    name = opt_re.findall(line)[0]
-                                    role = eol_re.findall(line)[0]
-                                    if len(name) > 0:
-                                        # Only store the role if it is not empty:
-                                        self.info["roles"].append(Role(abbreviation, name, role))
+                                description = line[index+1:].strip()
+                                self.info["props"].append(Prop(prop, responsible, description))
 
-                                elif command in ("sings", "says"):
-                                    # We count how many abbreviations actually appear in the sketch/song
-                                    # in order to find missing persons in the roles list.
-                                    abbreviation = keyword
-                                    self.info["appearing_roles"].add(abbreviation)
-                            else:
-                                # Store information:
-                                self.info[command] = keyword
+                            elif command == "role":
+                                abbreviation = keyword
+                                name = opt_re.findall(line)[0]
+                                role = eol_re.findall(line)[0]
+                                if len(name) > 0:
+                                    # Only store the role if it is not empty:
+                                    self.info["roles"].append(Role(abbreviation, name, role))
+
+                            elif command in ("sings", "says"):
+                                # We count how many abbreviations actually appear in the sketch/song
+                                # in order to find missing persons in the roles list.
+                                abbreviation = keyword
+                                self.info["appearing_roles"].add(abbreviation)
+                        else:
+                            # Store information:
+                            self.info[command] = keyword
 
 
     def topdf(self, pdfname, repetitions=2, encoding='utf-8'):
         "Convert internally stored TeX code to PDF using pdflatex."
-        converter = Converter(self.conf)
+        
+        if self.conf == None:
+            raise RuntimeError("The TeX object needs to be instantiated with "
+                    "either a config file or a Revue object in order to "
+                    "use topdf().")
+        converter = cv.Converter(self.conf)
         converter.textopdf(self.tex, pdfname, repetitions, encoding)
 
 
@@ -194,7 +209,7 @@ class TeX:
                     "a Revue object in order to use create_act_outline().")
 
         if templatefile == "":
-            templatefile = os.path.join(self.conf["Paths"]["template"],
+            templatefile = os.path.join(self.conf["Paths"]["templates"],
                                         "act_outline_template.tex")
 
         self.tex = ""
@@ -203,8 +218,8 @@ class TeX:
             template = f.read().split("<+ACTOUTLINE+>")
 
         template[0] = template[0].replace("<+VERSION+>", strftime("%d-%m-%Y", localtime()))
-        template[0] = template[0].replace("<+REVUENAME+>", self.name)
-        template[0] = template[0].replace("<+REVUEYEAR+>", self.year)
+        template[0] = template[0].replace("<+REVUENAME+>", self.revue.name)
+        template[0] = template[0].replace("<+REVUEYEAR+>", self.revue.year)
 
         for act in self.revue.acts:
             self.tex += ("\\section*{{{act_title} \\small{{\\textbf{{"
@@ -223,8 +238,8 @@ class TeX:
             
             self.tex += "\\end{enumerate}\n\n"
 
-
-        self.tex = "\n".join(template.insert(1,self.tex))
+        template.insert(1,self.tex)
+        self.tex = "\n".join(template)
 
 
     #----------------------------------------------------------------------
@@ -236,7 +251,7 @@ class TeX:
                     "a Revue object in order to use create_role_overview().")
 
         if templatefile == "":
-            templatefile = os.path.join(self.conf["Paths"]["template"],
+            templatefile = os.path.join(self.conf["Paths"]["templates"],
                                         "role_overview_template.tex")
         self.tex = ""
 
@@ -246,7 +261,7 @@ class TeX:
         template[0] = template[0].replace("<+VERSION+>", strftime("%d-%m-%Y", localtime()))
         template[0] = template[0].replace("<+REVUENAME+>", self.revue.name)
         template[0] = template[0].replace("<+REVUEYEAR+>", self.revue.year)
-        template[0] = template[0].replace("<+NACTORS+>", len(self.revue.actors))
+        template[0] = template[0].replace("<+NACTORS+>", str(len(self.revue.actors)))
 
         # Find longest title for pretty printing:
         pad = max(len(m.title) for act in self.revue.acts for m in act.materials)
@@ -277,7 +292,8 @@ class TeX:
                         self.tex += r"& \q"
                 self.tex += r"\\\hline"
         
-        self.tex = "\n".join(template.insert(1,self.tex))
+        template.insert(1,self.tex)
+        self.tex = "\n".join(template)
 
 
 
@@ -290,7 +306,7 @@ class TeX:
                     "a Revue object in order to use create_props_list().")
 
         if templatefile == "":
-            templatefile = os.path.join(self.conf["Paths"]["template"],
+            templatefile = os.path.join(self.conf["Paths"]["templates"],
                                         "props_list_template.tex")
 
         self.tex = ""
@@ -320,7 +336,8 @@ class TeX:
 
             self.tex += "\\end{longtable}\n\n"
 
-        self.tex = "\n".join(template.insert(1,self.tex))
+        template.insert(1,self.tex)
+        self.tex = "\n".join(template)
 
 
 
@@ -333,7 +350,7 @@ class TeX:
                     "a Revue object in order to use create_frontpage().")
 
         if templatefile == "":
-            templatefile = os.path.join(self.conf["Paths"]["template"],
+            templatefile = os.path.join(self.conf["Paths"]["templates"],
                                         "frontpage_template.tex")
 
         self.tex = ""
@@ -364,7 +381,7 @@ class TeX:
                     "a Revue object in order to use create_signup_form().")
         
         if templatefile == "":
-            templatefile = os.path.join(self.conf["Paths"]["template"],
+            templatefile = os.path.join(self.conf["Paths"]["templates"],
                     "signup_form_template.tex")
 
         self.tex = ""
@@ -392,10 +409,9 @@ class TeX:
 
             self.tex += "\\end{longtable}\n\n"
 
+        template.insert(1,self.tex)
+        self.tex = "\n".join(template)
 
-
-        
-        self.tex = "\n".join(template.insert(1,self.tex))
 
 
     #----------------------------------------------------------------------
@@ -474,9 +490,6 @@ class TeX:
                     self.tex += "\\\\\n"
 
         self.tex += "\\end{longtable}"
-        self.tex = "\n".join(template.insert(1,self.tex))
-
-
-
-
+        template.insert(1,self.tex)
+        self.tex = "\n".join(template)
 

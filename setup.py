@@ -3,7 +3,7 @@ import os
 import shutil
 import subprocess
 import sys
-from time import gmtime, strftime
+from time import localtime, strftime
 
 sys.path.append("scripts")
 import setup_functions as sf
@@ -29,12 +29,12 @@ except:
 
 # Ask for name and year:
 revue_name = input("Enter revue name (enter for FysikRevy\\texttrademark): ")
-revue_year = input("Enter year (enter for {}): ".format(strftime("%Y", gmtime())))
+revue_year = input("Enter year (enter for {}): ".format(strftime("%Y", localtime())))
 
 if revue_name == "":
     revue_name = r"FysikRevy\texttrademark"
 if revue_year == "":
-    revue_year = strftime("%Y", gmtime())
+    revue_year = strftime("%Y", localtime())
 
 
 
@@ -58,6 +58,8 @@ os.mkdir(os.path.join(dst_dir, paths["pdf"]))
 os.mkdir(os.path.join(dst_dir, paths["individual pdf"]))
 os.mkdir(os.path.join(dst_dir, paths["songs"]))
 os.mkdir(os.path.join(dst_dir, paths["sketches"]))
+os.mkdir(os.path.join(dst_dir, paths["pdf"], paths["songs"]))
+os.mkdir(os.path.join(dst_dir, paths["pdf"], paths["sketches"]))
 os.mkdir(os.path.join(dst_dir, paths["templates"]))
 
 # Create templates:

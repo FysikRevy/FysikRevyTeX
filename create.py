@@ -6,8 +6,8 @@ sys.path.append("scripts")
 import classy_revy as cr
 import setup_functions as sf
 import converters as cv
-import tex 
-import pdf 
+from tex import TeX
+from pdf import PDF
            
 
 def create_material_pdfs(revue):
@@ -16,14 +16,14 @@ def create_material_pdfs(revue):
         for material in act.materials:
             file_list.append(material.path)
 
-    conv = Converter(revue.conf)
+    conv = cv.Converter(revue.conf)
     conv.parallel_textopdf(file_list)
 
 def create_individual_pdfs(revue):
-    path = revue.config["Paths"]
+    path = revue.conf["Paths"]
     total_list = []
     for actor in revue.actors:
-        individual_list = (os.path.join(path["pdf"],"frontpage.pdf"), 
+        individual_list = (os.path.join(path["pdf"],"forside.pdf"), 
                              os.path.join(path["pdf"],"aktoversigt.pdf"), 
                              os.path.join(path["pdf"],"rolleliste.pdf"),
                              actor,
@@ -36,12 +36,13 @@ def create_individual_pdfs(revue):
     pdf.parallel_pdfmerge(total_list)
 
 def create_song_manus_pdf(revue):
-    path = revue.config["Paths"]
-    file_list = [os.path.join(path["pdf"],"frontpage.pdf")]
+    path = revue.conf["Paths"]
+    file_list = [os.path.join(path["pdf"],"forside.pdf")]
     for act in revue.acts:
         for material in act.materials:
-            if material.category == "sange":
-                file_list.append("{}.pdf".format(material.path[:-4]))
+            if material.category == path["songs"]:
+                file_list.append(os.path.join(path["pdf"], path["songs"],
+                                        "{}.pdf".format(material.file_name[:-4])))
     
     pdf = PDF(revue.conf)
     pdf.pdfmerge(file_list, os.path.join(path["pdf"],"sangmanuskript.pdf"))
@@ -50,36 +51,36 @@ def create_song_manus_pdf(revue):
 def create_parts(revue, args):
     tex = TeX(revue)
 
-    if "aktoversigt" in sys.argv:
+    if "aktoversigt" in args:
         tex.create_act_outline()
         tex.topdf("aktoversigt.pdf")
 
-    elif "roles" in sys.argv:
+    elif "roles" in args:
         tex.create_role_overview()
         tex.topdf("rolleliste.pdf")
 
-    elif "material" in sys.argv:
+    elif "material" in args:
         create_material_pdfs(revue)
 
-    elif "frontpage" in sys.argv:
+    elif "frontpage" in args:
         tex.create_frontpage()
         tex.topdf("forside.pdf")
     
-    elif "props" in sys.argv:
+    elif "props" in args:
         tex.create_props_list()
         tex.topdf("rekvisitliste.pdf")
 
-    elif "individual" in sys.argv:
+    elif "individual" in args:
         create_individual_pdfs(revue)
 
-    elif "contacts" in sys.argv:
+    elif "contacts" in args:
         tex.create_contacts_list("contacts.csv")
         tex.topdf("kontaktliste.pdf")
 
-    elif "songmanus" in sys.argv:
+    elif "songmanus" in args:
         create_song_manus_pdf(revue)
     
-    elif "signup" in sys.argv:
+    elif "signup" in args:
         tex.create_signup_form()
         tex.topdf("rolletilmelding.pdf")
 
@@ -92,12 +93,12 @@ if __name__ == "__main__":
         sys.exit("Plan file 'aktoversigt.plan' created successfully.")
 
     revue = cr.Revue.fromfile("aktoversigt.plan")
-    path = revue.config["Paths"]
+    path = revue.conf["Paths"]
     conv = cv.Converter(revue.conf)
 
     if len(sys.argv) < 2 or "manus" in sys.argv:
-        arglist = ("material", "aktoversigt", "roles", "frontpage", "props",
-                   "contacts", "individual", "songmanus")
+        arglist = ( "aktoversigt", "roles", "frontpage", "props",
+                   "contacts", "material","individual", "songmanus")
     else:
         arglist = sys.argv[1:]
 

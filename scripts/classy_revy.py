@@ -3,6 +3,7 @@ from configparser import ConfigParser
 from time import localtime, strftime
 
 import base_classes as bc
+from tex import TeX
 
 class Material:
     def __init__(self, info_dict):
@@ -29,7 +30,7 @@ class Material:
             self.melody = ""
         
         # Stuff that could be used for future features:
-        self.appearing_roles = info_dict["actual_roles"]
+        self.appearing_roles = info_dict["appearing_roles"]
 
         # To be deprecated (most likely):
         self.author = info_dict["author"]
@@ -40,7 +41,9 @@ class Material:
     @classmethod
     def fromfile(cls, filename):
         "Parse file using parsetexfile()."
-        info_dict = parsetexfile(filename)
+        tex = TeX()
+        tex.parse(filename)
+        info_dict = tex.info
         info_dict["path"] = filename
         return cls(info_dict)
 
@@ -118,8 +121,8 @@ class Revue:
         # Load variables from the configuration:
         self.conf = ConfigParser()
         self.conf.read(config_file)
-        self.name = self.config["Revue info"]["revue name"]
-        self.year = self.config["Revue info"]["revue year"]
+        self.name = self.conf["Revue info"]["revue name"]
+        self.year = self.conf["Revue info"]["revue year"]
 
         # Make a list of all actors:
         for act in self.acts:
