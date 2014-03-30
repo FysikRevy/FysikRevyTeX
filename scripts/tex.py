@@ -174,6 +174,15 @@ class TeX:
                                 abbreviation = keyword
                                 name = opt_re.findall(line)[0]
                                 role = eol_re.findall(line)[0]
+
+                                if '/' in name:
+                                    print("Warning! '/' is not allowed in "
+                                          "actor names, but occurs in '{}' "
+                                          "in file '{}'. ".format(name,self.fname))
+                                    print("It will be replaced by a dash ('-').")
+                                    # Replace potential slash with a dash,
+                                    # to avoid problems with slashes in filenames.
+                                    name = name.replace("/", "-")
                                 if len(name) > 0:
                                     # Only store the role if it is not empty:
                                     self.info["roles"].append(Role(abbreviation, name, role))
