@@ -11,10 +11,13 @@ class Converter:
     def __init__(self, config):
         self.conf = config
 
-    def textopdf(self, tex, pdfname="", repetitions=2, encoding='utf-8'):
+    def textopdf(self, tex, pdfname="", outputdir="", repetitions=2, encoding='utf-8'):
         "Generates a PDF from either a TeX file or TeX object."
 
-        current_dir = os.getcwd()
+        if outputdir == "":
+            outputdir = self.conf["Paths"]["pdf"]
+
+        src_dir = os.getcwd()
 
         if type(tex) == str and tex.strip()[-3:] == 'tex':
             # Object is a file path string.
@@ -28,7 +31,7 @@ class Converter:
             # Object is a file path string.
             path, texfile = os.path.split(tex.strip())
             pdffile = "{}.pdf".format(texfile[:-4])
-            dst_dir = os.path.join(current_dir, self.conf["Paths"]["pdf"],
+            dst_dir = os.path.join(src_dir, outputdir,
                                    os.path.split(path)[1])
         
         elif type(tex) == str and tex.strip()[-3:] != 'tex':
@@ -36,7 +39,7 @@ class Converter:
             tempname = uuid.uuid4() # Generate unique name
             texfile = "{}.tex".format(tempname)
             pdffile = "{}.pdf".format(tempname)
-            dst_dir = os.path.join(current_dir, self.conf["Paths"]["pdf"])
+            dst_dir = os.path.join(src_dir, outputdir)
 
             with open(os.path.join(temp, texfile), 'w', encoding=encoding) as f:
                 f.write(tex)
@@ -50,10 +53,10 @@ class Converter:
             texfile = "{}.tex".format(fname)
             pdffile = "{}.pdf".format(fname)
             tex.write(os.path.join(temp,texfile), encoding=encoding)
-            dst_dir = os.path.join(current_dir, self.conf["Paths"]["pdf"])
+            dst_dir = os.path.join(src_dir, outputdir)
 
         else:
-            raise TypeError("Input should be either TeX code, a string"
+            raise TypeError("Input should be either TeX code, a string "
                             "of a .tex file or a TeX object.")
 
 
@@ -61,7 +64,7 @@ class Converter:
             os.chdir(path)
         else:
             os.chdir(temp)
-            os.symlink(os.path.join(current_dir,"revy.sty"), "revy.sty")
+            os.symlink(os.path.join(src_dir,"revy.sty"), "revy.sty")
 
         for i in range(repetitions):
             if self.conf.getboolean("TeXing","verbose output"):
@@ -87,7 +90,7 @@ class Converter:
             os.remove(os.path.join(dst_dir, pdfname))
             shutil.move(pdfname, dst_dir)
 
-        os.chdir(current_dir)
+        os.chdir(src_dir)
 
         if input_is_tex_file:
             os.remove("{}.aux".format(os.path.join(path,texfile[:-4])))
@@ -96,12 +99,19 @@ class Converter:
             shutil.rmtree(temp)
 
 
-    def parallel_textopdf(self, file_list, repetitions=2, encoding='utf-8'):
+    def parallel_textopdf(self, file_list, outputdir="", repetitions=2, encoding='utf-8'):
 
         new_file_list = []
         for el in file_list:
+            if type(el) == list and type(el[1]) == str:
+                file_path = el[0]
+                pdfname = el[1]
+            else:
+                file_path = el
+                pdfname = ""
+
             # Each element should be: file_path, pdfname, repetitions, encoding
-            new_file_list.append((el, "", repetitions, encoding))
+            new_file_list.append((file_path, pdfname, outputdir, repetitions, encoding))
 
         with Pool(processes = cpu_count()) as pool:
             result = pool.starmap(self.textopdf, new_file_list)

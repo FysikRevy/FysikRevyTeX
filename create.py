@@ -21,9 +21,27 @@ def create_material_pdfs(revue):
 
 def create_individual_pdfs(revue):
     path = revue.conf["Paths"]
+    
+    # Create front pages for individual actors, if they don't already exist:
+    frontpages_list = []
+    if not os.path.exists(os.path.join(path["pdf"], "cache")):
+        os.mkdir(os.path.join(path["pdf"], "cache"))
+
+    for actor in revue.actors:
+        file_name = "forside-{}.pdf".format(actor.name)
+        if not os.path.isfile(os.path.join(path["pdf"], "cache", file_name)):
+            tex = TeX(revue)
+            tex.create_frontpage(subtitle=actor.name)
+            frontpages_list.append([tex, file_name]) 
+
+    # Create front pages:
+    conv = cv.Converter(revue.conf)
+    conv.parallel_textopdf(frontpages_list, outputdir=os.path.join(path["pdf"], "cache"))
+
     total_list = []
     for actor in revue.actors:
-        individual_list = (os.path.join(path["pdf"],"forside.pdf"), 
+        #individual_list = (os.path.join(path["pdf"],"forside.pdf"), 
+        individual_list = (os.path.join(path["pdf"],"cache", "forside-{}.pdf".format(actor.name)), 
                              os.path.join(path["pdf"],"aktoversigt.pdf"), 
                              os.path.join(path["pdf"],"rolleliste.pdf"),
                              actor,
@@ -35,9 +53,21 @@ def create_individual_pdfs(revue):
     pdf = PDF(revue.conf)
     pdf.parallel_pdfmerge(total_list)
 
+
 def create_song_manus_pdf(revue):
     path = revue.conf["Paths"]
-    file_list = [os.path.join(path["pdf"],"forside.pdf")]
+
+    # Create front page, if it doesn't already exist:
+    if not os.path.exists(os.path.join(path["pdf"], "cache")):
+        os.mkdir(os.path.join(path["pdf"], "cache"))
+
+    if not os.path.isfile(os.path.join(path["pdf"], "cache", "forside-sangmanuskript.pdf")):
+            tex = TeX(revue)
+            tex.create_frontpage(subtitle="sangmanuskript")
+            tex.topdf("forside-sangmanuskript.pdf", outputdir=os.path.join(path["pdf"], "cache"))
+
+    # Create song manuscript:
+    file_list = [os.path.join(path["pdf"], "cache", "forside-sangmanuskript.pdf")]
     for act in revue.acts:
         for material in act.materials:
             if material.category == path["songs"]:
@@ -97,7 +127,7 @@ if __name__ == "__main__":
     conv = cv.Converter(revue.conf)
 
     if len(sys.argv) < 2 or "manus" in sys.argv:
-        arglist = ( "aktoversigt", "roles", "frontpage", "props",
+        arglist = ("aktoversigt", "roles", "frontpage", "props",
                    "contacts", "material","individual", "songmanus")
     else:
         arglist = sys.argv[1:]

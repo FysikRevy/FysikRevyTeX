@@ -197,7 +197,7 @@ class TeX:
                             self.info[command] = keyword
 
 
-    def topdf(self, pdfname, repetitions=2, encoding='utf-8'):
+    def topdf(self, pdfname, outputdir="", repetitions=2, encoding='utf-8'):
         "Convert internally stored TeX code to PDF using pdflatex."
         
         if self.conf == None:
@@ -205,7 +205,7 @@ class TeX:
                     "either a config file or a Revue object in order to "
                     "use topdf().")
         converter = cv.Converter(self.conf)
-        converter.textopdf(self.tex, pdfname, repetitions, encoding)
+        converter.textopdf(self.tex, pdfname, outputdir, repetitions, encoding)
 
 
     #----------------------------------------------------------------------
@@ -352,7 +352,7 @@ class TeX:
 
     #----------------------------------------------------------------------
 
-    def create_frontpage(self, templatefile="", encoding='utf-8'):
+    def create_frontpage(self, templatefile="", subtitle="", encoding='utf-8'):
         
         if self.revue == None:
             raise RuntimeError("The TeX object needs to be instantiated with "
@@ -361,13 +361,16 @@ class TeX:
         if templatefile == "":
             templatefile = os.path.join(self.conf["Paths"]["templates"],
                                         "frontpage_template.tex")
-
-        self.tex = ""
+        if subtitle == "":
+            subtitle = "tekster"
 
         with open(templatefile, 'r', encoding=encoding) as f:
             template = f.read()
+        
+        self.tex = template
 
-        self.tex = template.replace("<+VERSION+>", self.conf["Frontpage"]["version"])
+        self.tex = self.tex.replace("<+SUBTITLE+>", subtitle)
+        self.tex = self.tex.replace("<+VERSION+>", self.conf["Frontpage"]["version"])
 
         if self.conf["Revue info"]["revue name"] == "\\FysikRevy\\texttrademark":
             self.tex = self.tex.replace("<+REVUENAME+>", "\\FysikRevy")
