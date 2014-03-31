@@ -1,7 +1,9 @@
 **FysikRevyTeX** is the TeXing system used to create the manuscript for FysikRevy&trade;. It is based on the fantastic [RevyTeX][], but adapted to be more physicist-friendly. Right now, the main features over [RevyTeX][] are:
 
 * Completely rewritten in Python 3.
+* Parallel generation of PDFs for song, sketches and individual manuscripts.
 * The manuscript has the traditional front page.
+* The contact list has a more human readable syntax.
 
 [revytex]: https://github.com/dikurevy/RevyTeX
 
