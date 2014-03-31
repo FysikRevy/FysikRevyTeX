@@ -5,8 +5,6 @@ import tempfile
 import uuid
 from multiprocessing import Pool, cpu_count
 
-from IPython import embed
-
 class Converter:
     def __init__(self, config):
         self.conf = config

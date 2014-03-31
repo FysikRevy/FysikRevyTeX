@@ -3,8 +3,6 @@ import re
 import sys
 from time import localtime, strftime
 
-from IPython import embed
-
 from base_classes import Prop, Role
 import converters as cv
 
