@@ -14,6 +14,11 @@ class Material:
         self.length = info_dict["eta"].replace('$','').split()[0]
         self.path = os.path.abspath(info_dict["path"])
         self.roles = info_dict["roles"]
+        try:
+            self.responsible = info_dict["responsible"]
+        except KeyError:
+            print("No TeX responsible for '{}'.".format(self.title))
+            self.responsible = ""
 
         for role in self.roles:
             # Add the title of this material to the roles:

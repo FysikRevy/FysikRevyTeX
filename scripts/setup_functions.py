@@ -7,26 +7,24 @@ def wildcard_copy(src, dst):
     for file in glob.glob(src):
         shutil.copy(file, dst)
 
-def create_sketch_template(dir, config, encoding='utf-8'):
-    with open(os.path.join(config["Paths"]["templates"], "sketchskabelon.tex"), 'r', encoding=encoding) as f:
+
+def create_material_template(dir, texfile, config, encoding='utf-8'):
+    with open(os.path.join(config["Paths"]["templates"], texfile), 'r', encoding=encoding) as f:
         tex = f.read()
 
-    tex = tex.replace("REVUENAME", config["Revue info"]["revue name"])
-    tex = tex.replace("REVUEYEAR", config["Revue info"]["revue year"])
+    tex = tex.replace("<+REVUENAME+>", config["Revue info"]["revue name"])
+    tex = tex.replace("<+REVUEYEAR+>", config["Revue info"]["revue year"])
 
-    with open(os.path.join(dir, "sketchskabelon.tex"), 'w', encoding=encoding) as f:
+    with open(os.path.join(dir, texfile), 'w', encoding=encoding) as f:
         f.write(tex)
+
+
+def create_sketch_template(dir, config, encoding='utf-8'):
+    create_material_template(dir, "sketchskabelon.tex", config)
 
 
 def create_song_template(dir, config, encoding='utf-8'):
-    with open(os.path.join(config["Paths"]["templates"], "sangskabelon.tex"), 'r', encoding=encoding) as f:
-        tex = f.read()
-
-    tex = tex.replace("REVUENAME", config["Revue info"]["revue name"])
-    tex = tex.replace("REVUEYEAR", config["Revue info"]["revue year"])
-
-    with open(os.path.join(dir, "sangskabelon.tex"), 'w', encoding=encoding) as f:
-        f.write(tex)
+    create_material_template(dir, "sangskabelon.tex", config)
 
 
 def create_plan_file(fname, encoding='utf-8'):

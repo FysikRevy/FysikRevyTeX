@@ -293,7 +293,10 @@ class TeX:
                 for actor in self.revue.actors:
                     for role in actor.roles:
                         if role.material.title == mat.title:
-                            self.tex += "&{:>3}".format(role.abbreviation)
+                            if actor.name == mat.responsible:
+                                self.tex += "&\\textbf{{\\color{{DodgerBlue}}{:>3}}}".format(role.abbreviation)
+                            else:
+                                self.tex += "&{:>3}".format(role.abbreviation)
                             break
                     else:
                         self.tex += r"& \q"
