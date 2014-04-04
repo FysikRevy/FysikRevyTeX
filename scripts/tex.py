@@ -336,10 +336,11 @@ class TeX:
 """.format(act_title=act.name)
         
             for m in act.materials:
-                self.tex += "\n\\mtitle{{{m_title}}}\n".format(m_title = m.title)
-                for prop in m.props:
-                    self.tex += r"\textbf{{{prop}}} & {responsible} & \\ {description} & & \\ \hline".format(prop=prop.prop, responsible=prop.responsible, description=prop.description)
-                    self.tex += "\n"
+                if len(m.props) != 0:
+                    self.tex += "\n\\mtitle{{{m_title}}}\n".format(m_title = m.title)
+                    for prop in m.props:
+                        self.tex += r"\textbf{{{prop}}} & {responsible} & \\ {description} & & \\ \hline".format(prop=prop.prop, responsible=prop.responsible, description=prop.description)
+                        self.tex += "\n"
 
             self.tex += "\\end{longtable}\n\n"
 
