@@ -83,9 +83,9 @@ os.symlink(os.path.join(src_dir, "scripts", "revy.sty"), os.path.join(dst_dir, p
 os.chdir(dst_dir)
 
 ### NOTE: The following is for testing only and should be removed!
-sf.wildcard_copy("/home/ks/documents/fysikrevy/jubilæumsrevy13/2013/sange/*.tex", "{}/sange/".format(dst_dir))
-sf.wildcard_copy("/home/ks/documents/fysikrevy/jubilæumsrevy13/2013/sketches/*.tex", "{}/sketches/".format(dst_dir))
-sf.wildcard_copy("/home/ks/documents/fysikrevy/jubilæumsrevy13/2013/sketches/*.jpg", "{}/sketches/".format(dst_dir))
+#sf.wildcard_copy("/home/ks/documents/fysikrevy/jubilæumsrevy13/2013/sange/*.tex", "{}/sange/".format(dst_dir))
+#sf.wildcard_copy("/home/ks/documents/fysikrevy/jubilæumsrevy13/2013/sketches/*.tex", "{}/sketches/".format(dst_dir))
+#sf.wildcard_copy("/home/ks/documents/fysikrevy/jubilæumsrevy13/2013/sketches/*.jpg", "{}/sketches/".format(dst_dir))
 
 
 
