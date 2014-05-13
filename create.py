@@ -125,6 +125,7 @@ if __name__ == "__main__":
     revue = cr.Revue.fromfile("aktoversigt.plan")
     path = revue.conf["Paths"]
     conv = cv.Converter(revue.conf)
+    # TODO: Load metadata
 
     if len(sys.argv) < 2 or "manus" in sys.argv:
         arglist = ("aktoversigt", "roles", "frontpage", "props",
@@ -147,3 +148,6 @@ if __name__ == "__main__":
                       os.path.join(path["pdf"],"manuskript.pdf"))
 
         print("Manuscript successfully created!")
+
+
+    # TODO: Save metadata
