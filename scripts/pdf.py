@@ -4,9 +4,13 @@ from multiprocessing import Pool, cpu_count
 
 from PyPDF2 import PdfFileMerger
 
+import config as cf
+
+conf = cf.Config()
+
 class PDF:
-    def __init__(self, config):
-        self.conf = config
+    def __init__(self):
+        self.conf = conf
 
     def pdfmerge(self, file_list, pdfname):
         "Merge a list of PDF files."

@@ -6,8 +6,12 @@ sys.path.append("scripts")
 import classy_revy as cr
 import setup_functions as sf
 import converters as cv
+import config as cf
+import metadata as md
 from tex import TeX
 from pdf import PDF
+
+from IPython import embed
            
 
 def create_material_pdfs(revue):
@@ -16,7 +20,7 @@ def create_material_pdfs(revue):
         for material in act.materials:
             file_list.append(material.path)
 
-    conv = cv.Converter(revue.conf)
+    conv = cv.Converter()
     conv.parallel_textopdf(file_list)
 
 def create_individual_pdfs(revue):
@@ -35,7 +39,7 @@ def create_individual_pdfs(revue):
             frontpages_list.append([tex, file_name]) 
 
     # Create front pages:
-    conv = cv.Converter(revue.conf)
+    conv = cv.Converter()
     conv.parallel_textopdf(frontpages_list, outputdir=os.path.join(path["pdf"], "cache"))
 
     total_list = []
@@ -50,7 +54,7 @@ def create_individual_pdfs(revue):
                            os.path.join(path["individual pdf"],
                                        "{}.pdf".format(actor.name))))
 
-    pdf = PDF(revue.conf)
+    pdf = PDF()
     pdf.parallel_pdfmerge(total_list)
 
 
@@ -74,7 +78,7 @@ def create_song_manus_pdf(revue):
                 file_list.append(os.path.join(path["pdf"], path["songs"],
                                         "{}.pdf".format(material.file_name[:-4])))
     
-    pdf = PDF(revue.conf)
+    pdf = PDF()
     pdf.pdfmerge(file_list, os.path.join(path["pdf"],"sangmanuskript.pdf"))
 
 
@@ -122,12 +126,22 @@ if __name__ == "__main__":
         sf.create_plan_file("aktoversigt.plan")
         sys.exit("Plan file 'aktoversigt.plan' created successfully.")
 
+    # Load configuration file:
+    conf = cf.Config()
+    conf.load("revytex.conf")
+    conf.add_args(sys.argv)
+
+    # Load meta data file:
+    metadata = md.MetaData()
+    metadata.load()
+
+
     revue = cr.Revue.fromfile("aktoversigt.plan")
     path = revue.conf["Paths"]
-    conv = cv.Converter(revue.conf)
-    # TODO: Load metadata
+    conv = cv.Converter()
 
-    if len(sys.argv) < 2 or "manus" in sys.argv:
+    print(conf.cmd_parts)
+    if len(conf.cmd_parts) == 0 or "manus" in sys.argv:
         arglist = ("aktoversigt", "roles", "frontpage", "props",
                    "contacts", "material","individual", "songmanus")
     else:
@@ -137,8 +151,8 @@ if __name__ == "__main__":
         create_parts(revue, arg)
 
 
-    if len(sys.argv) < 2 or "manus" in sys.argv:
-        pdf = PDF(revue.conf)
+    if len(conf.cmd_parts) == 0 or "manus" in sys.argv:
+        pdf = PDF()
         pdf.pdfmerge((os.path.join(path["pdf"],"forside.pdf"), 
                       os.path.join(path["pdf"],"aktoversigt.pdf"), 
                       os.path.join(path["pdf"],"rolleliste.pdf"), 
@@ -150,4 +164,6 @@ if __name__ == "__main__":
         print("Manuscript successfully created!")
 
 
-    # TODO: Save metadata
+    embed()
+    # Save meta data:
+    metadata.save()

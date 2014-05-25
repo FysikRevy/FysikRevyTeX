@@ -5,6 +5,9 @@ from time import localtime, strftime
 
 from base_classes import Prop, Role
 import converters as cv
+import config as cf
+
+conf = cf.Config()
 
 # Regular expression that extracts everything between \ and {:
 cmd_re = re.compile(r"^.*\\(.*){.*$")
@@ -66,25 +69,18 @@ def extract_multiple_lines(lines, line_number, start_delimiter='{', end_delimite
 
 class TeX:
     def __init__(self, arg = None):
-        if type(arg) == str and arg[-4] == 'conf':
-            # Load variables from the configuration:
-            self.conf = ConfigParser()
-            self.conf.read(arg)
-            self.revue = None
-
-        elif type(arg).__name__ == "Revue":
+        if type(arg).__name__ == "Revue":
             # Load configuration from revue:
             self.revue = arg
-            self.conf = self.revue.conf
 
         elif arg == None:
             self.revue = None
-            self.conf = None
             
         else:
-            raise TypeError("The optional argument must be either "
-                            "a config file or a Revue object.")
+            raise TypeError("The optional argument must be "
+                            "a Revue object.")
 
+        self.conf = conf
 
         self.tex = ""
         self.fname = ""
@@ -198,11 +194,7 @@ class TeX:
     def topdf(self, pdfname, outputdir="", repetitions=2, encoding='utf-8'):
         "Convert internally stored TeX code to PDF using pdflatex."
         
-        if self.conf == None:
-            raise RuntimeError("The TeX object needs to be instantiated with "
-                    "either a config file or a Revue object in order to "
-                    "use topdf().")
-        converter = cv.Converter(self.conf)
+        converter = cv.Converter()
         converter.textopdf(self.tex, pdfname, outputdir, repetitions, encoding)
 
 

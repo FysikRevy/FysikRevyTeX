@@ -1,9 +1,11 @@
 import os
-from configparser import ConfigParser
 from time import localtime, strftime
 
 import base_classes as bc
+import config as cf
 from tex import TeX
+
+conf = cf.Config()
 
 class Material:
     def __init__(self, info_dict):
@@ -33,6 +35,9 @@ class Material:
             self.melody = info_dict["melody"]
         except KeyError:
             self.melody = ""
+
+        # Meta data
+        self.modification_time = os.stat(filename).st_mtime
         
         # Stuff that could be used for future features:
         self.appearing_roles = info_dict["appearing_roles"]
@@ -119,13 +124,14 @@ class Act:
 
 
 class Revue:
-    def __init__(self, acts, config_file = "revytex.conf"):
+    def __init__(self, acts):
         self.acts = acts
         self.actors = []
 
         # Load variables from the configuration:
-        self.conf = ConfigParser()
-        self.conf.read(config_file)
+        # FIXME: Maybe just pass the ConfigParser object itself? There shouldn't
+        # be a reason to reparse the file.
+        self.conf = conf
         self.name = self.conf["Revue info"]["revue name"]
         self.year = self.conf["Revue info"]["revue year"]
 
@@ -137,7 +143,7 @@ class Revue:
 
 
     @classmethod
-    def fromfile(cls, filename, encoding='utf-8', config_file = "revytex.conf"):
+    def fromfile(cls, filename, encoding='utf-8'):
         "Takes a plan file and extracts the information for each material."
         
         acts = []
@@ -164,14 +170,14 @@ class Revue:
                                 role.add_material(m)
                             act.add_material(m)
                         except NameError as err:
-                            print("You need a name for the act before any TeX file.")
+                            print("You need a name for the act before any TeX file is listed.")
                             print("Problematic file: {}".format(filename))
                             print("Error raised: {}".format(err))
 
             # Store the very last act:
             acts.append(act)
 
-        return cls(acts, config_file = config_file)
+        return cls(acts)
 
     def __repr__(self):
         acts = "{}".format(self.acts[0])

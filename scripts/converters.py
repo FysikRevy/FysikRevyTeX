@@ -5,11 +5,25 @@ import tempfile
 import uuid
 from multiprocessing import Pool, cpu_count
 
-class Converter:
-    def __init__(self, config):
-        self.conf = config
+from decorators import checkcache
+import config as cf
 
-    def textopdf(self, tex, pdfname="", outputdir="", repetitions=2, encoding='utf-8'):
+conf = cf.Config()
+
+class Converter:
+    def __init__(self):
+        self.conf = conf
+
+    def textopdf(self, *args, **kwargs):
+        """
+        Dummy wrapper method to make multiprocessing work on a 
+        decorated function.
+        """
+        self._textopdf(*args, **kwargs)
+
+    @checkcache    
+    def _textopdf(self, tex, pdfname="", outputdir="", repetitions=2, encoding='utf-8'):
+    #def textopdf(self, tex, pdfname="", outputdir="", repetitions=2, encoding='utf-8'):
         "Generates a PDF from either a TeX file or TeX object."
 
         if outputdir == "":
@@ -71,6 +85,17 @@ class Converter:
                 rc = subprocess.call(["pdflatex", "-halt-on-error", texfile], 
                                      stdout=subprocess.DEVNULL)
 
+
+        # Check whether the pdf was generated:
+        # TODO: This needs to be done better.
+        if not os.path.isfile(pdffile):
+            rerun = input("Oh snap! Something went wrong when creating the PDF.\n"
+                          "Do you want to run pdflatex again, this time with output? (y/[n])")
+            if rerun == 'y':
+                rc = subprocess.call(["pdflatex", texfile]) 
+
+
+
         if pdfname == "":
             pdfname = pdffile
         else:
@@ -81,6 +106,7 @@ class Converter:
             print("\033[0;32m Success!\033[0m")
         else:
             print("\033[0;31m Failed!\033[0m")
+
 
         try:
             shutil.move(pdfname, dst_dir)
