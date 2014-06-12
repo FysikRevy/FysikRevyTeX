@@ -38,7 +38,7 @@ class MetaData:
             self.data.write(f)
 
 
-    def has_changed(self, filename):
+    def has_changed(self, material):
         """
         Check whether a file has changed since last run.
         Returns True if it has, otherwise False.
@@ -48,33 +48,50 @@ class MetaData:
             return True
         
         else:
-            # Make sure we only check the filename, not the path.
-            # No! We need to allow for similarly named songs and sketches!
-            #path, fname = os.path.split(filename.strip())
+            if type(material).__name__ == 'Material':
+                file_mod_time = os.stat(material.path).st_mtime
+                
+                try:
+                    last_changed = float(self.data["Modification time"][material.path])
+                except KeyError:
+                    # The file has not been logged before, i.e. it is new.
+                    return True
 
-            file_mod_time = os.stat(filename).st_mtime
-            
+            elif type(material) is str and material[-3:] == 'pdf':
+                # TODO: having a PDF object like Material with a path attribute would
+                # make this a lot cleaner...
+                file_mod_time = os.stat(material).st_mtime
+                
+                try:
+                    last_changed = float(self.data["Modification time"][material])
+                except KeyError:
+                    # The file has not been logged before, i.e. it is new.
+                    return True
+
             try:
-                last_changed = float(self.data["Modification time"][filename])
-            except KeyError:
-                # The file has not been logged before, i.e. it is new.
-                return True
-
-            if file_mod_time > last_changed:
-                return True
-            else:
-                return False
+                if file_mod_time > last_changed:
+                    return True
+                else:
+                    return False
+            except NameError:
+                print("Cannot check cache for object of type {}. "
+                      "Normal execution continued.".format(type(material).__name__))
 
 
-    def update_mod_time(self, filename):
+
+    def update_mod_time(self, material):
         """
         Updates the metadata about the file.
         """
 
         # Make sure we only save the filename, not the path.
         #path, fname = os.path.split(filename.strip())
+ 
+        if type(material).__name__ == 'Material':
+            self.data["Modification time"][material.path] = str(os.stat(material.path).st_mtime)
         
-        self.data["Modification time"][filename] = str(os.stat(filename).st_mtime)
+        elif type(material) is str and material[-3:] == 'pdf':
+            self.data["Modification time"][material] = str(os.stat(material).st_mtime)
 
 
 
