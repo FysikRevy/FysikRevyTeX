@@ -5,9 +5,8 @@ from time import localtime, strftime
 
 from base_classes import Prop, Role
 import converters as cv
-import config as cf
 
-conf = cf.Config()
+from config import configuration as conf
 
 # Regular expression that extracts everything between \ and {:
 cmd_re = re.compile(r"^.*\\(.*){.*$")
@@ -69,6 +68,7 @@ def extract_multiple_lines(lines, line_number, start_delimiter='{', end_delimite
 
 class TeX:
     def __init__(self, arg = None):
+        # TODO: The following is not needed anymore and should be removed?
         if type(arg).__name__ == "Revue":
             # Load configuration from revue:
             self.revue = arg
@@ -106,6 +106,8 @@ class TeX:
         "Parse a TeX file and extract revue relevant information to a dictionary."
         
         self.fname = os.path.split(fname)[1]
+        self.info['modification_time'] = os.stat(fname).st_mtime
+
         # Create lists for other stuff:
         self.info["props"] = []
         self.info["roles"] = []
@@ -119,6 +121,9 @@ class TeX:
 
         with open(fname, mode='r', encoding=encoding) as f:
             lines = f.readlines()
+
+        # Store the file content:
+        self.info['tex'] = lines
 
         for n,line in enumerate(lines):
             line = line.strip() # Remove leading and trailing whitespaces
@@ -195,7 +200,7 @@ class TeX:
         "Convert internally stored TeX code to PDF using pdflatex."
         
         converter = cv.Converter()
-        converter.textopdf(self.tex, pdfname, outputdir, repetitions, encoding)
+        converter.textopdf(self, pdfname, outputdir, repetitions, encoding)
 
 
     #----------------------------------------------------------------------

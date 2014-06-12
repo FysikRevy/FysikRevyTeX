@@ -43,9 +43,12 @@ class Config:
 
             elif arg == '-v':
                 # Change version number
-                self.conf["Frontpage"]["version"] = args[i+1]
-                self.cmd_options.append(args[i+1])
+                self.conf["Frontpage"]["version"] = self.cmd_args[i+1]
+                self.cmd_options.append(self.cmd_args[i+1])
             
             elif arg == '-f' or arg == '--force':
                 self.conf["TeXing"]["force TeXing of all files"] = "yes"
 
+
+configuration = Config()
+configuration.load()

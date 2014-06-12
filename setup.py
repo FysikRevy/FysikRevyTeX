@@ -20,10 +20,10 @@ src_dir = os.getcwd()
 try:
     os.mkdir(dst_dir)
 except:
-    #sys.exit("Directory already exists. Please remove it and rerun this script. Exiting.")
-    print("\033[0;31mRemoving and recreating directory {} - be careful and remember to remove this feature before release!\033[0m".format(dst_dir))
-    shutil.rmtree(dst_dir)
-    os.mkdir(dst_dir)
+    sys.exit("Directory already exists. Please remove it and rerun this script. Exiting.")
+    #print("\033[0;31mRemoving and recreating directory {} - be careful and remember to remove this feature before release!\033[0m".format(dst_dir))
+    #shutil.rmtree(dst_dir)
+    #os.mkdir(dst_dir)
 
 
 
@@ -62,6 +62,7 @@ os.mkdir(os.path.join(dst_dir, paths["pdf"], paths["songs"]))
 os.mkdir(os.path.join(dst_dir, paths["pdf"], paths["sketches"]))
 os.mkdir(os.path.join(dst_dir, paths["templates"]))
 os.mkdir(os.path.join(dst_dir, paths["cache"]))
+os.mkdir(os.path.join(dst_dir, paths["pdf cache"]))
 
 # Create templates:
 sf.create_sketch_template(os.path.join(dst_dir, paths["templates"]), conf)
@@ -84,9 +85,9 @@ os.symlink(os.path.join(src_dir, "scripts", "revy.sty"), os.path.join(dst_dir, p
 os.chdir(dst_dir)
 
 ### NOTE: The following is for testing only and should be removed!
-sf.wildcard_copy("/home/ks/documents/fysikrevy/jubilæumsrevy13/2013/sange/*.tex", "{}/sange/".format(dst_dir))
-sf.wildcard_copy("/home/ks/documents/fysikrevy/jubilæumsrevy13/2013/sketches/*.tex", "{}/sketches/".format(dst_dir))
-sf.wildcard_copy("/home/ks/documents/fysikrevy/jubilæumsrevy13/2013/sketches/*.jpg", "{}/sketches/".format(dst_dir))
+#sf.wildcard_copy("/home/ks/documents/fysikrevy/jubilæumsrevy13/2013/sange/*.tex", "{}/sange/".format(dst_dir))
+#sf.wildcard_copy("/home/ks/documents/fysikrevy/jubilæumsrevy13/2013/sketches/*.tex", "{}/sketches/".format(dst_dir))
+#sf.wildcard_copy("/home/ks/documents/fysikrevy/jubilæumsrevy13/2013/sketches/*.jpg", "{}/sketches/".format(dst_dir))
 
 
 

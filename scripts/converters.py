@@ -6,9 +6,7 @@ import uuid
 from multiprocessing import Pool, cpu_count
 
 from decorators import checkcache
-import config as cf
-
-conf = cf.Config()
+from config import configuration as conf
 
 class Converter:
     def __init__(self):
@@ -41,6 +39,9 @@ class Converter:
 
         if input_is_tex_file:
             # Object is a file path string.
+            # The TeXing should be done in the original directory to avoid
+            # problems with e.g. included figures not being copied to the
+            # temporary directory.
             path, texfile = os.path.split(tex.strip())
             pdffile = "{}.pdf".format(texfile[:-4])
             dst_dir = os.path.join(src_dir, outputdir,
@@ -67,9 +68,20 @@ class Converter:
             tex.write(os.path.join(temp,texfile), encoding=encoding)
             dst_dir = os.path.join(src_dir, outputdir)
 
+        elif type(tex).__name__ == "Material":
+            # Object is a Material object.
+            # The TeXing should be done in the original directory to avoid
+            # problems with e.g. included figures not being copied to the
+            # temporary directory.
+            path, texfile = os.path.split(tex.path.strip())
+            pdffile = "{}.pdf".format(texfile[:-4])
+            dst_dir = os.path.join(src_dir, outputdir,
+                                   os.path.split(path)[1])
+            input_is_tex_file = True
+
         else:
-            raise TypeError("Input should be either TeX code, a string "
-                            "of a .tex file or a TeX object.")
+            raise TypeError("Input should be either TeX code, a string of a "
+                            ".tex file, a TeX object or a Material object.")
 
 
         if input_is_tex_file:

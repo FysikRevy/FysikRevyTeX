@@ -2,12 +2,15 @@ import os
 from time import localtime, strftime
 
 import base_classes as bc
-import config as cf
 from tex import TeX
 
-conf = cf.Config()
+from config import configuration as conf
 
 class Material:
+    # TODO: This class should perhaps inherit from the completely general
+    # TeX class, as this is basically just a special case of a TeX file.
+    # This would make functions easier, as they can treat TeX and
+    # Material in the same way.
     def __init__(self, info_dict):
         "Extract data from dictionary returned by parsetexfile()."
         self.title = info_dict["title"]
@@ -37,7 +40,11 @@ class Material:
             self.melody = ""
 
         # Meta data
-        self.modification_time = os.stat(filename).st_mtime
+        self.modification_time = info_dict['modification_time']
+        self.has_been_texed = False
+
+        # Save the file content:
+        self.tex = info_dict['tex'] 
         
         # Stuff that could be used for future features:
         self.appearing_roles = info_dict["appearing_roles"]
@@ -50,12 +57,21 @@ class Material:
     
     @classmethod
     def fromfile(cls, filename):
-        "Parse file using parsetexfile()."
+        "Parse TeX file."
         tex = TeX()
         tex.parse(filename)
         info_dict = tex.info
         info_dict["path"] = filename
         return cls(info_dict)
+    
+
+    def write(self, fname, encoding='utf-8'):
+        "Write to a TeX file."
+        # FIXME: this pretty much proves that TeX and Material need to be
+        # merged somehow.
+        with open(fname, 'w', encoding=encoding) as f:
+            for line in self.tex:
+                f.write(line)
 
     def __repr__(self):
         return "{} ({} min): {}".format(self.title, self.length, self.status)

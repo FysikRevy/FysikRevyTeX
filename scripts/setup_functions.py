@@ -4,6 +4,7 @@ import shutil
 import sys
 
 def wildcard_copy(src, dst):
+    "Helper function easy setup of test environment. Only used in setup.py."
     for file in glob.glob(src):
         shutil.copy(file, dst)
 

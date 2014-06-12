@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import glob
 import os
 import sys
 sys.path.append("scripts")
@@ -12,40 +13,41 @@ from tex import TeX
 from pdf import PDF
 
 from IPython import embed
+
+from config import configuration as conf
            
 
 def create_material_pdfs(revue):
     file_list = []
     for act in revue.acts:
         for material in act.materials:
-            file_list.append(material.path)
+            file_list.append(material)
 
     conv = cv.Converter()
     conv.parallel_textopdf(file_list)
+    #for f in file_list:
+    #    conv.textopdf(f)
 
 def create_individual_pdfs(revue):
     path = revue.conf["Paths"]
     
     # Create front pages for individual actors, if they don't already exist:
     frontpages_list = []
-    if not os.path.exists(os.path.join(path["pdf"], "cache")):
-        os.mkdir(os.path.join(path["pdf"], "cache"))
 
     for actor in revue.actors:
         file_name = "forside-{}.pdf".format(actor.name)
-        if not os.path.isfile(os.path.join(path["pdf"], "cache", file_name)):
+        if not os.path.isfile(os.path.join(path["pdf cache"], file_name)):
             tex = TeX(revue)
             tex.create_frontpage(subtitle=actor.name)
             frontpages_list.append([tex, file_name]) 
 
     # Create front pages:
     conv = cv.Converter()
-    conv.parallel_textopdf(frontpages_list, outputdir=os.path.join(path["pdf"], "cache"))
+    conv.parallel_textopdf(frontpages_list, outputdir=path["pdf cache"])
 
     total_list = []
     for actor in revue.actors:
-        #individual_list = (os.path.join(path["pdf"],"forside.pdf"), 
-        individual_list = (os.path.join(path["pdf"],"cache", "forside-{}.pdf".format(actor.name)), 
+        individual_list = (os.path.join(path["pdf cache"], "forside-{}.pdf".format(actor.name)), 
                              os.path.join(path["pdf"],"aktoversigt.pdf"), 
                              os.path.join(path["pdf"],"rolleliste.pdf"),
                              actor,
@@ -56,6 +58,7 @@ def create_individual_pdfs(revue):
 
     pdf = PDF()
     pdf.parallel_pdfmerge(total_list)
+    #pdf.pdfmerge(total_list)
 
 
 def create_song_manus_pdf(revue):
@@ -127,7 +130,6 @@ if __name__ == "__main__":
         sys.exit("Plan file 'aktoversigt.plan' created successfully.")
 
     # Load configuration file:
-    conf = cf.Config()
     conf.load("revytex.conf")
     conf.add_args(sys.argv)
 
@@ -140,10 +142,12 @@ if __name__ == "__main__":
     path = revue.conf["Paths"]
     conv = cv.Converter()
 
-    print(conf.cmd_parts)
-    if len(conf.cmd_parts) == 0 or "manus" in sys.argv:
+    if len(conf.cmd_parts) == 0 in sys.argv:
         arglist = ("aktoversigt", "roles", "frontpage", "props",
                    "contacts", "material","individual", "songmanus")
+    elif "manus" in sys.argv:
+        arglist = ("aktoversigt", "roles", "frontpage", "props",
+                   "contacts", "material")
     else:
         arglist = sys.argv[1:]
 
@@ -164,6 +168,13 @@ if __name__ == "__main__":
         print("Manuscript successfully created!")
 
 
-    embed()
+    for act in revue.acts:
+        for material in act.materials:
+            metadata.update_mod_time(material)
+    for f in glob.glob(os.path.join(path["pdf"], "*.pdf")):
+        metadata.update_mod_time(f)
+    for f in glob.glob(os.path.join(path["pdf cache"], "*.pdf")):
+        metadata.update_mod_time(f)
+    #embed()
     # Save meta data:
     metadata.save()
