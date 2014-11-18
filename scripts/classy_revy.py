@@ -14,7 +14,10 @@ class Material:
     def __init__(self, info_dict):
         "Extract data from dictionary returned by parsetexfile()."
         self.title = info_dict["title"]
-        self.status = info_dict["status"]
+        try:
+            self.status = info_dict["status"]
+        except KeyError:
+            print("No status on '{}' is set.".format{self.title})
         self.props = info_dict["props"]
         self.length = info_dict["eta"].replace('$','').split()[0]
         self.path = os.path.abspath(info_dict["path"])
@@ -50,7 +53,10 @@ class Material:
         self.appearing_roles = info_dict["appearing_roles"]
 
         # To be deprecated (most likely):
-        self.author = info_dict["author"]
+        try:
+            self.author = info_dict["author"]
+        except KeyError:
+            print("No author for '{}' is declared.".format(self.title))
         self.year = info_dict["revyyear"]
         self.revue = info_dict["revyname"]
         self.version = info_dict["version"]
