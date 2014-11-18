@@ -15,7 +15,7 @@ from pdf import PDF
 from IPython import embed
 
 from config import configuration as conf
-           
+
 
 def create_material_pdfs(revue):
     file_list = []
@@ -30,7 +30,7 @@ def create_material_pdfs(revue):
 
 def create_individual_pdfs(revue):
     path = revue.conf["Paths"]
-    
+
     # Create front pages for individual actors, if they don't already exist:
     frontpages_list = []
 
@@ -39,7 +39,7 @@ def create_individual_pdfs(revue):
         if not os.path.isfile(os.path.join(path["pdf cache"], file_name)):
             tex = TeX(revue)
             tex.create_frontpage(subtitle=actor.name)
-            frontpages_list.append([tex, file_name]) 
+            frontpages_list.append([tex, file_name])
 
     # Create front pages:
     conv = cv.Converter()
@@ -47,12 +47,12 @@ def create_individual_pdfs(revue):
 
     total_list = []
     for actor in revue.actors:
-        individual_list = (os.path.join(path["pdf cache"], "forside-{}.pdf".format(actor.name)), 
-                             os.path.join(path["pdf"],"aktoversigt.pdf"), 
+        individual_list = (os.path.join(path["pdf cache"], "forside-{}.pdf".format(actor.name)),
+                             os.path.join(path["pdf"],"aktoversigt.pdf"),
                              os.path.join(path["pdf"],"rolleliste.pdf"),
                              actor,
                              os.path.join(path["pdf"],"rekvisitliste.pdf"))
-        total_list.append((individual_list, 
+        total_list.append((individual_list,
                            os.path.join(path["individual pdf"],
                                        "{}.pdf".format(actor.name))))
 
@@ -80,7 +80,7 @@ def create_song_manus_pdf(revue):
             if material.category == path["songs"]:
                 file_list.append(os.path.join(path["pdf"], path["songs"],
                                         "{}.pdf".format(material.file_name[:-4])))
-    
+
     pdf = PDF()
     pdf.pdfmerge(file_list, os.path.join(path["pdf"],"sangmanuskript.pdf"))
 
@@ -102,7 +102,7 @@ def create_parts(revue, args):
     elif "frontpage" in args:
         tex.create_frontpage()
         tex.topdf("forside.pdf")
-    
+
     elif "props" in args:
         tex.create_props_list()
         tex.topdf("rekvisitliste.pdf")
@@ -116,7 +116,7 @@ def create_parts(revue, args):
 
     elif "songmanus" in args:
         create_song_manus_pdf(revue)
-    
+
     elif "signup" in args:
         tex.create_signup_form()
         tex.topdf("rolletilmelding.pdf")
@@ -142,7 +142,7 @@ if __name__ == "__main__":
     path = revue.conf["Paths"]
     conv = cv.Converter()
 
-    if len(conf.cmd_parts) == 0 in sys.argv:
+    if len(conf.cmd_parts) == 0:
         arglist = ("aktoversigt", "roles", "frontpage", "props",
                    "contacts", "material","individual", "songmanus")
     elif "manus" in sys.argv:
@@ -157,12 +157,12 @@ if __name__ == "__main__":
 
     if len(conf.cmd_parts) == 0 or "manus" in sys.argv:
         pdf = PDF()
-        pdf.pdfmerge((os.path.join(path["pdf"],"forside.pdf"), 
-                      os.path.join(path["pdf"],"aktoversigt.pdf"), 
-                      os.path.join(path["pdf"],"rolleliste.pdf"), 
-                      revue, 
-                      os.path.join(path["pdf"],"rekvisitliste.pdf"), 
-                      os.path.join(path["pdf"],"kontaktliste.pdf")), 
+        pdf.pdfmerge((os.path.join(path["pdf"],"forside.pdf"),
+                      os.path.join(path["pdf"],"aktoversigt.pdf"),
+                      os.path.join(path["pdf"],"rolleliste.pdf"),
+                      revue,
+                      os.path.join(path["pdf"],"rekvisitliste.pdf"),
+                      os.path.join(path["pdf"],"kontaktliste.pdf")),
                       os.path.join(path["pdf"],"manuskript.pdf"))
 
         print("Manuscript successfully created!")
