@@ -14,7 +14,10 @@ class Material:
     def __init__(self, info_dict):
         "Extract data from dictionary returned by parsetexfile()."
         self.title = info_dict["title"]
-        self.status = info_dict["status"]
+        try:
+            self.status = info_dict["status"]
+        except KeyError:
+            print("No status on '{}' is set.".format(self.title))
         self.props = info_dict["props"]
         self.length = info_dict["eta"].replace('$','').split()[0]
         self.path = os.path.abspath(info_dict["path"])
@@ -29,7 +32,7 @@ class Material:
             # Add the title of this material to the roles:
             #role.add_material(self.title)
             role.add_material_path(self.path)
-        
+
         # Extract the category (which is the directory):
         path, self.file_name = os.path.split(self.path)
         self.category = os.path.split(path)[1]
@@ -44,17 +47,20 @@ class Material:
         self.has_been_texed = False
 
         # Save the file content:
-        self.tex = info_dict['tex'] 
-        
+        self.tex = info_dict['tex']
+
         # Stuff that could be used for future features:
         self.appearing_roles = info_dict["appearing_roles"]
 
         # To be deprecated (most likely):
-        self.author = info_dict["author"]
+        try:
+            self.author = info_dict["author"]
+        except KeyError:
+            print("No author for '{}' is declared.".format(self.title))
         self.year = info_dict["revyyear"]
         self.revue = info_dict["revyname"]
         self.version = info_dict["version"]
-    
+
     @classmethod
     def fromfile(cls, filename):
         "Parse TeX file."
@@ -63,7 +69,7 @@ class Material:
         info_dict = tex.info
         info_dict["path"] = filename
         return cls(info_dict)
-    
+
 
     def write(self, fname, encoding='utf-8'):
         "Write to a TeX file."
@@ -127,7 +133,7 @@ class Act:
                     n[m.length] += 1
                 except KeyError:
                     n[m.length] = 1
-        
+
         l = "{:4.2f}".format(t)
         for key in n:
             if n[key] != 1:
@@ -161,7 +167,7 @@ class Revue:
     @classmethod
     def fromfile(cls, filename, encoding='utf-8'):
         "Takes a plan file and extracts the information for each material."
-        
+
         acts = []
         act = Act()
 
