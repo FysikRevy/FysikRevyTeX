@@ -9,13 +9,13 @@ import converters as cv
 from config import configuration as conf
 
 # Regular expression that extracts everything between \ and {:
-cmd_re = re.compile(r"^.*\\(.*){.*$")
+cmd_re = re.compile(r"^.*\\([^\{]*){.*$")
 
 # Regular expression that extracts everything between { and }:
-kw_re = re.compile(r"^.*{(.*)}.*$")
+kw_re = re.compile(r"^[^}]*{([^}]*)}.*$")
 
 # Regular expression that extracts everything between [ and ]:
-opt_re = re.compile(r"^.*\[(.*)\].*$")
+opt_re = re.compile(r"^[^\[]*\[([^\]]*)\].*$")
 
 # Regular expression that extracts everything ] and to the end of the line:
 eol_re = re.compile(r"^.*\](.*).*$")
