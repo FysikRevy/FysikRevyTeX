@@ -25,11 +25,11 @@ def extract_multiple_lines(lines, line_number, start_delimiter='{', end_delimite
     "Extract the whole string of a command that spans multiple lines (e.g. \scene)."
 
     line = lines[line_number]
-    
+
     # Find index of start delimiter and instantiate the end index:
     start_index = line.find(start_delimiter)
     end_index = 0
-    
+
     # Get the start of the string, we want to return:
     string = line[start_index+1:].strip() # strip spaces and newlines
 
@@ -58,7 +58,7 @@ def extract_multiple_lines(lines, line_number, start_delimiter='{', end_delimite
 
     for l in range(line_number+1, line_n):
         # Strip spaces and newlines, but add a space between the new and past line:
-        string += " " + lines[l].strip() 
+        string += " " + lines[l].strip()
 
     # Add the ending:
     string += lines[line_n][:end_index]
@@ -75,7 +75,7 @@ class TeX:
 
         elif arg == None:
             self.revue = None
-            
+
         else:
             raise TypeError("The optional argument must be "
                             "a Revue object.")
@@ -84,7 +84,7 @@ class TeX:
 
         self.tex = ""
         self.fname = ""
-        
+
         # Create dictionary to store relevant information:
         self.info = {}
 
@@ -104,7 +104,7 @@ class TeX:
 
     def parse(self, fname, encoding='utf-8'):
         "Parse a TeX file and extract revue relevant information to a dictionary."
-        
+
         self.fname = os.path.split(fname)[1]
         self.info['modification_time'] = os.stat(fname).st_mtime
 
@@ -152,7 +152,7 @@ class TeX:
                         except IndexError:
                             # There is no ending '}' in the line.
                             keyword = extract_multiple_lines(lines, n)
-                        
+
                         # Now check whether the command is one of the important ones:
                         if command in important_list:
                             if command == "prop":
@@ -198,7 +198,7 @@ class TeX:
 
     def topdf(self, pdfname, outputdir="", repetitions=2, encoding='utf-8'):
         "Convert internally stored TeX code to PDF using pdflatex."
-        
+
         converter = cv.Converter()
         converter.textopdf(self, pdfname, outputdir, repetitions, encoding)
 
@@ -207,7 +207,7 @@ class TeX:
 
     def create_act_outline(self, templatefile="", encoding='utf-8'):
         "Create act outline from Revue object."
-        
+
         if self.revue == None:
             raise RuntimeError("The TeX object needs to be instantiated with "
                     "a Revue object in order to use create_act_outline().")
@@ -239,7 +239,7 @@ class TeX:
 
                 self.tex += """\\emph{{{revue_name} {revue_year}}}\\\\
         \t\t\\small{{Status: {status}, \\emph{{Tidsestimat: {length} minutter}}}}\n""".format(revue_name=m.revue, revue_year=m.year, status=m.status, length=m.length)
-            
+
             self.tex += "\\end{enumerate}\n\n"
 
         template.insert(1,self.tex)
@@ -249,7 +249,7 @@ class TeX:
     #----------------------------------------------------------------------
 
     def create_role_overview(self, templatefile="", encoding='utf-8'):
-        
+
         if self.revue == None:
             raise RuntimeError("The TeX object needs to be instantiated with "
                     "a Revue object in order to use create_role_overview().")
@@ -278,7 +278,7 @@ class TeX:
             for j in range(i):
                 self.tex += "|   "
             self.tex += "@{}".format(self.revue.actors[i])
-        self.tex += r"}\\\hline"
+        self.tex += r"}\\" + "\n" + r"\hline"
 
         for act in self.revue.acts:
             self.tex += r"\multicolumn{{{width}}}{{|l|}}{{\textbf{{{title}}}}}\\".format(
@@ -297,17 +297,16 @@ class TeX:
                             break
                     else:
                         self.tex += r"& \q"
-                self.tex += r"\\\hline"
-        
+                self.tex += "\n" + r"\\\hline"
+
         template.insert(1,self.tex)
         self.tex = "\n".join(template)
-
 
 
     #----------------------------------------------------------------------
 
     def create_props_list(self, templatefile="", encoding='utf-8'):
-        
+
         if self.revue == None:
             raise RuntimeError("The TeX object needs to be instantiated with "
                     "a Revue object in order to use create_props_list().")
@@ -334,7 +333,7 @@ class TeX:
 
 \hline \endfoot
 """.format(act_title=act.name)
-        
+
             for m in act.materials:
                 if len(m.props) != 0:
                     self.tex += "\n\\mtitle{{{m_title}}}\n".format(m_title = m.title)
@@ -352,7 +351,7 @@ class TeX:
     #----------------------------------------------------------------------
 
     def create_frontpage(self, templatefile="", subtitle="", encoding='utf-8'):
-        
+
         if self.revue == None:
             raise RuntimeError("The TeX object needs to be instantiated with "
                     "a Revue object in order to use create_frontpage().")
@@ -365,7 +364,7 @@ class TeX:
 
         with open(templatefile, 'r', encoding=encoding) as f:
             template = f.read()
-        
+
         self.tex = template
 
         self.tex = self.tex.replace("<+SUBTITLE+>", subtitle)
@@ -377,20 +376,20 @@ class TeX:
             self.tex = self.tex.replace("<+REVUENAME+>", self.revue.name)
 
         self.tex = self.tex.replace("<+REVUEYEAR+>", self.revue.year)
-        self.tex = self.tex.replace("<+TOPQUOTE+>", 
+        self.tex = self.tex.replace("<+TOPQUOTE+>",
                             self.conf["Frontpage"]["top quote"])
-        self.tex = self.tex.replace("<+BOTTOMQUOTE+>", 
+        self.tex = self.tex.replace("<+BOTTOMQUOTE+>",
                             self.conf["Frontpage"]["bottom quote"])
 
 
     #----------------------------------------------------------------------
 
     def create_signup_form(self, templatefile="", encoding='utf-8'):
-        
+
         if self.revue == None:
             raise RuntimeError("The TeX object needs to be instantiated with "
                     "a Revue object in order to use create_signup_form().")
-        
+
         if templatefile == "":
             templatefile = os.path.join(self.conf["Paths"]["templates"],
                     "signup_form_template.tex")
@@ -428,7 +427,7 @@ class TeX:
     #----------------------------------------------------------------------
 
     def create_contacts_list(self, contactsfile, templatefile='templates/contacts_list_template.tex', encoding='utf-8'):
-        """Parses a CSV file to create the contacts list. Comments starting with # will be interpreted as section headings. 
+        """Parses a CSV file to create the contacts list. Comments starting with # will be interpreted as section headings.
     Comments starting with ## will be interpreted as column headers in the list."""
 
         self.tex = ""
@@ -461,7 +460,7 @@ class TeX:
 
                     split_line = line.strip('# ').split(';')
                     n_cols = len(split_line)
-                    
+
                     self.tex += "\\begin{{longtable}}{{*{{{n}}}{{l}}}}\n".format(n=n_cols)
 
                     headers = ""
