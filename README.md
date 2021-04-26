@@ -115,6 +115,20 @@ Creates PDFs for each actor containing only the sketches and songs the actor par
 * **`python create.py signup`**<br/>
 Create a sign-up form for all sketches and songs. Look for `rolletilmelding.pdf` in the `pdf/` directory.
 
+> Herfra kommer der et skift i stil, hvilket den opmærksomme læser (eller læseren, som kan bruge `git blame`) måske kan gætte følger med et skift i forfatter.
+
 * **`python create.py --tex-all`**  
 Gennemtving gen-TeXning af alle filer. Kan også kobles på de andre kommandoer, for at tvinge gen-TeXning af udvalgte filer.
 > Det var, og er, en valgmulighed i `revytex.conf`-filen, men det er en god mulighed at have på kommandolinjen også.
+
+#### Omfattende omskrivninger
+Farlige kommandoer, som skriver om i kilde-TeX-filerne. Men dog så usikre på sig selv, at de ikke be'r om bekræfigelse før de gør noget.
+
+* **`python create.py uniform-revue` og `python create.py uniform-year`**  
+Revyster husker ikke altid, at skrive det rigtige år, eller den rigtige revy, i deres TeX-filer. De her kommandoer opdaterer alle TeX-filerne i `.plan`-en med revynavn hhv. -år fra `revytex.conf`-filen.
+
+* **`python create.py role-distribution`**  
+Skriv roller ind i alle TeX-filer, når rollefordelingen er på plads. Læg filen `roller.csv` i din revy-mappe (eller skriv din fil ind under "Files" som "roller = [filnavn]" i `revytex.conf`). Der er et eksempel i git-mappen, men formatet er basalt set det samme som rollefordelingsskemaet, men i csv-format.
+
+### Om `.csv`-filer
+Vi forventer i det her hus, at `.csv`-filer bruger semikolon (;) som separator (hvilket teknisk set gør dem til ssv-filer). Hvis du eksporterer csv-filer fra et regnearksprogram, og du får `.csv`-filer med kommaer (,) i stedet for semikoloner, så check først efter, om der er en indstilling for at få semikoloner i stedet for. Hvis ikke, så må du slev lave en søg-og-erstat. (Men pas på, der ikke er nogen, som har sneget semikoloner ind i felterne i dit regneark. Revyster er snu og uforudsigelige på den måde.)

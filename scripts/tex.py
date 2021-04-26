@@ -189,9 +189,8 @@ class TeX:
                                     # Replace potential slash with a dash,
                                     # to avoid problems with slashes in filenames.
                                     name = name.replace("/", "-")
-                                if len(name) > 0:
-                                    # Only store the role if it is not empty:
-                                    self.info["roles"].append(Role(abbreviation, name, role))
+
+                                self.info["roles"].append(Role(abbreviation, name, role))
 
                             elif command in ("sings", "says"):
                                 # We count how many abbreviations actually appear in the sketch/song
@@ -202,6 +201,81 @@ class TeX:
                             # Store information:
                             self.info[command] = keyword
 
+    def update_roles( self, roles ):
+        """Change the 'roles' section of the tex file to reflect the input list.
+        Used for propagating role assignment."""
+
+        for role in roles:
+            if not isinstance( role, Role ):
+                raise TypeError(
+                    # figure that one out!
+                    "update_roles passed a role that isn't a Role."
+                )
+
+        if not 'tex' in self.info:
+            raise RuntimeError( """update_roles called on umparsed TeX object
+. My fname is {}""".format( self.fname ) )
+
+        # Match roller efter forkortelser, og sammentræk informationer
+        # for roller, som findes i både den nye og den gamle
+        # rolleliste
+        r = []
+        for old_role in self.info['roles']:
+            for role in roles:
+                if old_role.abbreviation == role.abbreviation:
+                    if not role.role:
+                        role.role = old_role.role
+                    r += [ role ]
+                    roles.remove( role ) # Det går nok. Vi break'er lige bag efter
+                    break
+                        
+        # Vi går ud fra, at roller, som ikke er i den nye liste, er
+        # blevet fjernet fra nummeret
+        # Den nye rolleliste er de roller, som var i begge lister plus
+        # roller, som kun er i den nye, sorteret efter forkortelse
+        self.info['roles'] = r + sorted( roles, key=lambda x: x.abbreviation )
+
+        # find rollesektionen
+        for n,whole_line in enumerate( self.info['tex'] ):
+            line = whole_line.strip()
+
+            #copy-paste fra parse ^^:
+            if len(line) > 0 and line[0] == '\\' and '{' in line:
+                command = re.findall("\w+", line)[0] # Extract (the first) command using regex
+                
+                if command in [ "begin", "end" ]:
+                    try:
+                        keyword = kw_re.findall(line)[0] # Extract (the first) keyword using regex
+                    except IndexError:
+                        # There is no ending '}' in the line.
+                        keyword = extract_multiple_lines(self.info['tex'], n)
+
+                    # end copy-paste
+                    # find linjerne, hvor rollelisten starter og slutter
+                    if keyword == "roles":
+                        if command == "begin":
+                            start_line = n
+                        if command == "end":
+                            end_line = n
+                        try: 
+                            if start_line and end_line:
+                                break
+                        except NameError:
+                            # ikke endnu
+                            pass
+        else:
+            # der var ikke nogen rolleliste
+            # (eller kun en halv, hvilket er værre)
+            print("\033[0;31m Failed!\033[0m  No roles list in {}".format(self.fname))
+            return
+
+        indent = re.search( "^\s*", self.info['tex'][start_line + 1] ).group(0)
+        
+        role_lines = [ indent + "\\role{{{0.abbreviation}}}[{0.actor}] {0.role}\n".format( role )
+                       for role in self.info['roles']
+        ]
+        self.info['tex'] = self.info['tex'][:start_line + 1] + role_lines + self.info['tex'][end_line:]
+        
 
     def topdf(self, pdfname, outputdir="", repetitions=2, encoding='utf-8'):
         "Convert internally stored TeX code to PDF using pdflatex."

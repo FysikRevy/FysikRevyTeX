@@ -9,6 +9,7 @@ import setup_functions as sf
 import converters as cv
 import config as cf
 from tex import TeX
+from clobberers import clobber_steps, clobber_my_tex
 from pdf import PDF
 
 from config import configuration as conf
@@ -108,40 +109,41 @@ def create_song_manus_pdf(revue):
 def create_parts(revue, args):
     tex = TeX(revue)
 
+    if any( x in args for x in clobber_steps ):
+        clobber_my_tex( revue, args )
+
     if "aktoversigt" in args:
         tex.create_act_outline()
         tex.topdf("aktoversigt.pdf")
 
-    elif "roles" in args:
+    if "roles" in args:
         tex.create_role_overview()
         tex.topdf("rolleliste.pdf")
 
-    elif "material" in args:
-        create_material_pdfs(revue)
-
-    elif "frontpage" in args:
-        tex.create_frontpage()
+    if "frontpage" in args:
+        tex.create_frontpage( )
         tex.topdf("forside.pdf")
 
-    elif "props" in args:
+    if "props" in args:
         tex.create_props_list()
         tex.topdf("rekvisitliste.pdf")
 
-    elif "individual" in args:
-        create_individual_pdfs(revue)
-
-    elif "contacts" in args:
+    if "contacts" in args:
         tex.create_contacts_list("contacts.csv")
         tex.topdf("kontaktliste.pdf")
 
-    elif "songmanus" in args:
+    if "material" in args:
+        create_material_pdfs(revue)
+
+    if "individual" in args:
+        create_individual_pdfs(revue)
+
+    if "songmanus" in args:
         create_song_manus_pdf(revue)
 
-    elif "signup" in args:
+    if "signup" in args:
         tex.create_signup_form()
         tex.topdf("rolletilmelding.pdf")
-
-
 
 if __name__ == "__main__":
 
@@ -168,8 +170,7 @@ if __name__ == "__main__":
     else:
         arglist = sys.argv[1:]
 
-    for arg in arglist:
-        create_parts(revue, arg)
+    create_parts( revue, arglist )
 
 
     if len(conf.cmd_parts) == 0 or "manus" in sys.argv:
