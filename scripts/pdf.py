@@ -34,9 +34,11 @@ filnavne og bogmærkenavne (til indholdsfortegnelsen)."""
         merge_args = ()         # argumenter til PyPDF2 append()
         found_fresh_input = False # flag (::sadface::)
 
-        for f in file_list:
+        for fe in file_list:
+            f, bookmark = fe if isinstance( fe, tuple ) else ( fe, None )
             if type(f) == str and f[-3:] == 'pdf':
                 merge_args += ({ "fileobj": f,
+                                "bookmark": bookmark
                                 },)
                 found_fresh_input |= (
                     os.stat( f ).st_mtime > output_modtime
@@ -52,6 +54,7 @@ filnavne og bogmærkenavne (til indholdsfortegnelsen)."""
                         )
                         merge_args += ({
                             "fileobj": pdfpath,
+                            "bookmark": bookmark or m.title or None
                         },)
                         found_fresh_input |= (
                             os.path.getmtime( pdfpath ) > output_modtime
@@ -66,6 +69,7 @@ filnavne og bogmærkenavne (til indholdsfortegnelsen)."""
                     )                    
                     merge_args += ({
                         "fileobj": pdfpath,
+                        "bookmark": bookmark or role.material.title or None
                     },)
                     found_fresh_input |= (
                         os.path.getmtime( pdfpath ) > output_modtime
@@ -85,7 +89,18 @@ filnavne og bogmærkenavne (til indholdsfortegnelsen)."""
         merger = PdfFileMerger()
 
         # så kører bussen
+        tex_translations = { "\\texttrademark": "™",
+                             "--": "–",
+                             "---": "—",
+                             "''": "“",
+                             "``": "”"
+                            }
         for kwargs in merge_args:
+            for t in tex_translations:
+                if kwargs[ "bookmark" ]:
+                    kwargs[ "bookmark" ] = ( kwargs[ "bookmark" ]
+                                             .replace( t, tex_translations[t] )
+                                            )
             merger.append( **kwargs )
 
         try:

@@ -54,11 +54,15 @@ def create_individual_pdfs(revue):
 
     total_list = []
     for actor in revue.actors:
-        individual_list = (os.path.join(path["pdf cache"], "forside-{}.pdf".format(actor.name)),
-                             os.path.join(path["pdf"],"aktoversigt.pdf"),
-                             os.path.join(path["pdf"],"rolleliste.pdf"),
-                             actor,
-                             os.path.join(path["pdf"],"rekvisitliste.pdf"))
+        individual_list = (
+            ( os.path.join( path["pdf cache"],
+                            "forside-{}.pdf".format(actor.name)
+                           ), "Forside" ),
+            ( os.path.join( path["pdf"],"aktoversigt.pdf" ), "Aktoversigt" ),
+            ( os.path.join( path["pdf"],"rolleliste.pdf" ), "Rolleliste" ),
+            actor,
+            ( os.path.join( path["pdf"],"kontaktliste.pdf"), "Kontaktliste" )
+        )
         total_list.append((individual_list,
                            os.path.join(path["individual pdf"],
                                        "{}.pdf".format(actor.name))))
@@ -87,10 +91,13 @@ def create_song_manus_pdf(revue):
         for material in act.materials:
             if material.category == path["songs"]:
                 file_list.append(
+                    (
                         os.path.join(
                             path["pdf"],
                             os.path.dirname( os.path.relpath( material.path )),
                             "{}.pdf".format(material.file_name[:-4])
+                        ),
+                        material.title
                     )
                 )
 
@@ -167,12 +174,14 @@ if __name__ == "__main__":
 
     if len(conf.cmd_parts) == 0 or "manus" in sys.argv:
         pdf = PDF()
-        pdf.pdfmerge((os.path.join(path["pdf"],"forside.pdf"),
-                      os.path.join(path["pdf"],"aktoversigt.pdf"),
-                      os.path.join(path["pdf"],"rolleliste.pdf"),
-                      revue,
-                      os.path.join(path["pdf"],"rekvisitliste.pdf"),
-                      os.path.join(path["pdf"],"kontaktliste.pdf")),
-                      os.path.join(path["pdf"],"manuskript.pdf"))
+        pdf.pdfmerge(
+            (( os.path.join(path["pdf"],"forside.pdf"), "Forside" ),
+             ( os.path.join(path["pdf"],"aktoversigt.pdf"), "Aktoversigt" ),
+             ( os.path.join(path["pdf"],"rolleliste.pdf"), "Rolleliste" ),
+             revue,
+             ( os.path.join(path["pdf"],"rekvisitliste.pdf"), "Rekvisitliste" ),
+             ( os.path.join(path["pdf"],"kontaktliste.pdf"), "Kontaktliste" )
+             ),
+            os.path.join(path["pdf"],"manuskript.pdf"))
 
         print("Manuscript successfully created!")
