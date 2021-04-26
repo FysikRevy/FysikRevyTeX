@@ -99,6 +99,7 @@ Creates the list of props. Look for `rekvisitliste.pdf` in the `pdf/` directory.
 * **`python create.py contacts`**<br />
 Creates the contacts list. Look for `kontaktliste.pdf` in the `pdf/` directory.
 To add contacts, edit `contacts.csv` with your favourite text editor. 
+> Den nye kontaktliste er ikke så fleksibel som den gamle, men den ser bedre ud. __Mike drop__
 
 * **`python create.py songmanus`**<br />
 Creates a manuscript containing only songs. Look for `sangmanuskript.pdf` in the `pdf/` directory.

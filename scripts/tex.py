@@ -555,78 +555,101 @@ class TeX:
         self.tex = ""
 
         with open(templatefile, 'r', encoding=encoding) as f:
-            template = f.read().split("<+CONTACTS+>")
-
-
-        first_table = True
-
-        with open(contactsfile, 'r', encoding=encoding) as c:
-            lines = c.readlines()
-
-        for line in lines:
-            line = line.strip()
-
-            if len(line) > 0:
-                if line[0] == '#' and line[1] != '#':
-                    # Line is a heading.
-
-                    # We should end the previous table, if any:
-                    if not first_table:
-                        self.tex += "\n\\end{longtable}\\vspace*{1em}\n"
-
-                    self.tex += "{{\Large\\bfseries {heading}}}\n".format(heading=line.strip("# "))
-
-                elif line[0] == '#' and line[1] == '#':
-                    # Line specifies column headers.
-                    first_table = False
-
-                    split_line = line.strip('# ').split(';')
-                    n_cols = len(split_line)
-
-                    self.tex += "\\begin{{longtable}}{{*{{{n}}}{{l}}}}\n".format(n=n_cols)
-
-                    headers = ""
-                    for i,word in enumerate(split_line):
-                        if i == 0:
-                            headers += "\\textbf{{{word}}}".format(word=word.strip())
-                        else:
-                            headers += " & \\textbf{{{word}}}".format(word=word.strip())
-                    headers += "\\\\\n"
-                    self.tex += r"""
-\toprule
-{headers}
-\midrule
-\endfirsthead
-
-\toprule
-{headers}
-\midrule
-\endhead
-
-\bottomrule
-\endfoot
-""".format(headers=headers)
+            template = ( f
+                         .read()
+                         .replace( "<+VERSION+>",
+                                   self.conf["Frontpage"]["version"].
+                                   split(",")[-1].strip()
+                         )
+                         .replace( "<+REVUENAME+>",
+                                   self.conf["Revue info"]["revue name"]
+                         )
+                         .replace( "<+REVUEYEAR+>",
+                                   self.conf["Revue info"]["revue year"]
+                         )
+                         .split("<+CONTACTS+>")
+            )
         self.info[ "modification_time" ] = os.stat( templatefile ).st_mtime
 
+        # gæt på, hvad fremtidige TeX-ansvarlige eller
+        # kontaktlist-ansvarlige kunne finde på at kalde felterne.
+        # udvid gerne, hvis du har flere idéer. Husk, vi kører lower()
+        # og fjerner ikke-alfanumeriske tegn, før vi matcher.
+        matchers = [ {"rolle","titel","job","ansvar"},
+                     {"navn"},
+                     {"øgenavn","kaldenavn","kælenavn","kendtsom"},
+                     {"telefonnummer","tel","nummer","telefon","tlf"},
+                     {"email","mail"}
+        ]
+
+        def determine_format( csv_line ):
+            s = 0
+            while csv_line[s] == "#":
+                s += 1
+
+            headers = csv_line[s:].split(";")
+            fmt = []
+            for m in matchers:
+                for i, h in enumerate( headers ):
+                    if re.sub( "[^a-zæøå0-9]", "", h.lower() ) in m:
+                        fmt += [i + 1]
+                        break
                 else:
-                    # Line contains contact information:
-                    split_line = line.strip().split(';')
-                    if len(split_line) != n_cols:
-                        print("Warning! Line does not have the right number of columns! Line: {}".format(line))
+                    fmt += [ 0 ]
 
-                    for i,word in enumerate(split_line):
-                        if i == 0:
-                            self.tex += "{word}".format(word=word.strip())
-                        else:
-                            self.tex += " & {word}".format(word=word.strip())
+            return fmt            
 
-                    self.tex += "\\\\\n"
+        def interpret_with_format( fmt ):
+            def interpret( csv_line ):
+                fields = [""] + csv_line.split( ";" )
+                try:
+                    return (
+                        "\\contact{"
+                        + "}{".join( [ fields[i].strip() for i in fmt ] )
+                        + "}\n"
+                    )
+                except IndexError:
+                    return ""
+                
+            return interpret
 
-        self.tex += "\\end{longtable}"
-        template.insert(1,self.tex)
-        self.tex = "\n".join(template)
+        interpret = interpret_with_format( range( 1, len( matchers ) + 1 ))
+        
+        def eat_csv_line( interpret, csv_line ):
+            if csv_line.startswith( "##" ):
+                return (
+                    interpret_with_format(
+                        determine_format( csv_line )
+                    ),
+                    []
+                )
+                
+            elif csv_line.startswith( "#" ):
+                return (
+                    interpret_with_format(
+                        range( 1, len( matchers ) + 1 )
+                    ),
+                    [
+                        "\\section*{"
+                        + csv_line[1:].strip()
+                        + "}\n"
+                    ]
+                )
+            else:
+                return interpret, interpret( csv_line )
+
+        contact_lines = []
+        with open(contactsfile, 'r', encoding=encoding) as c:
+            for csv_line in c:
+                interpret, cl = eat_csv_line( interpret, csv_line.replace( "_", "\\_" ) )
+                contact_lines += cl
+
         self.info[ "modification_time" ] = max(
             self.info[ "modification_time" ],
             os.stat( contactsfile ).st_mtime
+        )
+        self.tex = "".join( template[0:1]
+                            + contact_lines
+                            + template[1:2]
         )
 
