@@ -8,14 +8,10 @@ import classy_revy as cr
 import setup_functions as sf
 import converters as cv
 import config as cf
-import metadata as md
 from tex import TeX
 from pdf import PDF
 
-from IPython import embed
-
 from config import configuration as conf
-
 
 def create_material_pdfs(revue):
     file_list = []
@@ -25,21 +21,32 @@ def create_material_pdfs(revue):
 
     conv = cv.Converter()
     conv.parallel_textopdf(file_list)
-    #for f in file_list:
+    # for f in file_list:
     #    conv.textopdf(f)
 
 def create_individual_pdfs(revue):
     path = revue.conf["Paths"]
 
-    # Create front pages for individual actors, if they don't already exist:
-    frontpages_list = []
+    ## Create front pages for individual actors, if they don't already exist:
+    # frontpages_list = []
 
-    for actor in revue.actors:
-        file_name = "forside-{}.pdf".format(actor.name)
-        if not os.path.isfile(os.path.join(path["pdf cache"], file_name)):
-            tex = TeX(revue)
-            tex.create_frontpage(subtitle=actor.name)
-            frontpages_list.append([tex, file_name])
+    # for actor in revue.actors:
+    #     file_name = "forside-{}.pdf".format(actor.name)
+    #     if not os.path.isfile(os.path.join(path["pdf cache"], file_name)):
+    #         tex = TeX(revue)
+    #         tex.create_frontpage(subtitle=actor.name)
+    #         frontpages_list.append([tex, file_name])
+
+    # Det burde ordne sig selv nu:
+    def tex_for_front_page( name ):
+        tex = TeX( revue )
+        tex.create_frontpage( subtitle = name )
+        return tex
+    
+    frontpages_list = [ [ tex_for_front_page( actor.name ),
+                          "forside-{}.pdf".format( actor.name )
+                         ] for actor in revue.actors
+                       ]
 
     # Create front pages:
     conv = cv.Converter()
@@ -65,21 +72,27 @@ def create_song_manus_pdf(revue):
     path = revue.conf["Paths"]
 
     # Create front page, if it doesn't already exist:
-    if not os.path.exists(os.path.join(path["pdf"], "cache")):
-        os.mkdir(os.path.join(path["pdf"], "cache"))
+    # if not os.path.exists(os.path.join(path["pdf"], "cache")):
+    #     os.mkdir(os.path.join(path["pdf"], "cache"))
 
-    if not os.path.isfile(os.path.join(path["pdf"], "cache", "forside-sangmanuskript.pdf")):
-            tex = TeX(revue)
-            tex.create_frontpage(subtitle="sangmanuskript")
-            tex.topdf("forside-sangmanuskript.pdf", outputdir=os.path.join(path["pdf"], "cache"))
+    # if not os.path.isfile(os.path.join(path["pdf"], "cache", "forside-sangmanuskript.pdf")):
+    # Det tager vare på sig selv nu
+    tex = TeX(revue)
+    tex.create_frontpage(subtitle="sangmanuskript")
+    tex.topdf("forside-sangmanuskript.pdf", outputdir=os.path.join(path["pdf"], "cache"))
 
     # Create song manuscript:
     file_list = [os.path.join(path["pdf"], "cache", "forside-sangmanuskript.pdf")]
     for act in revue.acts:
         for material in act.materials:
             if material.category == path["songs"]:
-                file_list.append(os.path.join(path["pdf"], path["songs"],
-                                        "{}.pdf".format(material.file_name[:-4])))
+                file_list.append(
+                        os.path.join(
+                            path["pdf"],
+                            os.path.dirname( os.path.relpath( material.path )),
+                            "{}.pdf".format(material.file_name[:-4])
+                    )
+                )
 
     pdf = PDF()
     pdf.pdfmerge(file_list, os.path.join(path["pdf"],"sangmanuskript.pdf"))
@@ -131,12 +144,9 @@ if __name__ == "__main__":
 
     # Load configuration file:
     conf.load("revytex.conf")
-    conf.add_args(sys.argv)
-
-    # Load meta data file:
-    metadata = md.MetaData()
-    metadata.load()
-
+    conf.add_args([ x for x in sys.argv if x[0] != "-" ])
+    if "--tex-all" in sys.argv:
+        conf["TeXing"]["force TeXing of all files"] = "yes"
 
     revue = cr.Revue.fromfile("aktoversigt.plan")
     path = revue.conf["Paths"]
@@ -166,15 +176,3 @@ if __name__ == "__main__":
                       os.path.join(path["pdf"],"manuskript.pdf"))
 
         print("Manuscript successfully created!")
-
-
-    for act in revue.acts:
-        for material in act.materials:
-            metadata.update_mod_time(material)
-    for f in glob.glob(os.path.join(path["pdf"], "*.pdf")):
-        metadata.update_mod_time(f)
-    for f in glob.glob(os.path.join(path["pdf cache"], "*.pdf")):
-        metadata.update_mod_time(f)
-    #embed()
-    # Save meta data:
-    metadata.save()

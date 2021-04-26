@@ -1,3 +1,4 @@
+import os
 from configparser import ConfigParser, ExtendedInterpolation
 
 class Config:
@@ -20,9 +21,10 @@ class Config:
     def load(self, config_file = "revytex.conf"):
         "Load a configuration file."
         self.conf = ConfigParser(interpolation=ExtendedInterpolation())
-        self.conf.read(config_file)
+        self.conf.read(config_file, encoding="utf8" )
         self.name = self.conf["Revue info"]["revue name"]
         self.year = self.conf["Revue info"]["revue year"]
+        self.modification_time = os.stat( config_file ).st_mtime
 
 
     def add_args(self, args):

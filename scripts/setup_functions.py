@@ -2,6 +2,7 @@ import glob
 import os
 import shutil
 import sys
+from glob import glob
 
 def wildcard_copy(src, dst):
     "Helper function easy setup of test environment. Only used in setup.py."
@@ -27,6 +28,9 @@ def create_sketch_template(dir, config, encoding='utf-8'):
 def create_song_template(dir, config, encoding='utf-8'):
     create_material_template(dir, "sangskabelon.tex", config)
 
+def tex_files_under_dir( dir ):
+    # https://stackoverflow.com/questions/18394147/recursive-sub-folder-search-and-return-files-in-a-list-python#18394205
+    return [y for x in os.walk( dir ) for y in glob( os.path.join( x[0], '*.tex'))]
 
 def create_plan_file(fname, encoding='utf-8'):
     if os.path.isfile(fname):
@@ -35,8 +39,8 @@ def create_plan_file(fname, encoding='utf-8'):
         if choice == "n" or choice == "":
             sys.exit("Nothing to be done. Exiting.")
 
-    songs = sorted(os.listdir("sange"), key=str.lower)
-    sketches = sorted(os.listdir("sketches"), key=str.lower)
+    songs = sorted( tex_files_under_dir( "sange" ), key=str.lower)
+    sketches = sorted( tex_files_under_dir( "sketches" ), key=str.lower)
 
     with open(fname, 'w', encoding=encoding) as f:
         f.write("Sange\n")

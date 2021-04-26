@@ -7,6 +7,10 @@
 
 [revytex]: https://github.com/dikurevy/RevyTeX
 
+> Og dokumentation på engelsk, hvilket er et valg, som jeg ikke rigtig
+> forstår. Men jeg gider ikke skrive det om, så vi nøjes med spydige
+> kommentarer på fremmedsprog.
+
 ## Set up instructions
 FysikRevyTeX has very few dependencies:
 
@@ -16,6 +20,8 @@ FysikRevyTeX has very few dependencies:
 When dependencies are met, just put the contents of FysikRevyTeX in a directory of your choice. No installation is required.
 
 FysikRevyTeX has been tested on Linux with Python 3.3 and PyPDF2 v. 1.20.
+
+> Opdateret og testet på Windows med Python 3.9 og PyPDF2 v. 1.26
 
 [pypdf2]: https://pypi.python.org/pypi/PyPDF2
 
@@ -32,6 +38,8 @@ Enter your newly created directory (`cd path/to/directory`) and do the following
 
 #### 1. Create TeX files
 TeX files for songs and sketches should go into the directories `sange` and `sketches`, respectively. If you need to create the files, look at the templates in the `templates` directory.
+
+> TeX-filerne kan også bo i undermapper under `sange`- og `sketches`-mapperne. Der er godt nok en risiko for, at LaTeX ikke kan finde `revy.sty` i en undermappe, men det finde du nok ud af at løse ;).
 
 #### 2. Create a new plan file
 A plan file defines the "layout" of the revue. To create a default file, run
@@ -103,3 +111,7 @@ Creates PDFs for each actor containing only the sketches and songs the actor par
 
 * **`python create.py signup`**<br/>
 Create a sign-up form for all sketches and songs. Look for `rolletilmelding.pdf` in the `pdf/` directory.
+
+* **`python create.py --tex-all`**  
+Gennemtving gen-TeXning af alle filer. Kan også kobles på de andre kommandoer, for at tvinge gen-TeXning af udvalgte filer.
+> Det var, og er, en valgmulighed i `revytex.conf`-filen, men det er en god mulighed at have på kommandolinjen også.

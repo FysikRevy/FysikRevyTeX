@@ -92,6 +92,7 @@ class TeX:
     def read(self, fname, encoding='utf-8'):
         "Read a TeX file without parsing it."
         self.fname = os.path.split(fname)[1]
+        self.info['modification_time'] = os.stat( fname ).st_mtime
         with open(fname, 'r', encoding=encoding) as f:
             self.tex = f.read()
 
@@ -99,7 +100,13 @@ class TeX:
     def write(self, fname, encoding='utf-8'):
         "Write to a TeX file."
         with open(fname, 'w', encoding=encoding) as f:
-            f.write(self.tex)
+            if 'tex' in self.info:
+                for l in self.info['tex']:
+                    f.write( l )
+            else:
+                f.write(self.tex)
+
+        self.info[ "modification_time" ] = os.path.getmtime( fname )
 
 
     def parse(self, fname, encoding='utf-8'):
@@ -220,6 +227,9 @@ class TeX:
 
         with open(templatefile, 'r', encoding=encoding) as f:
             template = f.read().split("<+ACTOUTLINE+>")
+        self.info[ "modification_time" ] = max( os.stat( templatefile ).st_mtime,
+                                                self.revue.modification_time
+                                               )
 
         template[0] = template[0].replace("<+VERSION+>", strftime("%d-%m-%Y", localtime()))
         template[0] = template[0].replace("<+REVUENAME+>", self.revue.name)
@@ -239,6 +249,11 @@ class TeX:
 
                 self.tex += """\\emph{{{revue_name} {revue_year}}}\\\\
         \t\t\\small{{Status: {status}, \\emph{{Tidsestimat: {length} minutter}}}}\n""".format(revue_name=m.revue, revue_year=m.year, status=m.status, length=m.length)
+
+                self.info[ "modification_time" ] = max(
+                    self.info[ "modification_time" ],
+                    m.modification_time
+                )
 
             self.tex += "\\end{enumerate}\n\n"
 
@@ -261,6 +276,7 @@ class TeX:
 
         with open(templatefile, 'r', encoding=encoding) as f:
             template = f.read().split("<+ROLEMATRIX+>")
+        self.info[ "modification_time" ] = os.stat( templatefile ).st_mtime
 
         template[0] = template[0].replace("<+VERSION+>", strftime("%d-%m-%Y", localtime()))
         template[0] = template[0].replace("<+REVUENAME+>", self.revue.name)
@@ -298,6 +314,10 @@ class TeX:
                     else:
                         self.tex += r"& \q"
                 self.tex += "\n" + r"\\\hline"
+                self.info[ "modification_time" ] = max(
+                    self.info[ "modification_time" ],
+                    mat.modification_time
+                )
 
         template.insert(1,self.tex)
         self.tex = "\n".join(template)
@@ -319,6 +339,7 @@ class TeX:
 
         with open(templatefile, 'r', encoding=encoding) as f:
             template = f.read().split("<+PROPSLIST+>")
+        self.info[ "modification_time" ] = os.stat( templatefile ).st_mtime
 
         for act in self.revue.acts:
             self.tex += r"""
@@ -340,6 +361,11 @@ class TeX:
                     for prop in m.props:
                         self.tex += r"\textbf{{{prop}}} & {responsible} & \\ {description} & & \\ \hline".format(prop=prop.prop, responsible=prop.responsible, description=prop.description)
                         self.tex += "\n"
+                        
+                    self.info[ "modification_time" ] = max(
+                        self.info[ "modification_time" ],
+                        m.modification_time
+                    )
 
             self.tex += "\\end{longtable}\n\n"
 
@@ -364,6 +390,10 @@ class TeX:
 
         with open(templatefile, 'r', encoding=encoding) as f:
             template = f.read()
+        self.info[ "modification_time" ] = max(
+            os.stat( templatefile ).st_mtime,
+            conf.modification_time # Det er her, vi skriver info til forsiden
+        )
 
         self.tex = template
 
@@ -398,6 +428,7 @@ class TeX:
 
         with open(templatefile, 'r', encoding=encoding) as f:
             template = f.read().split("<+SIGNUPFORM+>")
+        self.info[ "modification_time" ] = os.stat( templatefile ).st_mtime
 
         for act in self.revue.acts:
             self.tex += "\n\n\\begin{longtable}{|p{7cm}|cccl|}\n"
@@ -416,6 +447,11 @@ class TeX:
                         self.tex += "\\role{{{title}}}\n".format(title=role.abbreviation)
                     else:
                         self.tex += "\\role{{{title}}}\n".format(title=role.role)
+
+                self.info[ "modification_time" ] = max(
+                    self.info[ "modification_time" ],
+                    material.modification_time
+                )
 
             self.tex += "\\end{longtable}\n\n"
 
@@ -484,6 +520,7 @@ class TeX:
 \bottomrule
 \endfoot
 """.format(headers=headers)
+        self.info[ "modification_time" ] = os.stat( templatefile ).st_mtime
 
                 else:
                     # Line contains contact information:
@@ -502,4 +539,8 @@ class TeX:
         self.tex += "\\end{longtable}"
         template.insert(1,self.tex)
         self.tex = "\n".join(template)
+        self.info[ "modification_time" ] = max(
+            self.info[ "modification_time" ],
+            os.stat( contactsfile ).st_mtime
+        )
 
