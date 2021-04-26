@@ -3,6 +3,7 @@ from time import localtime, strftime
 
 import base_classes as bc
 from tex import TeX
+from base_classes import Role
 
 from config import configuration as conf
 from pathlib import Path
@@ -52,6 +53,18 @@ class Material:
 
         # Stuff that could be used for future features:
         self.appearing_roles = info_dict["appearing_roles"]
+        # Like this:
+        self.supernumeraries = [ role for role in self.appearing_roles
+                                 if role not in [
+                                         role.abbreviation for role in self.roles
+                                 ]
+        ]
+        if conf.getboolean( "TeXing", "supernumeraries" ) and self.supernumeraries:
+            self.roles += [ Role( " ".join( self.supernumeraries ),
+                                  "!!!!!!!",
+                                  ""
+            )]
+        
 
         # To be deprecated (most likely):
         try:
