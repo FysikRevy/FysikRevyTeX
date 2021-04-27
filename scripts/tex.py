@@ -398,7 +398,19 @@ class TeX:
         self.tex = template
 
         self.tex = self.tex.replace("<+SUBTITLE+>", subtitle)
-        self.tex = self.tex.replace("<+VERSION+>", self.conf["Frontpage"]["version"])
+
+        versions = [x.strip() for x in self.conf["Frontpage"]["version"].split(",")]
+        self.tex = self.tex.replace("<+VERSION+>", versions[-1] or "??????")
+        try:
+            self.tex = self.tex.replace(
+                "<+VERLIST+>",
+                " ".join(
+                    [ "\\item[\\rmfamily Tidligere versioner:] {}".format( versions[:-1][0] ) ]
+                    + [ "\\item {}".format( x ) for x in versions[1:-1] ]
+                )
+            )
+        except IndexError:
+            self.tex = self.tex.replace("<+VERLIST+>", "")
 
         if self.conf["Revue info"]["revue name"] == "\\FysikRevy\\texttrademark":
             self.tex = self.tex.replace("<+REVUENAME+>", "\\FysikRevy")

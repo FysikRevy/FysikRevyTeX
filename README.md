@@ -3,6 +3,7 @@
 * Completely rewritten in Python 3.
 * Parallel generation of PDFs for songs, sketches and individual manuscripts.
 * The manuscript has the traditional front page.
+> ...mere eller mindre
 * The contact list has a more human readable syntax.
 
 [revytex]: https://github.com/dikurevy/RevyTeX
@@ -67,6 +68,8 @@ An example of a plan file could be:
 
 #### 3. Edit configuration (optional)
 FysikRevyTeX can be configured by editing the file `revytex.conf`. This is also where properties of the front page can be changed.
+
+> Listen over tidligere versioner på forsiden er en ny idé, og valgfri. I `.conf`-filen kan værdien `version` enten være en kommasepareret liste over versionsnavne, hvoraf den sidste bliver brugt som den nuværende version, eller kun den nuværende version, hvor listen over tidligere versioner så slet ikke bliver sat på forsiden.
 
 #### 4. Rejoice!
 You should have a fully working FysikRevyTeX system! See **Day-to-day usage** for instructions on how to use FysikRevyTeX.
