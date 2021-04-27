@@ -17,6 +17,7 @@ FysikRevyTeX has very few dependencies:
 
 * Python 3.3 or newer.
 * [PyPDF2][] for the PDF magic.
+* [fuzzywuzzy][] til noget tekst-matche-magi
 
 When dependencies are met, just put the contents of FysikRevyTeX in a directory of your choice. No installation is required.
 
@@ -25,6 +26,7 @@ FysikRevyTeX has been tested on Linux with Python 3.3 and PyPDF2 v. 1.20.
 > Opdateret og testet på Windows med Python 3.9 og PyPDF2 v. 1.26
 
 [pypdf2]: https://pypi.python.org/pypi/PyPDF2
+[fuzzywuzzy]: https://pypi.org/project/fuzzywuzzy/
 
 ## Usage
 ### Creating a new revue directory
@@ -99,7 +101,7 @@ Creates the list of props. Look for `rekvisitliste.pdf` in the `pdf/` directory.
 * **`python create.py contacts`**<br />
 Creates the contacts list. Look for `kontaktliste.pdf` in the `pdf/` directory.
 To add contacts, edit `contacts.csv` with your favourite text editor. 
-> Den nye kontaktliste er ikke så fleksibel som den gamle, men den ser bedre ud. __Mike drop__
+> Den nye kontaktliste er ikke så fleksibel som den gamle, men den ser bedre ud. _Mike drop_
 
 * **`python create.py songmanus`**<br />
 Creates a manuscript containing only songs. Look for `sangmanuskript.pdf` in the `pdf/` directory.
