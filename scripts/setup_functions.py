@@ -2,7 +2,6 @@ import glob
 import os
 import shutil
 import sys
-from glob import glob
 
 def wildcard_copy(src, dst):
     "Helper function easy setup of test environment. Only used in setup.py."
