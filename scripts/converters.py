@@ -86,7 +86,7 @@ class Converter:
                             ".tex file, a TeX object or a Material object.")
 
         try:
-            if ( os.stat( os.path.join(dst_dir, pdfname) ).st_mtime
+            if ( os.stat( os.path.join(dst_dir, pdfname or pdffile ) ).st_mtime
                  > src_modtime
                  and not self.conf.getboolean( "TeXing", "force TeXing of all files" )
                 ):
