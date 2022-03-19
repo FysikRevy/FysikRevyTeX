@@ -8,6 +8,9 @@ from time import time
 
 from config import configuration as conf
 
+class ConversionError( Exception ):
+    pass
+        
 class Converter:
     def __init__(self):
         self.conf = conf
@@ -99,37 +102,39 @@ class Converter:
             os.chdir(path)
         else:
             os.chdir(temp)
-            os.symlink(os.path.join(src_dir,"revy.sty"), "revy.sty")
+            if os.path.exists( os.path.join( src_dir, "revy.sty" ) ):
+                os.symlink(os.path.join(src_dir,"revy.sty"), "revy.sty")
 
         for i in range(repetitions):
             if self.conf.getboolean("TeXing","verbose output"):
-                rc = subprocess.call(["pdflatex", "-halt-on-error", texfile])
+                rc = subprocess.call(["pdflatex", "-interaction=nonstopmode", texfile])
             else:
-                rc = subprocess.call(["pdflatex", "-halt-on-error", texfile], 
+                rc = subprocess.call(["pdflatex", "-interaction=batchmode", texfile], 
                                      stdout=subprocess.DEVNULL)
 
 
         # Check whether the pdf was generated:
         # TODO: This needs to be done better.
-        if not os.path.isfile(pdffile):
-            rerun = input("Oh snap! Something went wrong when creating the PDF.\n"
-                          "Do you want to run pdflatex again, this time with output? (y/[n])")
-            if rerun == 'y':
-                rc = subprocess.call(["pdflatex", texfile]) 
+        # if not os.path.isfile(pdffile):
+        #     rerun = input("Oh snap! Something went wrong when creating the PDF.\n"
+        #                   "Do you want to run pdflatex again, this time with output? (y/[n])")
+        #     if rerun == 'y':
+        #         rc = subprocess.call(["pdflatex", texfile]) 
 
 
+        print("{:<42}".format("\033[0;37;1m{}:\033[0m".format(pdfname or pdffile)), end="")
+        if rc == 0:
+            print("\033[0;32m Success!\033[0m")
+        elif os.path.exists( pdffile ):
+            print("\033[0;33m Had Errors!\033[0m" )
+        else:
+            print("\033[0;31m Failed!\033[0m")
+            raise ConversionError
 
         if pdfname == "":
             pdfname = pdffile
         else:
             os.rename(pdffile, pdfname)
-
-        print("{:<42}".format("\033[0;37;1m{}:\033[0m".format(pdfname)), end="")
-        if rc == 0:
-            print("\033[0;32m Success!\033[0m")
-        else:
-            print("\033[0;31m Failed!\033[0m")
-
 
         try:
             if not os.path.isdir( dst_dir ):
@@ -147,7 +152,7 @@ class Converter:
         else:
             shutil.rmtree(temp)
 
-
+        
     def parallel_textopdf(self, file_list, outputdir="", repetitions=2, encoding='utf-8'):
 
         new_file_list = []

@@ -113,6 +113,7 @@ def create_parts(revue, args):
         clobber_my_tex( revue, args )
 
     if "aktoversigt" in args:
+        print( "ping" )
         tex.create_act_outline()
         tex.topdf("aktoversigt.pdf")
 
@@ -156,6 +157,8 @@ if __name__ == "__main__":
     conf.add_args([ x for x in sys.argv if x[0] != "-" ])
     if "--tex-all" in sys.argv:
         conf["TeXing"]["force TeXing of all files"] = "yes"
+    if "-v" in sys.argv:
+        conf["TeXing"]["verbose output"] = "yes"
 
     revue = cr.Revue.fromfile("aktoversigt.plan")
     path = revue.conf["Paths"]
@@ -170,19 +173,22 @@ if __name__ == "__main__":
     else:
         arglist = sys.argv[1:]
 
-    create_parts( revue, arglist )
+    try:
+        create_parts( revue, arglist )
+    except cv.ConversionError:
+        print( "Some TeX files failed to compile. Can't create manuscripts.")
+    else:
 
-
-    if len(conf.cmd_parts) == 0 or "manus" in sys.argv:
-        pdf = PDF()
-        pdf.pdfmerge(
-            (( os.path.join(path["pdf"],"forside.pdf"), "Forside" ),
-             ( os.path.join(path["pdf"],"aktoversigt.pdf"), "Aktoversigt" ),
-             ( os.path.join(path["pdf"],"rolleliste.pdf"), "Rolleliste" ),
-             revue,
-             ( os.path.join(path["pdf"],"rekvisitliste.pdf"), "Rekvisitliste" ),
-             ( os.path.join(path["pdf"],"kontaktliste.pdf"), "Kontaktliste" )
-             ),
-            os.path.join(path["pdf"],"manuskript.pdf"))
-
-        print("Manuscript successfully created!")
+    	if len(conf.cmd_parts) == 0 or "manus" in sys.argv:
+    	    pdf = PDF()
+    	    pdf.pdfmerge(
+    	        (( os.path.join(path["pdf"],"forside.pdf"), "Forside" ),
+    	         ( os.path.join(path["pdf"],"aktoversigt.pdf"), "Aktoversigt" ),
+    	         ( os.path.join(path["pdf"],"rolleliste.pdf"), "Rolleliste" ),
+    	         revue,
+    	         ( os.path.join(path["pdf"],"rekvisitliste.pdf"), "Rekvisitliste" ),
+    	         ( os.path.join(path["pdf"],"kontaktliste.pdf"), "Kontaktliste" )
+    	         ),
+    	        os.path.join(path["pdf"],"manuskript.pdf"))
+    	
+    	    print("Manuscript successfully created!")

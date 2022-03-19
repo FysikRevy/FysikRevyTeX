@@ -2,7 +2,7 @@
 import os
 from multiprocessing import Pool, cpu_count
 
-from PyPDF2 import PdfFileMerger
+from PyPDF2 import PdfFileMerger,PdfFileReader
 
 from config import configuration as conf
 
@@ -43,6 +43,10 @@ filnavne og bogmærkenavne (til indholdsfortegnelsen)."""
                 found_fresh_input |= (
                     os.stat( f ).st_mtime > output_modtime
                 )
+                if PdfFileReader( f ).numPages % 2 == 1:
+                    merge_args += { "fileobj": "blank.pdf", "bookmark": None },
+
+
 
             elif type(f).__name__ == "Revue":
                 for act in f.acts:
@@ -58,7 +62,11 @@ filnavne og bogmærkenavne (til indholdsfortegnelsen)."""
                         },)
                         found_fresh_input |= (
                             os.path.getmtime( pdfpath ) > output_modtime
-                        )                        
+                        )
+                        if PdfFileReader( pdfpath ).numPages % 2 == 1:
+                            merge_args += { "fileobj": "blank.pdf", "bookmark": None },
+
+
             
             elif type(f).__name__ == "Actor":
                 for role in f.roles:
@@ -73,7 +81,11 @@ filnavne og bogmærkenavne (til indholdsfortegnelsen)."""
                     },)
                     found_fresh_input |= (
                         os.path.getmtime( pdfpath ) > output_modtime
-                    )                        
+                    )
+                    if PdfFileReader( pdfpath ).numPages % 2 == 1:
+                        merge_args += { "fileobj": "blank.pdf", "bookmark": None },
+
+
 
             else:
                 raise TypeError("List must only contain PDF file paths, "
@@ -102,6 +114,8 @@ filnavne og bogmærkenavne (til indholdsfortegnelsen)."""
                                              .replace( t, tex_translations[t] )
                                             )
             merger.append( **kwargs )
+            merger.setPageLayout( "/TwoPageRight" )
+            merger.setPageMode( "/UseOutlines" )
 
         try:
             with open(pdfname, "wb") as output:

@@ -139,18 +139,25 @@ class TeX:
                 if "{" not in line:
                     # If it is a strange line, extract the first part (everything until the
                     # first non-alphanumeric character that isn't '\':
-                    first_part = re.findall("\w+", line)[0]
-
-                    if first_part not in ignore_list:
-                        # Find also the second part, i.e. whatever follows the first part (including
-                        # the non-alphanumeric character):
-                        end_part = re.findall("^.\w+(.*)", line)[0]
-
-                        # Store the info:
-                        self.info[first_part] = end_part
+                    try:
+                        first_part = re.findall("\w+", line)[0]
+                    except IndexError:
+                        # couldn't find a command, just ignore it
+                        pass
+                    else:
+                        if first_part not in ignore_list:
+                            # Find also the second part, i.e. whatever follows the first part (including
+                            # the non-alphanumeric character):
+                            end_part = re.findall("^.\w+(.*)", line)[0]
+                            
+                            # Store the info:
+                            self.info[first_part] = end_part
 
                 else:
-                    command = re.findall("\w+", line)[0] # Extract (the first) command using regex
+                    try:
+                        command = re.findall("\w+", line)[0] # Extract (the first) command using regex
+                    except IndexError:
+                        command = ""
 
                     if command not in ignore_list:
 
@@ -305,7 +312,11 @@ class TeX:
                                                 self.revue.modification_time
                                                )
 
-        template[0] = template[0].replace("<+VERSION+>", strftime("%d-%m-%Y", localtime()))
+        template[0] = template[0].replace("<+VERSION+>",
+                                          self.conf["Frontpage"]["version"]\
+                                              .split(",")[-1]\
+                                              .strip()
+                                          )
         template[0] = template[0].replace("<+REVUENAME+>", self.revue.name)
         template[0] = template[0].replace("<+REVUEYEAR+>", self.revue.year)
 
@@ -352,7 +363,11 @@ class TeX:
             template = f.read().split("<+ROLEMATRIX+>")
         self.info[ "modification_time" ] = os.stat( templatefile ).st_mtime
 
-        template[0] = template[0].replace("<+VERSION+>", strftime("%d-%m-%Y", localtime()))
+        template[0] = template[0].replace("<+VERSION+>",
+                                          self.conf["Frontpage"]["version"]\
+                                              .split(",")[-1]\
+                                              .strip()
+                                          )
         template[0] = template[0].replace("<+REVUENAME+>", self.revue.name)
         template[0] = template[0].replace("<+REVUEYEAR+>", self.revue.year)
         template[0] = template[0].replace("<+NACTORS+>", str(len(self.revue.actors)))
