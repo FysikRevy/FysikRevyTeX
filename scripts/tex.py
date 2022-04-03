@@ -228,11 +228,17 @@ class TeX:
         # for roller, som findes i både den nye og den gamle
         # rolleliste
         r = []
+        defaults = { "S": "Sanger",
+                     "D": "Danser",
+                     "B": "Sceneshow"
+                    }
         for old_role in self.info['roles']:
             for role in roles:
                 if old_role.abbreviation == role.abbreviation:
                     if not role.role:
-                        role.role = old_role.role
+                        role.role = old_role.role\
+                            or defaults.get( role.abbreviation[0] )\
+                            or ""
                     r += [ role ]
                     roles.remove( role ) # Det går nok. Vi break'er lige bag efter
                     break
