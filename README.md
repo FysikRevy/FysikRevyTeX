@@ -42,7 +42,7 @@ Enter your newly created directory (`cd path/to/directory`) and do the following
 #### 1. Create TeX files
 TeX files for songs and sketches should go into the directories `sange` and `sketches`, respectively. If you need to create the files, look at the templates in the `templates` directory.
 
-> TeX-filerne kan også bo i undermapper under `sange`- og `sketches`-mapperne. Der er godt nok en risiko for, at LaTeX ikke kan finde `revy.sty` i en undermappe, men det finde du nok ud af at løse ;).
+> TeX-filerne kan også bo i undermapper under `sange`- og `sketches`-mapperne. Der er godt nok en risiko for, at LaTeX ikke kan finde `revy.sty` i en undermappe, men det finder du nok ud af at løse ;).
 
 #### 2. Create a new plan file
 A plan file defines the "layout" of the revue. To create a default file, run
@@ -125,7 +125,7 @@ Gennemtving gen-TeXning af alle filer. Kan også kobles på de andre kommandoer,
 > Det var, og er, en valgmulighed i `revytex.conf`-filen, men det er en god mulighed at have på kommandolinjen også.
 
 #### Omfattende omskrivninger
-Farlige kommandoer, som skriver om i kilde-TeX-filerne. Men dog så usikre på sig selv, at de ikke be'r om bekræfigelse før de gør noget.
+Farlige kommandoer, som skriver om i kilde-TeX-filerne. Men dog så usikre på sig selv, at de be'r om bekræfigelse før de gør noget.
 
 * **`python create.py uniform-revue` og `python create.py uniform-year`**  
 Revyster husker ikke altid, at skrive det rigtige år, eller den rigtige revy, i deres TeX-filer. De her kommandoer opdaterer alle TeX-filerne i `.plan`-en med revynavn hhv. -år fra `revytex.conf`-filen.
@@ -134,4 +134,4 @@ Revyster husker ikke altid, at skrive det rigtige år, eller den rigtige revy, i
 Skriv roller ind i alle TeX-filer, når rollefordelingen er på plads. Læg filen `roller.csv` i din revy-mappe (eller skriv din fil ind under "Files" som "roller = [filnavn]" i `revytex.conf`). Der er et eksempel i git-mappen, men formatet er basalt set det samme som rollefordelingsskemaet, men i csv-format.
 
 ### Om `.csv`-filer
-Vi forventer i det her hus, at `.csv`-filer bruger semikolon (;) som separator (hvilket teknisk set gør dem til ssv-filer). Hvis du eksporterer csv-filer fra et regnearksprogram, og du får `.csv`-filer med kommaer (,) i stedet for semikoloner, så check først efter, om der er en indstilling for at få semikoloner i stedet for. Hvis ikke, så må du slev lave en søg-og-erstat. (Men pas på, der ikke er nogen, som har sneget semikoloner ind i felterne i dit regneark. Revyster er snu og uforudsigelige på den måde.)
+`.csv`-filer kan også bruge semikolonner til at separere værdier, hvilket især er brugbart, når kommaer kan optræde i andre kontekster. Ikke desto mindre laver bl.a. Google Sheets `.csv`-filer med kommaer, så vi prøver at være smarte omkring det. Vi går ud fra, at det tegn af de to (`;` eller `,`), som optræder oftest i csv-filen, er separatortegnet. Det er muligt, at dette kan give anledning til fejl...
