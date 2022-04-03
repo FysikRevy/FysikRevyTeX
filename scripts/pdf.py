@@ -1,5 +1,6 @@
 #import subprocess
 import os
+import subprocess
 from multiprocessing import Pool, cpu_count
 
 from PyPDF2 import PdfFileMerger,PdfFileReader
@@ -129,6 +130,16 @@ filnavne og bogmærkenavne (til indholdsfortegnelsen)."""
         else:
             rc = 0
 
+        if not self.conf["TeXing"]["pdfsizeopt"] == "no":
+            subprocess.run([ self.conf["TeXing"]["pdfsizeopt"],
+                             os.path.abspath( pdfname ),
+                             os.path.abspath( pdfname ) ],
+                           cwd = os.path.dirname(
+                               self.conf["TeXing"]["pdfsizeopt"]
+                           ),
+                           capture_output = True
+                           )
+            
         print("{:<42}".format("\033[0;37;1m{}:\033[0m".format(os.path.split(pdfname)[1])), end="")
         if rc == 0:
             print("\033[0;32m Success!\033[0m")
