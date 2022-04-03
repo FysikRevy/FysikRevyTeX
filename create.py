@@ -113,7 +113,6 @@ def create_parts(revue, args):
         clobber_my_tex( revue, args )
 
     if "aktoversigt" in args:
-        print( "ping" )
         tex.create_act_outline()
         tex.topdf("aktoversigt.pdf")
 

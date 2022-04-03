@@ -5,6 +5,7 @@ from time import localtime, strftime
 
 from base_classes import Prop, Role
 import converters as cv
+from helpers import split_outside_quotes
 
 from config import configuration as conf
 
@@ -596,31 +597,34 @@ class TeX:
                      {"telefonnummer","tel","nummer","telefon","tlf"},
                      {"email","mail"}
         ]
+        seperator = ";"
 
         def determine_format( csv_line ):
             s = 0
             while csv_line[s] == "#":
                 s += 1
 
-            headers = csv_line[s:].split(";")
+            headers = split_outside_quotes( seperator, csv_line[s:] )
             fmt = []
             for m in matchers:
                 for i, h in enumerate( headers ):
                     if re.sub( "[^a-zæøå0-9]", "", h.lower() ) in m:
-                        fmt += [i + 1]
+                        fmt += [i]
                         break
                 else:
-                    fmt += [ 0 ]
-
+                    fmt += [ None ]
             return fmt            
 
         def interpret_with_format( fmt ):
             def interpret( csv_line ):
-                fields = [""] + csv_line.split( ";" )
+                fields = split_outside_quotes( seperator, csv_line )
+                        
                 try:
                     return (
                         "\\contact{"
-                        + "}{".join( [ fields[i].strip() for i in fmt ] )
+                        + "}{".join(
+                            [ fields[i].strip() if isinstance( i, int ) else "" for i in fmt ]
+                        )
                         + "}\n"
                     )
                 except IndexError:
@@ -628,7 +632,7 @@ class TeX:
                 
             return interpret
 
-        interpret = interpret_with_format( range( 1, len( matchers ) + 1 ))
+        interpret = interpret_with_format( range( len( matchers ) ))
         
         def eat_csv_line( interpret, csv_line ):
             if csv_line.startswith( "##" ):
@@ -642,11 +646,13 @@ class TeX:
             elif csv_line.startswith( "#" ):
                 return (
                     interpret_with_format(
-                        range( 1, len( matchers ) + 1 )
+                        range(  len( matchers )  )
                     ),
                     [
                         "\\section*{"
-                        + csv_line[1:].strip()
+                        + split_outside_quotes(
+                            seperator, csv_line[1:]
+                        )[0].strip()
                         + "}\n"
                     ]
                 )
@@ -655,6 +661,10 @@ class TeX:
 
         contact_lines = []
         with open(contactsfile, 'r', encoding=encoding) as c:
+            seperator = "," if\
+                c.read().count(",") > c.read().count(";")\
+                else ";"
+            c.seek( 0 )
             for csv_line in c:
                 interpret, cl = eat_csv_line( interpret, csv_line.replace( "_", "\\_" ) )
                 contact_lines += cl

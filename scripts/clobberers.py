@@ -1,6 +1,7 @@
 from base_classes import Role
 from tex import TeX
 from fuzzywuzzy import fuzz
+from helpers import split_outside_quotes
 
 stoptext = """
         ╔═╗╔╦╗╔═╗╔═╗        
@@ -58,8 +59,12 @@ class RoleDistribution( ClobberInstructions ):
 
         try:
             with open( fname, "r", encoding = "utf-8" ) as f:
-                role_rows = [ line.strip().split( ";" )
-                              for line in f.readlines() if ";" in line
+                seperator = "," if \
+                    f.read().count(",") > f.read().count(";") \
+                    else ";"
+                f.seek( 0 )
+                role_rows = [ split_outside_quotes( seperator, line.strip() )
+                              for line in f.readlines() if seperator in line
                 ]
                 
         except FileNotFoundError:
