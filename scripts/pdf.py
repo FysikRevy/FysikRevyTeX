@@ -65,8 +65,12 @@ på en verso-side i dobbeltsidet layout.
                     (
                         os.path.join(
                             self.conf["Paths"]["pdf"],
-                            os.path.dirname( os.path.relpath( role.material.path ) ),
-                            os.path.splitext( role.material.file_name )[0] + ".pdf"
+                            os.path.dirname(
+                                os.path.relpath( role.material.path )
+                            ),
+                            os.path.splitext(
+                                role.material.file_name
+                            )[0] + ".pdf"
                         ),
                         ( bookmark or role.material.title or None ),
                         verso )
@@ -100,6 +104,7 @@ på en verso-side i dobbeltsidet layout.
             pagenum = writer.getNumPages()
             if pagenum % 2 == 1 and not verso:
                 writer.addBlankPage()
+                pagenum += 1
                 
             inpdf = PdfFileReader( filename )
             writer.appendPagesFromReader( inpdf )
