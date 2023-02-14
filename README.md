@@ -92,6 +92,13 @@ Creates the whole manuscript. Look for `manuskript.pdf` in the `pdf/` directory.
 * **`python create.py aktoversigt`**<br />
 Creates the act outline (a "table of contents") for the revue. Look for `aktoversigt.pdf` in the `pdf/` directory.
 
+> * **`python create.py thumbindex`**<br />
+> Bygger indekssiden til registermærkningerne. Husk, at hvis manuskripsider skal have registermærkninger, så skal `revy.sty` kaldes med argumenterne `thumbindex` og `planfile=`_[stil til planfilen]_. Fx:
+
+    \usepackage[thumbindex,planfile=../aktoversigt.plan]{revy}
+    
+> **TODO:** Skriv kaldet til `revy` om automatisk.
+
 * **`python create.py roles`**<br />
 Creates the role/sketch matrix. Look for `rolleliste.pdf` in the `pdf/` directory.
 
