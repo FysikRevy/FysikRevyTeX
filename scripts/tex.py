@@ -298,6 +298,16 @@ class TeX:
         converter.textopdf(self, pdfname, outputdir, repetitions, encoding)
 
 
+    # def controls(self, controlname):
+    #     controlname = controlname.lstrip("\\")
+    #     startline = endline = i
+    #     startchar = line.find( "\\" + controlname )
+    #     pointer = startchar + len( controlname ) + 1
+    #     if line[ pointer ] in "[", "(":
+    #         line[ pointer + 1: ].split( line[ pointer ] )
+    #     [ i, line for i, line in enumerate( self.info['tex'] )
+    #       if "\\" + controlname in line ]
+
     #----------------------------------------------------------------------
 
     def create_act_outline(self, templatefile="", encoding='utf-8'):
