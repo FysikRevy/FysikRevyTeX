@@ -61,7 +61,8 @@ def create_individual_pdfs(revue):
                             "forside-{}.pdf".format(actor.name)
                            ), "Forside" ),
             ( os.path.join( path["pdf"],"aktoversigt.pdf" ), "Aktoversigt" ),
-            ( os.path.join( path["pdf"],"rolleliste.pdf" ), "Rolleliste" ),
+            ( os.path.join( path["pdf"],"thumbindex.pdf" ) ),
+            ( os.path.join( path["pdf"],"rolleliste.pdf" ), "Rolleliste", True ),
             actor,
             ( os.path.join( path["pdf"],"kontaktliste.pdf"), "Kontaktliste" )
         )
@@ -88,7 +89,13 @@ def create_song_manus_pdf(revue):
     tex.topdf("forside-sangmanuskript.pdf", outputdir=os.path.join(path["pdf"], "cache"))
 
     # Create song manuscript:
-    file_list = [os.path.join(path["pdf"], "cache", "forside-sangmanuskript.pdf")]
+    file_list = [os.path.join(path["pdf"],
+                              "cache",
+                              "forside-sangmanuskript.pdf"),
+                 os.path.join(path["pdf"],
+                              "thumbindex.pdf"
+                              )
+                 ]
     for act in revue.acts:
         for material in act.materials:
             if material.category == path["songs"]:
@@ -120,6 +127,10 @@ def create_parts(revue, args):
     if "roles" in args:
         tex.create_role_overview()
         tex.topdf("rolleliste.pdf")
+
+    if "thumbindex" in args:
+        conv.textopdf( "./templates/thumbindex_template.tex",
+                       "thumbindex.pdf" )
 
     if "frontpage" in args:
         tex.create_frontpage( )
@@ -165,10 +176,10 @@ if __name__ == "__main__":
     conv = cv.Converter()
 
     if len(conf.cmd_parts) == 0:
-        arglist = ("aktoversigt", "roles", "frontpage", "props",
+        arglist = ("aktoversigt", "thumbindex", "roles", "frontpage", # "props",
                    "contacts", "material","individual", "songmanus")
     elif "manus" in sys.argv:
-        arglist = ("aktoversigt", "roles", "frontpage", "props",
+        arglist = ("aktoversigt", "thumbindex", "roles", "frontpage", # "props",
                    "contacts", "material")
     else:
         arglist = sys.argv[1:]
@@ -184,9 +195,10 @@ if __name__ == "__main__":
     	    pdf.pdfmerge(
     	        (( os.path.join(path["pdf"],"forside.pdf"), "Forside" ),
     	         ( os.path.join(path["pdf"],"aktoversigt.pdf"), "Aktoversigt" ),
-    	         ( os.path.join(path["pdf"],"rolleliste.pdf"), "Rolleliste" ),
+    	         ( os.path.join(path["pdf"],"thumbindex.pdf") ),
+    	         ( os.path.join(path["pdf"],"rolleliste.pdf"), "Rolleliste", True ),
     	         revue,
-    	         ( os.path.join(path["pdf"],"rekvisitliste.pdf"), "Rekvisitliste" ),
+    	         # ( os.path.join(path["pdf"],"rekvisitliste.pdf"), "Rekvisitliste" ),
     	         ( os.path.join(path["pdf"],"kontaktliste.pdf"), "Kontaktliste" )
     	         ),
     	        os.path.join(path["pdf"],"manuskript.pdf"))
