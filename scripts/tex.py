@@ -5,6 +5,7 @@ from time import localtime, strftime
 
 from base_classes import Prop, Role
 import converters as cv
+from helpers import split_outside_quotes
 
 from config import configuration as conf
 
@@ -92,6 +93,7 @@ class TeX:
     def read(self, fname, encoding='utf-8'):
         "Read a TeX file without parsing it."
         self.fname = os.path.split(fname)[1]
+        self.info['modification_time'] = os.stat( fname ).st_mtime
         with open(fname, 'r', encoding=encoding) as f:
             self.tex = f.read()
 
@@ -99,7 +101,13 @@ class TeX:
     def write(self, fname, encoding='utf-8'):
         "Write to a TeX file."
         with open(fname, 'w', encoding=encoding) as f:
-            f.write(self.tex)
+            if 'tex' in self.info:
+                for l in self.info['tex']:
+                    f.write( l )
+            else:
+                f.write(self.tex)
+
+        self.info[ "modification_time" ] = os.path.getmtime( fname )
 
 
     def parse(self, fname, encoding='utf-8'):
@@ -132,18 +140,25 @@ class TeX:
                 if "{" not in line:
                     # If it is a strange line, extract the first part (everything until the
                     # first non-alphanumeric character that isn't '\':
-                    first_part = re.findall("\w+", line)[0]
-
-                    if first_part not in ignore_list:
-                        # Find also the second part, i.e. whatever follows the first part (including
-                        # the non-alphanumeric character):
-                        end_part = re.findall("^.\w+(.*)", line)[0]
-
-                        # Store the info:
-                        self.info[first_part] = end_part
+                    try:
+                        first_part = re.findall("\w+", line)[0]
+                    except IndexError:
+                        # couldn't find a command, just ignore it
+                        pass
+                    else:
+                        if first_part not in ignore_list:
+                            # Find also the second part, i.e. whatever follows the first part (including
+                            # the non-alphanumeric character):
+                            end_part = re.findall("^.\w+(.*)", line)[0]
+                            
+                            # Store the info:
+                            self.info[first_part] = end_part
 
                 else:
-                    command = re.findall("\w+", line)[0] # Extract (the first) command using regex
+                    try:
+                        command = re.findall("\w+", line)[0] # Extract (the first) command using regex
+                    except IndexError:
+                        command = ""
 
                     if command not in ignore_list:
 
@@ -182,9 +197,8 @@ class TeX:
                                     # Replace potential slash with a dash,
                                     # to avoid problems with slashes in filenames.
                                     name = name.replace("/", "-")
-                                if len(name) > 0:
-                                    # Only store the role if it is not empty:
-                                    self.info["roles"].append(Role(abbreviation, name, role))
+
+                                self.info["roles"].append(Role(abbreviation, name, role))
 
                             elif command in ("sings", "says"):
                                 # We count how many abbreviations actually appear in the sketch/song
@@ -195,6 +209,87 @@ class TeX:
                             # Store information:
                             self.info[command] = keyword
 
+    def update_roles( self, roles ):
+        """Change the 'roles' section of the tex file to reflect the input list.
+        Used for propagating role assignment."""
+
+        for role in roles:
+            if not isinstance( role, Role ):
+                raise TypeError(
+                    # figure that one out!
+                    "update_roles passed a role that isn't a Role."
+                )
+
+        if not 'tex' in self.info:
+            raise RuntimeError( """update_roles called on umparsed TeX object
+. My fname is {}""".format( self.fname ) )
+
+        # Match roller efter forkortelser, og sammentræk informationer
+        # for roller, som findes i både den nye og den gamle
+        # rolleliste
+        r = []
+        defaults = { "S": "Sanger",
+                     "D": "Danser",
+                     "B": "Sceneshow"
+                    }
+        for old_role in self.info['roles']:
+            for role in roles:
+                if old_role.abbreviation == role.abbreviation:
+                    if not role.role:
+                        role.role = old_role.role\
+                            or defaults.get( role.abbreviation[0] )\
+                            or ""
+                    r += [ role ]
+                    roles.remove( role ) # Det går nok. Vi break'er lige bag efter
+                    break
+                        
+        # Vi går ud fra, at roller, som ikke er i den nye liste, er
+        # blevet fjernet fra nummeret
+        # Den nye rolleliste er de roller, som var i begge lister plus
+        # roller, som kun er i den nye, sorteret efter forkortelse
+        self.info['roles'] = r + sorted( roles, key=lambda x: x.abbreviation )
+
+        # find rollesektionen
+        for n,whole_line in enumerate( self.info['tex'] ):
+            line = whole_line.strip()
+
+            #copy-paste fra parse ^^:
+            if len(line) > 0 and line[0] == '\\' and '{' in line:
+                command = re.findall("\w+", line)[0] # Extract (the first) command using regex
+                
+                if command in [ "begin", "end" ]:
+                    try:
+                        keyword = kw_re.findall(line)[0] # Extract (the first) keyword using regex
+                    except IndexError:
+                        # There is no ending '}' in the line.
+                        keyword = extract_multiple_lines(self.info['tex'], n)
+
+                    # end copy-paste
+                    # find linjerne, hvor rollelisten starter og slutter
+                    if keyword == "roles":
+                        if command == "begin":
+                            start_line = n
+                        if command == "end":
+                            end_line = n
+                        try: 
+                            if start_line and end_line:
+                                break
+                        except NameError:
+                            # ikke endnu
+                            pass
+        else:
+            # der var ikke nogen rolleliste
+            # (eller kun en halv, hvilket er værre)
+            print("\033[0;31m Failed!\033[0m  No roles list in {}".format(self.fname))
+            return
+
+        indent = re.search( "^\s*", self.info['tex'][start_line + 1] ).group(0)
+        
+        role_lines = [ indent + "\\role{{{0.abbreviation}}}[{0.actor}] {0.role}\n".format( role )
+                       for role in self.info['roles']
+        ]
+        self.info['tex'] = self.info['tex'][:start_line + 1] + role_lines + self.info['tex'][end_line:]
+        
 
     def topdf(self, pdfname, outputdir="", repetitions=2, encoding='utf-8'):
         "Convert internally stored TeX code to PDF using pdflatex."
@@ -220,8 +315,15 @@ class TeX:
 
         with open(templatefile, 'r', encoding=encoding) as f:
             template = f.read().split("<+ACTOUTLINE+>")
+        self.info[ "modification_time" ] = max( os.stat( templatefile ).st_mtime,
+                                                self.revue.modification_time
+                                               )
 
-        template[0] = template[0].replace("<+VERSION+>", strftime("%d-%m-%Y", localtime()))
+        template[0] = template[0].replace("<+VERSION+>",
+                                          self.conf["Frontpage"]["version"]\
+                                              .split(",")[-1]\
+                                              .strip()
+                                          )
         template[0] = template[0].replace("<+REVUENAME+>", self.revue.name)
         template[0] = template[0].replace("<+REVUEYEAR+>", self.revue.year)
 
@@ -239,6 +341,11 @@ class TeX:
 
                 self.tex += """\\emph{{{revue_name} {revue_year}}}\\\\
         \t\t\\small{{Status: {status}, \\emph{{Tidsestimat: {length} minutter}}}}\n""".format(revue_name=m.revue, revue_year=m.year, status=m.status, length=m.length)
+
+                self.info[ "modification_time" ] = max(
+                    self.info[ "modification_time" ],
+                    m.modification_time
+                )
 
             self.tex += "\\end{enumerate}\n\n"
 
@@ -261,8 +368,13 @@ class TeX:
 
         with open(templatefile, 'r', encoding=encoding) as f:
             template = f.read().split("<+ROLEMATRIX+>")
+        self.info[ "modification_time" ] = os.stat( templatefile ).st_mtime
 
-        template[0] = template[0].replace("<+VERSION+>", strftime("%d-%m-%Y", localtime()))
+        template[0] = template[0].replace("<+VERSION+>",
+                                          self.conf["Frontpage"]["version"]\
+                                              .split(",")[-1]\
+                                              .strip()
+                                          )
         template[0] = template[0].replace("<+REVUENAME+>", self.revue.name)
         template[0] = template[0].replace("<+REVUEYEAR+>", self.revue.year)
         template[0] = template[0].replace("<+NACTORS+>", str(len(self.revue.actors)))
@@ -298,6 +410,10 @@ class TeX:
                     else:
                         self.tex += r"& \q"
                 self.tex += "\n" + r"\\\hline"
+                self.info[ "modification_time" ] = max(
+                    self.info[ "modification_time" ],
+                    mat.modification_time
+                )
 
         template.insert(1,self.tex)
         self.tex = "\n".join(template)
@@ -319,6 +435,7 @@ class TeX:
 
         with open(templatefile, 'r', encoding=encoding) as f:
             template = f.read().split("<+PROPSLIST+>")
+        self.info[ "modification_time" ] = os.stat( templatefile ).st_mtime
 
         for act in self.revue.acts:
             self.tex += r"""
@@ -340,6 +457,11 @@ class TeX:
                     for prop in m.props:
                         self.tex += r"\textbf{{{prop}}} & {responsible} & \\ {description} & & \\ \hline".format(prop=prop.prop, responsible=prop.responsible, description=prop.description)
                         self.tex += "\n"
+                        
+                    self.info[ "modification_time" ] = max(
+                        self.info[ "modification_time" ],
+                        m.modification_time
+                    )
 
             self.tex += "\\end{longtable}\n\n"
 
@@ -364,11 +486,27 @@ class TeX:
 
         with open(templatefile, 'r', encoding=encoding) as f:
             template = f.read()
+        self.info[ "modification_time" ] = max(
+            os.stat( templatefile ).st_mtime,
+            conf.modification_time # Det er her, vi skriver info til forsiden
+        )
 
         self.tex = template
 
         self.tex = self.tex.replace("<+SUBTITLE+>", subtitle)
-        self.tex = self.tex.replace("<+VERSION+>", self.conf["Frontpage"]["version"])
+
+        versions = [x.strip() for x in self.conf["Frontpage"]["version"].split(",")]
+        self.tex = self.tex.replace("<+VERSION+>", versions[-1] or "??????")
+        try:
+            self.tex = self.tex.replace(
+                "<+VERLIST+>",
+                " ".join(
+                    [ "\\item[\\rmfamily Tidligere versioner:] {}".format( versions[:-1][0] ) ]
+                    + [ "\\item {}".format( x ) for x in versions[1:-1] ]
+                )
+            )
+        except IndexError:
+            self.tex = self.tex.replace("<+VERLIST+>", "")
 
         if self.conf["Revue info"]["revue name"] == "\\FysikRevy\\texttrademark":
             self.tex = self.tex.replace("<+REVUENAME+>", "\\FysikRevy")
@@ -398,6 +536,7 @@ class TeX:
 
         with open(templatefile, 'r', encoding=encoding) as f:
             template = f.read().split("<+SIGNUPFORM+>")
+        self.info[ "modification_time" ] = os.stat( templatefile ).st_mtime
 
         for act in self.revue.acts:
             self.tex += "\n\n\\begin{longtable}{|p{7cm}|cccl|}\n"
@@ -417,6 +556,11 @@ class TeX:
                     else:
                         self.tex += "\\role{{{title}}}\n".format(title=role.role)
 
+                self.info[ "modification_time" ] = max(
+                    self.info[ "modification_time" ],
+                    material.modification_time
+                )
+
             self.tex += "\\end{longtable}\n\n"
 
         template.insert(1,self.tex)
@@ -433,73 +577,110 @@ class TeX:
         self.tex = ""
 
         with open(templatefile, 'r', encoding=encoding) as f:
-            template = f.read().split("<+CONTACTS+>")
+            template = ( f
+                         .read()
+                         .replace( "<+VERSION+>",
+                                   self.conf["Frontpage"]["version"].
+                                   split(",")[-1].strip()
+                         )
+                         .replace( "<+REVUENAME+>",
+                                   self.conf["Revue info"]["revue name"]
+                         )
+                         .replace( "<+REVUEYEAR+>",
+                                   self.conf["Revue info"]["revue year"]
+                         )
+                         .split("<+CONTACTS+>")
+            )
+        self.info[ "modification_time" ] = os.stat( templatefile ).st_mtime
 
+        # gæt på, hvad fremtidige TeX-ansvarlige eller
+        # kontaktlist-ansvarlige kunne finde på at kalde felterne.
+        # udvid gerne, hvis du har flere idéer. Husk, vi kører lower()
+        # og fjerner ikke-alfanumeriske tegn, før vi matcher.
+        matchers = [ {"rolle","titel","job","ansvar"},
+                     {"navn"},
+                     {"øgenavn","kaldenavn","kælenavn","kendtsom"},
+                     {"telefonnummer","tel","nummer","telefon","tlf"},
+                     {"email","mail"}
+        ]
+        seperator = ";"
 
-        first_table = True
+        def determine_format( csv_line ):
+            s = 0
+            while csv_line[s] == "#":
+                s += 1
 
-        with open(contactsfile, 'r', encoding=encoding) as c:
-            lines = c.readlines()
-
-        for line in lines:
-            line = line.strip()
-
-            if len(line) > 0:
-                if line[0] == '#' and line[1] != '#':
-                    # Line is a heading.
-
-                    # We should end the previous table, if any:
-                    if not first_table:
-                        self.tex += "\n\\end{longtable}\\vspace*{1em}\n"
-
-                    self.tex += "{{\Large\\bfseries {heading}}}\n".format(heading=line.strip("# "))
-
-                elif line[0] == '#' and line[1] == '#':
-                    # Line specifies column headers.
-                    first_table = False
-
-                    split_line = line.strip('# ').split(';')
-                    n_cols = len(split_line)
-
-                    self.tex += "\\begin{{longtable}}{{*{{{n}}}{{l}}}}\n".format(n=n_cols)
-
-                    headers = ""
-                    for i,word in enumerate(split_line):
-                        if i == 0:
-                            headers += "\\textbf{{{word}}}".format(word=word.strip())
-                        else:
-                            headers += " & \\textbf{{{word}}}".format(word=word.strip())
-                    headers += "\\\\\n"
-                    self.tex += r"""
-\toprule
-{headers}
-\midrule
-\endfirsthead
-
-\toprule
-{headers}
-\midrule
-\endhead
-
-\bottomrule
-\endfoot
-""".format(headers=headers)
-
+            headers = split_outside_quotes( seperator, csv_line[s:] )
+            fmt = []
+            for m in matchers:
+                for i, h in enumerate( headers ):
+                    if re.sub( "[^a-zæøå0-9]", "", h.lower() ) in m:
+                        fmt += [i]
+                        break
                 else:
-                    # Line contains contact information:
-                    split_line = line.strip().split(';')
-                    if len(split_line) != n_cols:
-                        print("Warning! Line does not have the right number of columns! Line: {}".format(line))
+                    fmt += [ None ]
+            return fmt            
 
-                    for i,word in enumerate(split_line):
-                        if i == 0:
-                            self.tex += "{word}".format(word=word.strip())
-                        else:
-                            self.tex += " & {word}".format(word=word.strip())
+        def interpret_with_format( fmt ):
+            def interpret( csv_line ):
+                fields = split_outside_quotes( seperator, csv_line )
+                        
+                try:
+                    return (
+                        "\\contact{"
+                        + "}{".join(
+                            [ fields[i].strip() if isinstance( i, int ) else "" for i in fmt ]
+                        )
+                        + "}\n"
+                    )
+                except IndexError:
+                    return ""
+                
+            return interpret
 
-                    self.tex += "\\\\\n"
+        interpret = interpret_with_format( range( len( matchers ) ))
+        
+        def eat_csv_line( interpret, csv_line ):
+            if csv_line.startswith( "##" ):
+                return (
+                    interpret_with_format(
+                        determine_format( csv_line )
+                    ),
+                    []
+                )
+                
+            elif csv_line.startswith( "#" ):
+                return (
+                    interpret_with_format(
+                        range(  len( matchers )  )
+                    ),
+                    [
+                        "\\section*{"
+                        + split_outside_quotes(
+                            seperator, csv_line[1:]
+                        )[0].strip()
+                        + "}\n"
+                    ]
+                )
+            else:
+                return interpret, interpret( csv_line )
 
-        self.tex += "\\end{longtable}"
-        template.insert(1,self.tex)
-        self.tex = "\n".join(template)
+        contact_lines = []
+        with open(contactsfile, 'r', encoding=encoding) as c:
+            seperator = "," if\
+                c.read().count(",") > c.read().count(";")\
+                else ";"
+            c.seek( 0 )
+            for csv_line in c:
+                interpret, cl = eat_csv_line( interpret, csv_line.replace( "_", "\\_" ) )
+                contact_lines += cl
+
+        self.info[ "modification_time" ] = max(
+            self.info[ "modification_time" ],
+            os.stat( contactsfile ).st_mtime
+        )
+        self.tex = "".join( template[0:1]
+                            + contact_lines
+                            + template[1:2]
+        )
 

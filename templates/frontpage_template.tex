@@ -5,10 +5,12 @@
 \setpapersize{A4}
 %argumenter:{hleftmargini}{htopmargini}{hrightmargini}{hbottommargini}{headheight}{headsep}{footheight}{footskip}
 \setmarginsrb{20mm}{15mm}{20mm}{20mm}{12pt}{11mm}{0pt}{11mm}
-\usepackage[T1]{fontenc}                 % æøåÆØÅ
+%\usepackage[T1]{fontenc}                 % æøåÆØÅ
+\usepackage{lmodern}
 \usepackage{color}                       % farver
 \usepackage{amsmath}                     % Matematiske kommandoer
 \usepackage{amssymb}                     % Matematiske symboler
+\usepackage{paralist}
 
 %-----------------------------------------------------%
 %                   KOMMANDOER                        %
@@ -48,11 +50,18 @@
 
 {\cmfntt{Ver. <+VERSION+>}}\\ %\Huge{\textbf{$|5+i\sqrt{11}|$}}}}\\
 \vspace{5mm}
-{\cmfnttt{\today}}\\
-\vspace{1cm}
+{\cmfnttt{\today}}
 %de næste versions numre er:
 %
 \end{center}
+\begin{footnotesize}
+  \begin{sffamily}
+    \begin{inparaitem}[\hspace{-0.26em},]
+      <+VERLIST+>
+    \end{inparaitem}
+  \end{sffamily}
+\end{footnotesize}
+\vspace{1cm}
 
 
 \begin{center}

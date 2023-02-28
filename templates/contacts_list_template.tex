@@ -1,12 +1,35 @@
-\documentclass[a4paper,9pt,oneside]{article}
-\usepackage[a4paper,hmargin=2.5cm,nohead,nofoot]{geometry}
-\usepackage{charter,euler}
-\usepackage[danish]{babel,varioref}
-\usepackage[T1]{fontenc}
+\documentclass[danish,a4paper,11pt]{article}
+\usepackage{revy}
+\usepackage[danish]{babel}
 \usepackage[utf8]{inputenc}
-\usepackage{longtable}
-\usepackage{booktabs}
+\usepackage{lmodern}
+\usepackage{marvosym}
+\usepackage{etoolbox}
+\usepackage{hyperref}
+
+\def\telnumspc#1#2#3#4#5{#1#2#3#4#5\,}
+\newcommand*{\contact}[5]{%
+\par\noindent\begin{scriptsize}%
+%    \vspace{-.3em}%
+    \makebox[2em][r]{\textit{ #1}}
+    #2\ifblank{#3}{}{---``#3''}
+    \linebreak[3]
+    \hfill
+    \makebox[14.5ex][l]{\Telefon\,\telnumspc\string#4}
+    \makebox[13em][l]{\Letter\,\sffamily{#5}}
+    
+  \end{scriptsize}
+}
+
+\title{Kontaktliste}
+
+\version{<+VERSION+>}
+\revyname{<+REVUENAME+>}
+\revyyear{<+REVUEYEAR+>}
+
 \begin{document}
+
+\maketitle
 
 <+CONTACTS+>
 

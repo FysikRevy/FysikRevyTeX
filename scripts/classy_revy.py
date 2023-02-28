@@ -3,8 +3,10 @@ from time import localtime, strftime
 
 import base_classes as bc
 from tex import TeX
+from base_classes import Role
 
 from config import configuration as conf
+from pathlib import Path
 
 class Material:
     # TODO: This class should perhaps inherit from the completely general
@@ -35,7 +37,7 @@ class Material:
 
         # Extract the category (which is the directory):
         path, self.file_name = os.path.split(self.path)
-        self.category = os.path.split(path)[1]
+        self.category = Path( info_dict["path"] ).parts[0]
 
         try:
             self.melody = info_dict["melody"]
@@ -51,6 +53,18 @@ class Material:
 
         # Stuff that could be used for future features:
         self.appearing_roles = info_dict["appearing_roles"]
+        # Like this:
+        self.supernumeraries = [ role for role in self.appearing_roles
+                                 if role not in [
+                                         role.abbreviation for role in self.roles
+                                 ]
+        ]
+        if conf.getboolean( "TeXing", "supernumeraries" ) and self.supernumeraries:
+            self.roles += [ Role( " ".join( self.supernumeraries ),
+                                  "!!!!!!!",
+                                  ""
+            )]
+        
 
         # To be deprecated (most likely):
         try:
@@ -199,7 +213,10 @@ class Revue:
             # Store the very last act:
             acts.append(act)
 
-        return cls(acts)
+        r = cls(acts)
+        # Hust modifikations-tid for aktoversigten
+        r.modification_time = os.stat( filename ).st_mtime
+        return r
 
     def __repr__(self):
         acts = "{}".format(self.acts[0])

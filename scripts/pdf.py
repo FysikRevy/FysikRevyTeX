@@ -1,10 +1,9 @@
 #import subprocess
 import os
+import subprocess
 from multiprocessing import Pool, cpu_count
 
-from PyPDF2 import PdfFileMerger
-
-from decorators import checkcache
+from PyPDF2 import PdfFileWriter,PdfFileReader
 
 from config import configuration as conf
 
@@ -16,38 +15,111 @@ class PDF:
         "Dummy wrapper to make multiprocessing work."
         return self._pdfmerge(*args, **kwargs)
 
-    @checkcache
     def _pdfmerge(self, file_list, pdfname):
-        "Merge a list of PDF files."
+        """Merge a list of PDF files.  file_list kan være en liste med
+filnavne, eller en liste med tupler af formatet:
+( filnavn, bookmark = None, verso = False )
 
-        merger = PdfFileMerger()
+Hvor filnavn er filnavnet, bookmark er navnet på et pdf-bogmærke (til
+indholdsfortegnelsen) og verso angiver, om pdf-filen må starte
+på en verso-side i dobbeltsidet layout.
 
-        for f in file_list:
-            if type(f) == str and f[-3:] == 'pdf':
-                fo = open(f, "rb")
-                merger.append(fileobj = fo)
+        """
+        # det er egentlig noget hø, sådan automagisk at bøje sig rundt
+        # om forskellige typer i argumenterne. Det nærmest tigger og
+        # be'r om at blive til en bug i fremtiden. Men det giver
+        # mening som et format, og bagudkompatibilitet er vigtigt. Så
+        # nu er vi her.
 
-            elif type(f).__name__ == "Revue":
-                for act in f.acts:
-                    for m in act.materials:
-                        merger.append(os.path.join(self.conf["Paths"]["pdf"],
-                            m.category, 
-                            "{}.pdf".format(m.file_name[:-4])))
+        # check, om output er nyere end input
+        try:
+            output_modtime = os.stat( pdfname ).st_mtime
+        except FileNotFoundError:
+            # ingen output er ikke nyere end nogen ting
+            output_modtime = float('-inf')
+
+        def gen_arg_list( args ):
+            if not isinstance( args, tuple ):
+                args = args,
+            f, bookmark, verso = args + ( "", None, False )[len(args):]
             
-            elif type(f).__name__ == "Actor":
-                for role in f.roles:
-                    merger.append(os.path.join(self.conf["Paths"]["pdf"],
-                        role.material.category, 
-                        "{}.pdf".format(role.material.file_name[:-4])))
+            if type( f ) == str and f[-3:] == "pdf":
+                return ( f, bookmark, verso ),
 
-            else:
-                raise TypeError("List must only contain PDF file paths, "
-                                "a Revue object or an Actor object.")
+            if type( f ).__name__ == "Revue":
+                return (
+                    (
+                        os.path.join(
+                            self.conf["Paths"]["pdf"],
+                            os.path.dirname( os.path.relpath( m.path )),
+                            os.path.splitext( m.file_name )[0] + ".pdf"
+                        ),
+                        ( bookmark or m.title or None ),
+                        verso )
+                    for act in f.acts
+                    for m in act.materials
+                )
+
+            if type( f ).__name__ == "Actor":
+                return (
+                    (
+                        os.path.join(
+                            self.conf["Paths"]["pdf"],
+                            os.path.dirname(
+                                os.path.relpath( role.material.path )
+                            ),
+                            os.path.splitext(
+                                role.material.file_name
+                            )[0] + ".pdf"
+                        ),
+                        ( bookmark or role.material.title or None ),
+                        verso )
+                    for role in f.roles
+                )
+
+            # otherwise...
+            print( f, bookmark, verso )
+            raise TypeError("List must only contain PDF file paths, "
+                            "a Revue object or an Actor object.")
+
+        arg_list = [ arg for f in file_list for arg in gen_arg_list( f ) ]
+
+        if not self.conf.getboolean( "TeXing", "force TeXing of all files" )\
+           and not any( os.path.getmtime( f ) > output_modtime
+                        for f,_,_ in arg_list ):
+            return              # intet nyt ind = intet nyt ud
+
+        # så kører bussen
+        writer = PdfFileWriter()
+        writer.setPageLayout( "/TwoPageRight" )
+        writer.setPageMode( "/UseOutlines" )
+
+        tex_translations = { "\\texttrademark": "™",
+                             "--": "–",
+                             "---": "—",
+                             "''": "“",
+                             "``": "”"
+                            }
+        for filename, bookmark, verso in arg_list:
+            pagenum = writer.getNumPages()
+            if pagenum % 2 == 1 and not verso:
+                writer.addBlankPage()
+                pagenum += 1
+                
+            inpdf = PdfFileReader( filename )
+            writer.appendPagesFromReader( inpdf )
+            
+            if bookmark:
+                for t in tex_translations:
+                    bookmark = bookmark.replace( t, tex_translations[t] )
+
+                writer.addBookmark( bookmark, pagenum )
+            
 
         try:
-            output = open(pdfname, "wb")
-            merger.write(output)
-            output.close()
+            with open(pdfname, "wb") as output:
+                writer.write(output)
+                output.close()
         except FileNotFoundError:
             err = "File could not be opened: {}".format(pdfname)
             rc = 1
@@ -56,7 +128,24 @@ class PDF:
         else:
             rc = 0
 
-        print("{:<42}".format("\033[0;37;1m{}:\033[0m".format(os.path.split(pdfname)[1])), end="")
+        try:
+            self.conf.getboolean( "TeXing", "pdfsizeopt" )
+        except ValueError:
+            subprocess.run([ self.conf["TeXing"]["pdfsizeopt"],
+                             os.path.abspath( pdfname ),
+                             os.path.abspath( pdfname ) ],
+                           cwd = os.path.dirname(
+                               self.conf["TeXing"]["pdfsizeopt"]
+                           ),
+                           capture_output = True
+                           )
+            
+        print(
+            "{:<42}".format(
+                "\033[0;37;1m{}:\033[0m".format(os.path.split(pdfname)[1])
+            ),
+            end=""
+        )
         if rc == 0:
             print("\033[0;32m Success!\033[0m")
         else:
