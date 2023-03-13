@@ -61,22 +61,8 @@ def create_individual_pdfs(revue):
                             "forside-{}.pdf".format(actor.name)
                            ), "Forside" ),
             ( os.path.join( path["pdf"],"aktoversigt.pdf" ), "Aktoversigt" ),
-<<<<<<< Updated upstream
             ( os.path.join( path["pdf"],"thumbindex.pdf" ) ),
             ( os.path.join( path["pdf"],"rolleliste.pdf" ), "Rolleliste", True ),
-||||||| Stash base
-            ( os.path.join( path["pdf"],"rolleliste.pdf" ), "Rolleliste" ),
-=======
-<<<<<<< Updated upstream
-            ( os.path.join( path["pdf"],"rolleliste.pdf" ), "Rolleliste" ),
-||||||| Stash base
-            ( os.path.join( path["pdf"],"thumbindex.pdf" ) ),
-            ( os.path.join( path["pdf"],"rolleliste.pdf" ), "Rolleliste", True ),
-=======
-            ( os.path.join( path["pdf"],"thumbindex.pdf" ), "Registerindeks" ),
-            ( os.path.join( path["pdf"],"rolleliste.pdf" ), "Rolleliste", True ),
->>>>>>> Stashed changes
->>>>>>> Stashed changes
             actor,
             ( os.path.join( path["pdf"],"kontaktliste.pdf"), "Kontaktliste" )
         )
@@ -142,26 +128,10 @@ def create_parts(revue, args):
         tex.create_role_overview()
         tex.topdf("rolleliste.pdf")
 
-<<<<<<< Updated upstream
     if "thumbindex" in args:
         conv.textopdf( "./templates/thumbindex_template.tex",
                        "thumbindex.pdf" )
 
-||||||| Stash base
-=======
-<<<<<<< Updated upstream
-||||||| Stash base
-    if "thumbindex" in args:
-        conv.textopdf( "./templates/thumbindex_template.tex",
-                       "thumbindex.pdf" )
-
-=======
-    if "thumbindex" in args:
-        tex.create_thumbindex()
-        tex.topdf("thumbindex.pdf")
-
->>>>>>> Stashed changes
->>>>>>> Stashed changes
     if "frontpage" in args:
         tex.create_frontpage( )
         tex.topdf("forside.pdf")
@@ -225,22 +195,8 @@ if __name__ == "__main__":
     	    pdf.pdfmerge(
     	        (( os.path.join(path["pdf"],"forside.pdf"), "Forside" ),
     	         ( os.path.join(path["pdf"],"aktoversigt.pdf"), "Aktoversigt" ),
-<<<<<<< Updated upstream
     	         ( os.path.join(path["pdf"],"thumbindex.pdf") ),
     	         ( os.path.join(path["pdf"],"rolleliste.pdf"), "Rolleliste", True ),
-||||||| Stash base
-    	         ( os.path.join(path["pdf"],"rolleliste.pdf"), "Rolleliste" ),
-=======
-<<<<<<< Updated upstream
-    	         ( os.path.join(path["pdf"],"rolleliste.pdf"), "Rolleliste" ),
-||||||| Stash base
-    	         ( os.path.join(path["pdf"],"thumbindex.pdf") ),
-    	         ( os.path.join(path["pdf"],"rolleliste.pdf"), "Rolleliste", True ),
-=======
-    	         ( os.path.join(path["pdf"],"thumbindex.pdf"), "Registerindeks" ),
-    	         ( os.path.join(path["pdf"],"rolleliste.pdf"), "Rolleliste", True ),
->>>>>>> Stashed changes
->>>>>>> Stashed changes
     	         revue,
     	         # ( os.path.join(path["pdf"],"rekvisitliste.pdf"), "Rekvisitliste" ),
     	         ( os.path.join(path["pdf"],"kontaktliste.pdf"), "Kontaktliste" )
