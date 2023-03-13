@@ -61,7 +61,7 @@ def create_individual_pdfs(revue):
                             "forside-{}.pdf".format(actor.name)
                            ), "Forside" ),
             ( os.path.join( path["pdf"],"aktoversigt.pdf" ), "Aktoversigt" ),
-            ( os.path.join( path["pdf"],"thumbindex.pdf" ) ),
+            ( os.path.join( path["pdf"],"thumbindex.pdf" ), "Registerindeks" ),
             ( os.path.join( path["pdf"],"rolleliste.pdf" ), "Rolleliste", True ),
             actor,
             ( os.path.join( path["pdf"],"kontaktliste.pdf"), "Kontaktliste" )
@@ -129,8 +129,8 @@ def create_parts(revue, args):
         tex.topdf("rolleliste.pdf")
 
     if "thumbindex" in args:
-        conv.textopdf( "./templates/thumbindex_template.tex",
-                       "thumbindex.pdf" )
+        tex.create_thumbindex()
+        tex.topdf("thumbindex.pdf")
 
     if "frontpage" in args:
         tex.create_frontpage( )
@@ -195,7 +195,7 @@ if __name__ == "__main__":
     	    pdf.pdfmerge(
     	        (( os.path.join(path["pdf"],"forside.pdf"), "Forside" ),
     	         ( os.path.join(path["pdf"],"aktoversigt.pdf"), "Aktoversigt" ),
-    	         ( os.path.join(path["pdf"],"thumbindex.pdf") ),
+    	         ( os.path.join(path["pdf"],"thumbindex.pdf"), "Registerindeks" ),
     	         ( os.path.join(path["pdf"],"rolleliste.pdf"), "Rolleliste", True ),
     	         revue,
     	         # ( os.path.join(path["pdf"],"rekvisitliste.pdf"), "Rekvisitliste" ),
