@@ -374,38 +374,6 @@ class TeX:
 
     #----------------------------------------------------------------------
 
-    def create_thumbindex(self, templatefile="", encoding='utf-8'):
-        "Create a thumbindex outline from Revue object."
-
-        if self.revue == None:
-            raise RuntimeError("The TeX object needs to be instantiated with "
-                    "a Revue object in order to use create_act_outline().")
-
-        if templatefile == "":
-            templatefile = os.path.join(self.conf["Paths"]["templates"],
-                                        "thumbindex_template.tex")
-
-        self.tex = ""
-
-        with open(templatefile, 'r', encoding=encoding) as f:
-            template = f.read()
-        self.info[ "modification_time" ] = max( os.stat( templatefile ).st_mtime,
-                                                self.revue.modification_time
-                                               )
-
-        template = template.replace("<+VERSION+>",
-                                    self.conf["Frontpage"]["version"]\
-                                    .split(",")[-1]\
-                                    .strip()
-                                    )
-        template = template.replace("<+REVUENAME+>", self.revue.name)
-        template = template.replace("<+REVUEYEAR+>", self.revue.year)
-
-        self.tex = template
-
-
-    #----------------------------------------------------------------------
-
     def create_role_overview(self, templatefile="", encoding='utf-8'):
 
         if self.revue == None:
