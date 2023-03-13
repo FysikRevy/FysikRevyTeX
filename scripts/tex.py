@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import re
 import sys
@@ -186,8 +187,16 @@ class TeX:
 
                             elif command == "role":
                                 abbreviation = keyword
-                                name = opt_re.findall(line)[0]
-                                role = eol_re.findall(line)[0]
+                                try:
+                                    name = opt_re.findall(line)[0]
+                                except IndexError:
+                                    # Ikke noget navn endnu
+                                    name = ""
+                                try:
+                                    role = eol_re.findall(line)[0]
+                                except IndexError:
+                                    #ingen beskrivelse
+                                    role = ""
 
                                 if '/' in name:
                                     print("Warning! '/' is not allowed in "

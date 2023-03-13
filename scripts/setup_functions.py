@@ -29,7 +29,7 @@ def create_song_template(dir, config, encoding='utf-8'):
 
 def tex_files_under_dir( dir ):
     # https://stackoverflow.com/questions/18394147/recursive-sub-folder-search-and-return-files-in-a-list-python#18394205
-    return [y for x in os.walk( dir ) for y in glob( os.path.join( x[0], '*.tex'))]
+    return [y for x in os.walk( dir ) for y in glob.glob( os.path.join( x[0], '*.tex'))]
 
 def create_plan_file(fname, encoding='utf-8'):
     if os.path.isfile(fname):
