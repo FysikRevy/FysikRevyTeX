@@ -240,6 +240,7 @@
   \expandafter\@gobble
 \fi{
   \RequirePackage{tikz}
+  \RequirePackage[T1]{fontenc}
   \begingroup
   \def\expandFiHere#1\fi{\fi #1}
   \def\patheat#1/#2{%
@@ -271,8 +272,9 @@
       \read\planread to \line
       \expandafter\ifx\expandafter\par\line\else
         \IfEndWith{\line}{.tex}{
+          \set@curr@file\line
           \advance\count256 by 1
-          \openin\tabtex=\planpath\line
+          \openin\tabtex=\planpath\@curr@file
         }{%
           \edef\act{\noexpand\tabtoks={%
             \the\tabtoks
@@ -496,7 +498,7 @@
     \versothumbtabfor{\@title}%
     \vspace*{ -\paperheight }\vspace*{ -\voffset }\vspace*{ 0.32in }%
   }
-}
+}%
 \let\revyinfo=\relax
 \newtoks\@titletoks
 \newtoks\@authortoks
@@ -524,6 +526,6 @@
   }%
   \end@document
 }
-\endinput
+%\endinput
 %%
 %% End of file `ucph-script.cls'.
