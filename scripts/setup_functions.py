@@ -45,10 +45,12 @@ def create_plan_file(fname, encoding='utf-8'):
         f.write("Sange\n")
         for song in songs:
             if song[-3:] == "tex":
-                f.write(os.path.join("sange", "{}\n".format(song)))
+                f.write(os.path.join( "{}\n".format(song))\
+                          .replace(os.sep,"/")) # så TeX kan være med
 
         f.write("\nSketches\n")
         for sketch in sketches:
             if sketch[-3:] == "tex":
-                f.write(os.path.join("sketches", "{}\n".format(sketch)))
+                f.write(os.path.join( "{}\n".format(sketch))\
+                          .replace(os.sep,"/")) # så TeX kan være med
 
