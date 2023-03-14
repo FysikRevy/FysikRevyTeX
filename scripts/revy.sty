@@ -272,9 +272,9 @@
       \read\planread to \line
       \expandafter\ifx\expandafter\par\line\else
         \IfEndWith{\line}{.tex}{
-          \set@curr@file\line
+          \set@curr@file{\line}
           \advance\count256 by 1
-          \openin\tabtex=\planpath\@curr@file
+          \openin\tabtex={\planpath\@curr@file}
         }{%
           \edef\act{\noexpand\tabtoks={%
             \the\tabtoks
