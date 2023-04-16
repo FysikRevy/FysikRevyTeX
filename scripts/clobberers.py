@@ -1,7 +1,7 @@
 from base_classes import Role
 from tex import TeX
 from fuzzywuzzy import fuzz
-from helpers import split_outside_quotes
+from helpers import split_outside_quotes,rows_from_csv_etc
 
 stoptext = """
         ╔═╗╔╦╗╔═╗╔═╗        
@@ -52,20 +52,38 @@ class RoleDistribution( ClobberInstructions ):
     @staticmethod
     def init( revue ):
 
+        if "role_names" in revue.conf["Files"] \
+           and revue.conf["Files"]["role_names"]:
+            try:
+                rolenamerows = rows_from_csv_etc(
+                    revue.conf["Files"]["role_names"]
+                    )
+                print("Bruger {} som rollenavneliste.\n".format(
+                    revue.conf["Files"]["role_names"]
+                    ))
+            except FileNotFoundError:
+                print(
+                    "Kunne ikke finde filen {}, "
+                    + "som er angivet i conf-filen.\n"
+                    .format( revue.conf["Files"]["role_names"] )
+                    )
+            else:
+                rolenamedict = {}
+                for row in rolenamerows[1:]:
+                    rolenames = {}
+                    for abbr, name in zip( rolenamerows[0][1:], row[1:] ):
+                        if name:
+                            rolenames[ abbr ] = name
+                    rolenamedict[ row[0] ] = rolenames
+                
         fname = ( revue.conf["Files"]["roller"]
                   if "roller" in revue.conf["Files"]
                   else "roller.csv"
         )
 
         try:
-            with open( fname, "r", encoding = "utf-8" ) as f:
-                seperator = "," if \
-                    f.read().count(",") > f.read().count(";") \
-                    else ";"
-                f.seek( 0 )
-                role_rows = [ split_outside_quotes( seperator, line.strip() )
-                              for line in f.readlines() if seperator in line
-                ]
+            role_rows = rows_from_csv_etc( fname )
+            print("Bruger {} til rollefordeling.\n".format( fname ) )
                 
         except FileNotFoundError:
             print("""
@@ -75,18 +93,25 @@ Så det springer vi over denne gang.
 """.format( fname )
             )
             clobber_steps[ "role-distribution" ] = ClobberInstructions
+
         else:
             # prøv at gætte sammenhængen mellem nummer-navne i
             # rollefordelingsfilen og manuskriptfilerne, med fuzzy
             # matching, se https://pypi.org/project/fuzzywuzzy/
             materials = [ material for act in revue.acts
                           for material in act.materials ]
+
+            def rolename_when_exists( title, abbr ):
+                try:
+                    return rolenamedict[ title ][ abbr ]
+                except:
+                    return ""
             
             scorechart = {
                 row[0]: {
                     "scores": [ fuzz.partial_ratio( material.title, row[0] )
                                 for material in materials ],
-                    "roles": [ Role( abbr, name, "" )
+                    "roles": [ Role( abbr, name, rolename_when_exists( row[0], abbr ) )
                                for abbr, name in zip(
                                        row[1:], role_rows[0][1:]
                                ) if abbr
@@ -95,6 +120,8 @@ Så det springer vi over denne gang.
                 for row in role_rows[1:]
             }
             translations = {}
+            print(role_rows)
+            print(rolenamedict)
 
             while scorechart:
                 # tag gættet med den højeste sikkerhed hver gang,
