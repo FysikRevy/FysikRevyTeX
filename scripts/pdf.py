@@ -3,7 +3,7 @@ import os
 import subprocess
 from multiprocessing import Pool, cpu_count
 
-from PyPDF2 import PdfFileWriter,PdfFileReader
+from PyPDF2 import PdfWriter,PdfReader
 
 from config import configuration as conf
 
@@ -90,9 +90,9 @@ på en verso-side i dobbeltsidet layout.
             return              # intet nyt ind = intet nyt ud
 
         # så kører bussen
-        writer = PdfFileWriter()
-        writer.setPageLayout( "/TwoPageRight" )
-        writer.setPageMode( "/UseOutlines" )
+        writer = PdfWriter()
+        writer.page_layout = "/TwoPageRight"
+        writer.page_mode = "/UseOutlines"
 
         tex_translations = { "\\texttrademark": "™",
                              "--": "–",
@@ -101,19 +101,19 @@ på en verso-side i dobbeltsidet layout.
                              "``": "”"
                             }
         for filename, bookmark, verso in arg_list:
-            pagenum = writer.getNumPages()
+            pagenum = len(writer.pages)
             if pagenum % 2 == 1 and not verso:
-                writer.addBlankPage()
+                writer.add_blank_page()
                 pagenum += 1
                 
-            inpdf = PdfFileReader( filename )
-            writer.appendPagesFromReader( inpdf )
+            inpdf = PdfReader( filename )
+            writer.append_pages_from_reader( inpdf )
             
             if bookmark:
                 for t in tex_translations:
                     bookmark = bookmark.replace( t, tex_translations[t] )
 
-                writer.addBookmark( bookmark, pagenum )
+                writer.add_outline_item( bookmark, pagenum )
             
 
         try:
