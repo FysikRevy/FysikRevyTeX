@@ -27,8 +27,10 @@ class Material:
         try:
             self.responsible = info_dict["responsible"]
         except KeyError:
-            print("No TeX responsible for '{}'.".format(self.title))
             self.responsible = ""
+        if self.responsible not in [ role.actor for role in self.roles ]:
+            print("Incorrect TeX responsible for '{}' ({})."
+                  .format(self.title, self.responsible or "<unspecified>"))
 
         for role in self.roles:
             # Add the title of this material to the roles:
