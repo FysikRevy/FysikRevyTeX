@@ -606,13 +606,15 @@ class TeX:
         # kontaktlist-ansvarlige kunne finde på at kalde felterne.
         # udvid gerne, hvis du har flere idéer. Husk, vi kører lower()
         # og fjerner ikke-alfanumeriske tegn, før vi matcher.
-        matchers = [ {"rolle","titel","job","ansvar"},
-                     {"navn"},
+        matchers = [ {"rolle","titel","job","ansvar","ansvarspost"},
+                     {"navn","fulde navn"},
                      {"øgenavn","kaldenavn","kælenavn","kendtsom"},
                      {"telefonnummer","tel","nummer","telefon","tlf"},
                      {"email","mail"}
         ]
-        seperator = ";"
+        # seperator = "\t"
+
+        # FIXME: det her er noget rod.
 
         def determine_format( csv_line ):
             s = 0
@@ -679,6 +681,7 @@ class TeX:
             seperator = "," if\
                 c.read().count(",") > c.read().count(";")\
                 else ";"
+            seperator = "\t"
             c.seek( 0 )
             for csv_line in c:
                 interpret, cl = eat_csv_line( interpret, csv_line.replace( "_", "\\_" ) )
