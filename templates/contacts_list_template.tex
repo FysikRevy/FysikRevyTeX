@@ -7,20 +7,23 @@
 \usepackage{marvosym}
 \usepackage{etoolbox}
 \usepackage{hyperref}
+\usepackage{setspace}
 
-\def\telnumspc#1#2#3#4#5{#1#2#3#4#5\,}
-\newcommand*{\contact}[5]{%
-\par\noindent\begin{scriptsize}%
+\makeatletter
+\def\telnumpull#1#2#3#4#5{#1#2#3#4#5}
+\def\telnumspc#1#2#3#4#5{#1#2#3#4#5\,\telnumpull}
+\newif\ifincontact \incontactfalse
+\newcommand*{\contact}[5]{\setstretch{.7}%
+  \ifincontact\incontactfalse\else\begin{flushright}\fi\begin{scriptsize}\noindent%
 %    \vspace{-.3em}%
     \makebox[2em][r]{\textit{ #1}}
     #2\ifblank{#3}{}{---``#3''}
-    \linebreak[3]
-    \hfill
-    \makebox[14.5ex][l]{\Telefon\,\telnumspc\string#4}
-    \makebox[13em][l]{\Letter\,\sffamily{#5}}
-    
-  \end{scriptsize}
+    \hfill\phantom{.} \hfill\makebox{
+      \makebox[14.5ex][l]{\ifx&#4&\else\Telefon\,\telnumspc\string#4\fi}~\makebox[13em][l]{\Letter\,\sffamily{#5}}
+    }
+  \end{scriptsize}\@ifnextchar\contact{\incontacttrue\par}{\end{flushright}}
 }
+\makeatother
 
 \title{Kontaktliste}
 
