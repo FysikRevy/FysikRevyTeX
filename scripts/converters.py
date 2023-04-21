@@ -104,7 +104,8 @@ class Converter:
         else:
             os.chdir(temp)
             if os.path.exists( os.path.join( src_dir, "revy.sty" ) ):
-                os.symlink(os.path.join(src_dir,"revy.sty"), "revy.sty")
+                shutil.copy(os.path.join(src_dir,"revy.sty"), "revy.sty")
+            # os.link( src_dir, "src_dir" )
 
         for i in range(repetitions):
             if self.conf.getboolean("TeXing","verbose output"):

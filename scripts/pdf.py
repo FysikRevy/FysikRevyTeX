@@ -128,17 +128,27 @@ på en verso-side i dobbeltsidet layout.
         else:
             rc = 0
 
+        # try:
+        #     self.conf.getboolean( "TeXing", "pdfsizeopt" )
+        # except ValueError:
+        #     subprocess.run([ self.conf["TeXing"]["pdfsizeopt"],
+        #                      os.path.abspath( pdfname ),
+        #                      os.path.abspath( pdfname ) ],
+        #                    cwd = os.path.dirname(
+        #                        self.conf["TeXing"]["pdfsizeopt"]
+        #                    ),
+        #                    capture_output = True
+        #                    )
         try:
-            self.conf.getboolean( "TeXing", "pdfsizeopt" )
-        except ValueError:
-            subprocess.run([ self.conf["TeXing"]["pdfsizeopt"],
+            subprocess.run([ os.environ['PDFSIZEOPT'],
                              os.path.abspath( pdfname ),
                              os.path.abspath( pdfname ) ],
-                           cwd = os.path.dirname(
-                               self.conf["TeXing"]["pdfsizeopt"]
-                           ),
+                           cmd = os.path.dirname( os.environ['PDFSIZEOPT'] ),
                            capture_output = True
                            )
+        except KeyError:
+            # Environment variable not found
+            pass
             
         print(
             "{:<42}".format(
