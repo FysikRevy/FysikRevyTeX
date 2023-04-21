@@ -163,7 +163,9 @@ def with_compare( revue ):
                 material_splat[0][0] = mat.file_name
                 material_splat[0][2] = mat.title
             except IndexError:
-                pass
+                material_splat = [
+                    [mat.file_name,'',mat.title,version] + [''] * 3
+                ]
             act_splat += material_splat
         rem_mat_is = [ n for n,r
                        in [ x for x in enumerate( values )]

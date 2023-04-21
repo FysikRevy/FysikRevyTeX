@@ -436,8 +436,8 @@ class TeX:
         if self.revue == None:
             raise RuntimeError("The TeX object needs to be instantiated with "
                     "a Revue object in order to use create_props_list().")
-
-        # return with_compare( self.revue )
+        from google_sheets import with_compare
+        return with_compare( self.revue )
 
         if templatefile == "":
             templatefile = os.path.join(self.conf["Paths"]["templates"],
