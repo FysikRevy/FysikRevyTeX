@@ -143,7 +143,7 @@ på en verso-side i dobbeltsidet layout.
             subprocess.run([ os.environ['PDFSIZEOPT'],
                              os.path.abspath( pdfname ),
                              os.path.abspath( pdfname ) ],
-                           cmd = os.path.dirname( os.environ['PDFSIZEOPT'] ),
+                           cwd = os.path.dirname( os.environ['PDFSIZEOPT'] ),
                            capture_output = True
                            )
         except KeyError:
