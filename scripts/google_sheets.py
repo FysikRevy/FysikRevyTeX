@@ -1,10 +1,10 @@
 import gspread, functools
 from itertools import zip_longest
 version = "test"
-from config import configuration as conf
-version = conf["Frontpage"]["version"]\
-    .split(",")[-1]\
-    .strip()
+#from config import configuration as conf
+# version = conf["Frontpage"]["version"]\
+#     .split(",")[-1]\
+#     .strip()
 
 held_values = None
 
@@ -30,6 +30,7 @@ sheet = sh.worksheet("Ark1")
     # held_values = sheet.get_all_values()[1:]
 
 values = sheet.get( "A2:Z" )
+updates = requests = []
 
 @functools.cache
 def list_sparse_column( coln ):
@@ -186,3 +187,56 @@ def with_compare( revue ):
         splat += act_splat
     # print( splat )
     sheet.update( "A2:Z", splat )
+
+def fill_in_titles( value_table ):
+    v = value_table
+    for row,last_row in zip( v[1:],v ):
+        for i in range( 3 ):
+            row[i] = row[i] or last_row[i]
+    return v
+
+def update_steps( revue ):
+    updates = requests = []
+    v = fill_in_titles( values )
+    src, dst = 0,0
+    for act in revue.acts:
+        act_start = src
+        for mat in act.materials:
+            mat_start = src
+            for prop in mat.props:
+                v = find_prop_move_here( v, prop, dst )
+                src += 1
+                dst += 1
+            move_rest_mat_here()
+            write_mat_heads()
+        write_act_name()
+    cleanup_spares()
+
+def find_prop_move_here( v, prop, dst):
+    try:
+        at = next( n for n,r in enumerate( v )
+                   if n >= src
+                   and r[0] == mat.file_name
+                   and r[4] == prop.prop
+                  )
+        v = move_row( v, at, dst )
+    except StopIteration:
+        v = insert_row( v, dst, columnize_prop( prop ) )
+    return v
+
+def move_row( v, move_from, move_to ):
+    requests += { "moveDimension": {
+        "source": {
+            "sheetId": sheet.id,
+            "dimension": "ROWS",
+            "startIndex": move_from + 1,
+            "endIndex": move_from + 2
+            },
+        "destinationIndex": move_to + 1
+        }}
+    v[ move_to : move_to ] = v[ move_from : move_from + 1 ]
+    v[ move_from : move_from + 1 ] = []
+    return v
+
+def insert_row( v, dst, row ):
+    pass
