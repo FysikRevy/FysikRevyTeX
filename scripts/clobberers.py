@@ -120,8 +120,6 @@ Så det springer vi over denne gang.
                 for row in role_rows[1:]
             }
             translations = {}
-            print(role_rows)
-            print(rolenamedict)
 
             while scorechart:
                 # tag gættet med den højeste sikkerhed hver gang,
