@@ -612,12 +612,8 @@ class TeX:
                      {"telefonnummer","tel","nummer","telefon","tlf"},
                      {"email","mail"}
         ]
-        # seperator = "\t"
-
-        # FIXME: det her er noget rod.
 
         def determine_format( csv_row ):
-            csv_row[0] = re.sub( r'^\s*#*', csv_row[0], '' )
             fmt = []
             for m in matchers:
                 for i, h in enumerate( csv_row ):
