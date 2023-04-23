@@ -6,7 +6,7 @@ from time import localtime, strftime
 
 from base_classes import Prop, Role
 import converters as cv
-from helpers import split_outside_quotes
+from helpers import rows_from_csv_etc
 
 from config import configuration as conf
 
@@ -616,15 +616,11 @@ class TeX:
 
         # FIXME: det her er noget rod.
 
-        def determine_format( csv_line ):
-            s = 0
-            while csv_line[s] == "#":
-                s += 1
-
-            headers = split_outside_quotes( seperator, csv_line[s:] )
+        def determine_format( csv_row ):
+            csv_row[0] = re.sub( r'^\s*#*', csv_row[0], '' )
             fmt = []
             for m in matchers:
-                for i, h in enumerate( headers ):
+                for i, h in enumerate( csv_row ):
                     if re.sub( "[^a-zæøå0-9]", "", h.lower() ) in m:
                         fmt += [i]
                         break
@@ -633,14 +629,15 @@ class TeX:
             return fmt            
 
         def interpret_with_format( fmt ):
-            def interpret( csv_line ):
-                fields = split_outside_quotes( seperator, csv_line )
-                        
+            def interpret( csv_row ):
+                if not any( csv_row ):
+                    return ""
                 try:
                     return (
                         "\\contact{"
                         + "}{".join(
-                            [ fields[i].strip() if isinstance( i, int ) else "" for i in fmt ]
+                            [ csv_row[i].strip().replace( "_", "\\_" )
+                              if isinstance( i, int ) else "" for i in fmt ]
                         )
                         + "}\n"
                     )
@@ -651,41 +648,33 @@ class TeX:
 
         interpret = interpret_with_format( range( len( matchers ) ))
         
-        def eat_csv_line( interpret, csv_line ):
-            if csv_line.startswith( "##" ):
+        def eat_csv_row( interpret, csv_row ):
+            if csv_row[0].startswith( "##" ):
                 return (
                     interpret_with_format(
-                        determine_format( csv_line )
+                        determine_format( csv_row )
                     ),
                     []
                 )
                 
-            elif csv_line.startswith( "#" ):
+            elif csv_row[0].startswith( "#" ):
                 return (
                     interpret_with_format(
                         range(  len( matchers )  )
                     ),
                     [
                         "\\section*{"
-                        + split_outside_quotes(
-                            seperator, csv_line[1:]
-                        )[0].strip()
+                        + csv_row[0][1:].strip()
                         + "}\n"
                     ]
                 )
             else:
-                return interpret, interpret( csv_line )
+                return interpret, interpret( csv_row )
 
         contact_lines = []
-        with open(contactsfile, 'r', encoding=encoding) as c:
-            seperator = "," if\
-                c.read().count(",") > c.read().count(";")\
-                else ";"
-            seperator = "\t"
-            c.seek( 0 )
-            for csv_line in c:
-                interpret, cl = eat_csv_line( interpret, csv_line.replace( "_", "\\_" ) )
-                contact_lines += cl
+        for csv_row in rows_from_csv_etc( contactsfile, encoding=encoding ):
+            interpret, cl = eat_csv_row( interpret, csv_row )
+            contact_lines += cl
 
         self.info[ "modification_time" ] = max(
             self.info[ "modification_time" ],
