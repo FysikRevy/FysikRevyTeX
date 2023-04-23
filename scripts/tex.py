@@ -7,6 +7,7 @@ from time import localtime, strftime
 from base_classes import Prop, Role
 import converters as cv
 from helpers import rows_from_csv_etc
+# from google_sheets import dump_everything, with_compare
 
 from config import configuration as conf
 
@@ -435,6 +436,8 @@ class TeX:
         if self.revue == None:
             raise RuntimeError("The TeX object needs to be instantiated with "
                     "a Revue object in order to use create_props_list().")
+
+        # return with_compare( self.revue )
 
         if templatefile == "":
             templatefile = os.path.join(self.conf["Paths"]["templates"],
