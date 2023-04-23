@@ -9,6 +9,16 @@ from time import time
 
 from config import configuration as conf
 
+# fordi https://learn.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/create-symbolic-links
+# tak, windows.
+try:
+    import _winapi
+    def portable_dir_link( source, target ):
+        _winapi.CreateJunction( source, target )
+except ImportError:
+    def portable_dir_link( source, target ):
+        os.symlink( source, target )
+        
 class ConversionError( Exception ):
     pass
         
@@ -105,7 +115,7 @@ class Converter:
             os.chdir(temp)
             if os.path.exists( os.path.join( src_dir, "revy.sty" ) ):
                 shutil.copy(os.path.join(src_dir,"revy.sty"), "revy.sty")
-            # os.link( src_dir, "src_dir" )
+            portable_dir_link( src_dir, "src_dir" )
 
         for i in range(repetitions):
             if self.conf.getboolean("TeXing","verbose output"):
