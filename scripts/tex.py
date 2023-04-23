@@ -142,7 +142,7 @@ class TeX:
                     # If it is a strange line, extract the first part (everything until the
                     # first non-alphanumeric character that isn't '\':
                     try:
-                        first_part = re.findall("\w+", line)[0]
+                        first_part = re.findall(r"\w+", line)[0]
                     except IndexError:
                         # couldn't find a command, just ignore it
                         pass
@@ -150,14 +150,14 @@ class TeX:
                         if first_part not in ignore_list:
                             # Find also the second part, i.e. whatever follows the first part (including
                             # the non-alphanumeric character):
-                            end_part = re.findall("^.\w+(.*)", line)[0]
+                            end_part = re.findall(r"^.\w+(.*)", line)[0]
                             
                             # Store the info:
                             self.info[first_part] = end_part
 
                 else:
                     try:
-                        command = re.findall("\w+", line)[0] # Extract (the first) command using regex
+                        command = re.findall(r"\w+", line)[0] # Extract (the first) command using regex
                     except IndexError:
                         command = ""
 
@@ -264,7 +264,7 @@ class TeX:
 
             #copy-paste fra parse ^^:
             if len(line) > 0 and line[0] == '\\' and '{' in line:
-                command = re.findall("\w+", line)[0] # Extract (the first) command using regex
+                command = re.findall(r"\w+", line)[0] # Extract (the first) command using regex
                 
                 if command in [ "begin", "end" ]:
                     try:
@@ -292,7 +292,7 @@ class TeX:
             print("\033[0;31m Failed!\033[0m  No roles list in {}".format(self.fname))
             return
 
-        indent = re.search( "^\s*", self.info['tex'][start_line + 1] ).group(0)
+        indent = re.search( r"^\s*", self.info['tex'][start_line + 1] ).group(0)
         
         role_lines = [ indent + "\\role{{{0.abbreviation}}}[{0.actor}] {0.role}\n".format( role )
                        for role in self.info['roles']
