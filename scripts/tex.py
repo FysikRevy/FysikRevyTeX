@@ -432,53 +432,14 @@ class TeX:
     #----------------------------------------------------------------------
 
     def create_props_list(self, templatefile="", encoding='utf-8'):
-
         if self.revue == None:
             raise RuntimeError("The TeX object needs to be instantiated with "
                     "a Revue object in order to use create_props_list().")
-        from google_sheets import with_compare
-        return with_compare( self.revue )
+        if conf["gspread"]["skip gspread"]:
+            return
 
-        if templatefile == "":
-            templatefile = os.path.join(self.conf["Paths"]["templates"],
-                                        "props_list_template.tex")
-
-        self.tex = ""
-
-        with open(templatefile, 'r', encoding=encoding) as f:
-            template = f.read().split("<+PROPSLIST+>")
-        self.info[ "modification_time" ] = os.stat( templatefile ).st_mtime
-
-        for act in self.revue.acts:
-            self.tex += r"""
-\begin{{longtable}}{{|p{{7cm}}|p{{4cm}}|p{{7cm}}|}}
-\hline
-\textbf{{{act_title}}} & Ansvarlig & Status \\
-\endfirsthead
-
-\hline
-\textbf{{{act_title} (fortsat)}} & Ansvarlig & Status  \\
-\endhead
-
-\hline \endfoot
-""".format(act_title=act.name)
-
-            for m in act.materials:
-                if len(m.props) != 0:
-                    self.tex += "\n\\mtitle{{{m_title}}}\n".format(m_title = m.title)
-                    for prop in m.props:
-                        self.tex += r"\textbf{{{prop}}} & {responsible} & \\ {description} & & \\ \hline".format(prop=prop.prop, responsible=prop.responsible, description=prop.description)
-                        self.tex += "\n"
-                        
-                    self.info[ "modification_time" ] = max(
-                        self.info[ "modification_time" ],
-                        m.modification_time
-                    )
-
-            self.tex += "\\end{longtable}\n\n"
-
-        template.insert(1,self.tex)
-        self.tex = "\n".join(template)
+        from google_sheets import send_props_to_gspread
+        send_props_to_gspread( self.revue )
 
 
 
