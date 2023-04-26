@@ -436,6 +436,7 @@ class TeX:
             raise RuntimeError("The TeX object needs to be instantiated with "
                     "a Revue object in order to use create_props_list().")
         if conf["gspread"]["skip gspread"]:
+            print( "props requires that 'skip gspread' in 'revytex.comf' be set to 'no' or removed. Nothing will be done.")
             return
 
         from google_sheets import send_props_to_gspread

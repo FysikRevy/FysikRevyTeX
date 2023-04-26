@@ -95,9 +95,6 @@ Creates the act outline (a "table of contents") for the revue. Look for `aktover
 * **`python create.py roles`**<br />
 Creates the role/sketch matrix. Look for `rolleliste.pdf` in the `pdf/` directory.
 
-* **`python create.py props`**<br />
-Creates the list of props. Look for `rekvisitliste.pdf` in the `pdf/` directory.
-
 * **`python create.py contacts`**<br />
 Creates the contacts list. Look for `kontaktliste.pdf` in the `pdf/` directory.
 To add contacts, edit `contacts.csv` with your favourite text editor. 
@@ -120,9 +117,23 @@ Create a sign-up form for all sketches and songs. Look for `rolletilmelding.pdf`
 
 > Herfra kommer der et skift i stil, hvilket den opmærksomme læser (eller læseren, som kan bruge `git blame`) måske kan gætte følger med et skift i forfatter.
 
+* **`python create.py props`**<br />
+Eksporterer de rekvisitter, som er skrevet ind i `props`--miljøet i `.tex`--filerne, til et regeark på Google Sheets. Integrationen kræver [gspread][].
+
+    For at sætte op, følg de her trin:
+
+    1. Start med at have en Google--konto. 
+    2. Følg skridtene til "Authentication" i [gspread][]s dokumentation. (Hvis du er i tvivl, brug trinene "For End Users". Men trinene "For Bots" virker også.)
+    3. Find eller lav et tomt ark i et regneark, som du har redigeringsrettigheder til i Google Sheets. Hvis arket ikke er tomt (helt præcist, hvis celle `A1` ikke er tom), bliver overskrifterne ikke autogenereret.
+    4. Skriv regnearkets og arkets navne ind i din `revytex.conf`, og sæt `skip gspread` til `no`.
+    5. Kør `python create.py props`, og se regnearket blive fyldt op (hvis dine revyster rent faktisk har skrevet deres rekvisitter ind...)
+
 * **`python create.py --tex-all`**  
 Gennemtving gen-TeXning af alle filer. Kan også kobles på de andre kommandoer, for at tvinge gen-TeXning af udvalgte filer.
 > Det var, og er, en valgmulighed i `revytex.conf`-filen, men det er en god mulighed at have på kommandolinjen også.
+
+[gspread]: https://docs.gspread.org/en/latest/index.html
+
 
 #### Omfattende omskrivninger
 Farlige kommandoer, som skriver om i kilde-TeX-filerne. Men dog så usikre på sig selv, at de be'r om bekræfigelse før de gør noget.
