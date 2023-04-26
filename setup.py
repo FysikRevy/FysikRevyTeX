@@ -99,4 +99,5 @@ print("""To get started, please do the following in the given order:
     4. Take a look at revytex.conf and change any settings you want.
     5. Run 'python create.py' to create your first TeXhæfte.
     6. Rejoice!
+   (7. Look into installing PdfSizeOpt, to make smaller PDFs. Check the README.)
     """)

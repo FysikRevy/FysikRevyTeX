@@ -23,7 +23,7 @@ When dependencies are met, just put the contents of FysikRevyTeX in a directory 
 
 FysikRevyTeX has been tested on Linux with Python 3.3 and PyPDF2 v. 1.20.
 
-> Opdateret og testet på Windows med Python 3.9 og PyPDF2 v. 1.26
+> Opdateret og testet på Windows med Python 3.11 og PyPDF2 v. 3.0.1
 
 [pypdf2]: https://pypi.python.org/pypi/PyPDF2
 [fuzzywuzzy]: https://pypi.org/project/fuzzywuzzy/
@@ -75,6 +75,18 @@ FysikRevyTeX can be configured by editing the file `revytex.conf`. This is also 
 
 #### 4. Rejoice!
 You should have a fully working FysikRevyTeX system! See **Day-to-day usage** for instructions on how to use FysikRevyTeX.
+
+>#### 5. Installer PdfSizeOpt
+> [PdfSizeOpt][] er et (python 2) program, som kan optimere størrelsen på en PDF--fil. En manuskript--fil, som er limet sammen af mange, mindre, PDF--filer kan ofte reduceres i størrelse med en faktor 10.
+>
+> For gøre det, start med at installere PdfSizeOpt, som instueret på deres GitHub--side. Læg så den fulde sti til PdfSizeOpts eksekverbare fil (`.exe`--filen under Windows) i en miljøvariabel i `create.py`s miljø, som hedder `PDFSIZEOPT`.
+>
+> Altså, under *nix, sådan noget som  
+> `$ export PDFSIZEOPT=/sti/til/exec`
+>
+> Under Windows, skriv 'miljø' i startmenuen, og klik ind i den dialogboks, som hedder "Rediger systemmiljøvarablene".
+
+[PdfSizeOpt]: https://github.com/pts/pdfsizeopt
 
 
 ### Day-to-day usage
@@ -130,10 +142,13 @@ Eksporterer de rekvisitter, som er skrevet ind i `props`--miljøet i `.tex`--fil
 
 * **`python create.py --tex-all`**  
 Gennemtving gen-TeXning af alle filer. Kan også kobles på de andre kommandoer, for at tvinge gen-TeXning af udvalgte filer.
-> Det var, og er, en valgmulighed i `revytex.conf`-filen, men det er en god mulighed at have på kommandolinjen også.
+
+* **`python create.py -v`**  
+Skriv output fra LaTeX til terminalen (v for "verbose"). Scriptet paralleliserer TeXningen, så du får nok en overvældende mængde output fra kommandoer, som TeXer flere ting. Men der er nok den eneste måde at få diagnostisk information fra kommandoer som `aktoversigt` eller `contacts`.
 
 [gspread]: https://docs.gspread.org/en/latest/index.html
 
+> De her var, og er, en valgmulighed i `revytex.conf`-filen, men de er en gode muligheder at have på kommandolinjen også.
 
 #### Omfattende omskrivninger
 Farlige kommandoer, som skriver om i kilde-TeX-filerne. Men dog så usikre på sig selv, at de be'r om bekræfigelse før de gør noget.
@@ -145,4 +160,4 @@ Revyster husker ikke altid, at skrive det rigtige år, eller den rigtige revy, i
 Skriv roller ind i alle TeX-filer, når rollefordelingen er på plads. Læg filen `roller.csv` i din revy-mappe (eller skriv din fil ind under "Files" som "roller = [filnavn]" i `revytex.conf`). Der er et eksempel i git-mappen, men formatet er basalt set det samme som rollefordelingsskemaet, men i csv-format.
 
 ### Om `.csv`-filer
-`.csv`-filer kan også bruge semikolonner til at separere værdier, hvilket især er brugbart, når kommaer kan optræde i andre kontekster. Ikke desto mindre laver bl.a. Google Sheets `.csv`-filer med kommaer, så vi prøver at være smarte omkring det. Vi går ud fra, at det tegn af de to (`;` eller `,`), som optræder oftest i csv-filen, er separatortegnet. Det er muligt, at dette kan give anledning til fejl...
+`.csv`-filer kan også bruge semikolonner til at separere værdier, hvilket især er brugbart, når kommaer kan optræde i andre kontekster. Ikke desto mindre laver bl.a. Google Sheets `.csv`-filer med kommaer, så vi prøver at være smarte omkring det. Vi godtager også `.tsv`--filer, hvor seperatoren er et tabulatortegn (pas på med at vise dem til almindeligt revyster, som måske ikke kan se forskel på tabulatortegn og mellemrum). Vi går ud fra, at det tegn af de tre mulige (`tab`, `;` eller `,`), som optræder oftest i (c/t)sv-filen, er separatortegnet. Det er muligt, at dette kan give anledning til fejl...
