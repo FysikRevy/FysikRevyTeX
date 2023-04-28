@@ -127,7 +127,7 @@ def create_parts(revue, args):
 
     if "props" in args:
         tex.create_props_list()
-        tex.topdf("rekvisitliste.pdf")
+#        tex.topdf("rekvisitliste.pdf")
 
     if "contacts" in args:
         tex.create_contacts_list("contacts.csv")

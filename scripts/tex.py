@@ -435,7 +435,7 @@ class TeX:
         if self.revue == None:
             raise RuntimeError("The TeX object needs to be instantiated with "
                     "a Revue object in order to use create_props_list().")
-        if conf["gspread"]["skip gspread"]:
+        if conf["gspread"].getboolean("skip gspread", fallback=False):
             print( "props requires that 'skip gspread' in 'revytex.comf' be set to 'no' or removed. Nothing will be done.")
             return
 
