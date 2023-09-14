@@ -20,6 +20,13 @@ undertrykkes ved at sige '-y' til scriptet)
 
 class ClobberInstructions:
     # skelet til rutiner, som skriver tex-filer om:
+
+    cmd = "thing-do"
+    # argumentet til programmet, som udløser den her handling
+    doc = "Does a thing"
+    # beskrivelse til "--help" argumentet.
+    # prøv at hold under 60 bogstaver
+    
     @staticmethod
     def init( revue ):
         # analyser, hvilke ændringer vi vil lave. Byg
@@ -49,6 +56,9 @@ class ClobberInstructions:
 
 class RoleDistribution( ClobberInstructions ):
     # automatisk rollefordeling.
+    cmd = "role-distribution"
+    doc = "Skriver rollefordelingen (fra roler.csv) ind i .tex-filerne"
+    
     @staticmethod
     def init( revue ):
 
@@ -201,15 +211,22 @@ def valueReplace( texname, confname ):
 
 # for de to her overskriver vi kun clobber-trinnet
 class UniformRevue( ClobberInstructions ):
+    cmd = "uniform-revue"
+    doc = "Skriv revyens navn (fra revytex.conf) ind i .tex-filerne"
     clobber = valueReplace( "revyname", "revue name" )
 
 class UniformYear( ClobberInstructions ):
+    cmd = "uniform-year"
+    doc = "Skriv revyåret (fra revyconf.tex) ind i .tex-filerne"
     clobber = valueReplace( "revyyear", "revue year" )
 
 clobber_steps = {
-    "role-distribution" : RoleDistribution,
-    "uniform-revue"     : UniformRevue,
-    "uniform-year"      : UniformYear
+    # måske de er en bedre måde at strukturere det her på, efter cmd
+    # og doc blev indført...?
+    step.cmd: step for step in [RoleDistribution,
+                                UniformRevue,
+                                UniformYear
+                                ]
 }
 
 def clobber_my_tex( revue, args ):
