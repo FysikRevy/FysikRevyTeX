@@ -3,6 +3,7 @@
 import glob
 import os
 import sys
+import re
 sys.path.append("scripts")
 
 import classy_revy as cr
@@ -113,6 +114,115 @@ def create_song_manus_pdf(revue):
     pdf = PDF()
     pdf.pdfmerge(file_list, os.path.join(path["pdf"],"sangmanuskript.pdf"))
 
+class Argument:
+    def __init__(self, cmd, doc, action):
+        self.cmd = cmd
+        self.doc = doc
+        self.action = action
+
+def write_help(*args):
+    print("TeX et revymanus.\n\nSyntaks:\n\n[pyton] create.py [-", end="")
+    for flag in flags:
+        print("[{}]".format(flag.cmd), end="")
+    print("] ", end="")
+    for toggle in toggles:
+        print("[{}] ".format(toggle.cmd), end="")
+    print("[ <kommandoer> ]")
+    print("""
+Som standard, hvis der ikke gives nogen kommandoer, lader scriptet som om
+det har fået kommandoerne
+   """, end="")
+    print( " ".join( default_commands ), end="" )
+    print( """
+
+Kommandoen "manus" er det samme som at give kommandoerne
+   """, end="")
+    print( " ".join( manus_commands ), end="" )
+    print( """
+
+Hele listen med kommandoer er:
+
+Flag:""")
+    for flag in flags:
+        print("  -{:<17} {}".format(flag.cmd, flag.doc))
+    print("\nTilvalg:")
+    for toggle in toggles:
+        print("  {:<18} {}".format(toggle.cmd, toggle.doc))
+    print("\nKommandoer:", end="")
+    print("""
+  manus              TeX'er kun det overordnede manus (se ovenfor)
+  plan               Laver en ny aktoversit.plan""")
+    for action in actions:
+        print("  {:<18} {}".format(action.cmd, action.doc))
+    print("\nKommandoer, der skriver om i TeX-filerne:")
+    for clobber in clobber_steps:
+        print("  {:<18} {}".format(clobber_steps[ clobber ].cmd,
+                                  clobber_steps[ clobber ].doc)
+              )
+    sys.exit("\n")
+
+actions = [
+    Argument( "aktoversigt",
+              "TeX en ny aktoversigt",
+              lambda tex: ( tex.create_act_outline(),
+                        tex.topdf("aktoversigt.pdf")
+                        )
+              ),
+
+    Argument( "roles",
+              "TeX en ny rolleliste",
+              lambda tex: ( tex.create_role_overview(),
+                            tex.topdf("rolleliste.pdf")
+                           )
+              ),
+
+    Argument( "frontpage",
+              "TeX en ny forside",
+              lambda tex: ( tex.create_frontpage( ),
+                            tex.topdf("forside.pdf")
+                           )
+              ),
+    Argument( "thumbindex",
+              "TeX et nyt registerindeks",
+              lambda tex: ( tex.create_thumbindex(),
+                            tex.topdf("thumbindex.pdf")
+                            )
+
+    Argument( "props",
+              "Opdater rekvisitliste i Google Sheets (hvis det er sat op)",
+              lambda tex: ( tex.create_props_list() )
+              # TODO: måske hører den funktion ikke hjemme i tex længere?
+              ),
+              
+    Argument( "contacts",
+              "TeX en ny kontaktliste",
+              lambda tex: ( tex.create_contacts_list("contacts.csv"),
+                            tex.topdf("kontaktliste.pdf")
+                           )
+             ),
+    
+    Argument( "material",
+              "Gen-TeX materialesiderne (hvis de er blevet ændret)",
+              lambda tex: create_material_pdfs(revue)
+              ),
+
+    Argument( "individual",
+              "Sammensæt nye individuelle manuskripter (hvis der er ændringer)",
+              lambda tex: create_individual_pdfs(revue)
+              ),
+
+    Argument( "songmanus",
+              "Sammensæt et nyt sangmanuskript (hvis der er ændringer)",
+              lambda tex: create_song_manus_pdf(revue)
+              ),
+
+    Argument( "signup",
+              "TeX en ny tilmeldingsblanket",
+              lambda tex: ( tex.create_signup_form(),
+                            tex.topdf("rolletilmelding.pdf")
+                           )
+              )
+    ]
 
 def create_parts(revue, args):
     tex = TeX(revue)
@@ -120,69 +230,79 @@ def create_parts(revue, args):
     if any( x in args for x in clobber_steps ):
         clobber_my_tex( revue, args )
 
-    if "aktoversigt" in args:
-        tex.create_act_outline()
-        tex.topdf("aktoversigt.pdf")
+    for action in actions:
+        if action.cmd in args:
+            action.action( tex )
 
-    if "roles" in args:
-        tex.create_role_overview()
-        tex.topdf("rolleliste.pdf")
+def tex_all(conf):
+    conf["TeXing"]["force TeXing of all files"] = "yes"
 
-    if "thumbindex" in args:
-        tex.create_thumbindex()
-        tex.topdf("thumbindex.pdf")
+def verbose(conf):
+    conf["TeXing"]["verbose output"] = "yes"
 
-    if "frontpage" in args:
-        tex.create_frontpage( )
-        tex.topdf("forside.pdf")
+toggles = [
+    Argument( "--help",
+              "Du kan få hjælp",
+              write_help
+              ),
+    Argument( "--tex-all",
+              "TeX alt! (ligesom indstillingen i revytex.conf)",
+              tex_all
+              )
+    ]
 
-    if "props" in args:
-        tex.create_props_list()
-#        tex.topdf("rekvisitliste.pdf")
+flags = [
+    Argument( "h",
+              "Jeg har hjælp til dig",
+              write_help
+              ),
+    Argument( "v",
+              "Få mere verbost output fra LaTeX.",
+              verbose
+              )
+    ]
 
-    if "contacts" in args:
-        tex.create_contacts_list("contacts.csv")
-        tex.topdf("kontaktliste.pdf")
+default_commands = ("aktoversigt", "thumbindex", "roles", "frontpage",
+                    "props", "contacts", "material", "individual",
+                    "songmanus")
+manus_commands = ("aktoversigt", "thumbindex", "roles", "frontpage", "props",
+                   "contacts", "material")
 
-    if "material" in args:
-        create_material_pdfs(revue)
-
-    if "individual" in args:
-        create_individual_pdfs(revue)
-
-    if "songmanus" in args:
-        create_song_manus_pdf(revue)
-
-    if "signup" in args:
-        tex.create_signup_form()
-        tex.topdf("rolletilmelding.pdf")
-
+            
 if __name__ == "__main__":
+
+    # Load configuration file:
+    conf.load("revytex.conf")
+    conf.add_args([ x for x in sys.argv if x[0] != "-" ])
+    
+    for toggle in toggles:
+        if toggle.cmd in sys.argv:
+            toggle.action(conf) 
+    for flag in flags:
+        if flag.cmd in \
+           "".join( [ match[1] for match in
+                      [ re.match( r"^-([^-]+)", arg ) for arg in sys.argv ]
+                      if match ]
+                     ):
+            flag.action(conf) 
+    # if "--tex-all" in sys.argv:
+    #     conf["TeXing"]["force TeXing of all files"] = "yes"
+    # if "-v" in sys.argv:
+    #     conf["TeXing"]["verbose output"] = "yes"
 
     if "plan" in sys.argv or not os.path.isfile("aktoversigt.plan"):
         sf.create_plan_file("aktoversigt.plan")
         sys.exit("Plan file 'aktoversigt.plan' created successfully.")
 
-    # Load configuration file:
-    conf.load("revytex.conf")
-    conf.add_args([ x for x in sys.argv if x[0] != "-" ])
-    if "--tex-all" in sys.argv:
-        conf["TeXing"]["force TeXing of all files"] = "yes"
-    if "-v" in sys.argv:
-        conf["TeXing"]["verbose output"] = "yes"
-
     revue = cr.Revue.fromfile("aktoversigt.plan")
     path = revue.conf["Paths"]
     conv = cv.Converter()
 
+    arglist = sys.argv[1:]
     if len(conf.cmd_parts) == 0:
-        arglist = ("aktoversigt", "thumbindex", "roles", "frontpage", # "props",
-                   "contacts", "material","individual", "songmanus")
+        arglist = default_commands
     elif "manus" in sys.argv:
-        arglist = ("aktoversigt", "thumbindex", "roles", "frontpage", # "props",
-                   "contacts", "material")
-    else:
-        arglist = sys.argv[1:]
+        arglist = arglist + manus_commands
 
     try:
         create_parts( revue, arglist )

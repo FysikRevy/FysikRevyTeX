@@ -76,6 +76,13 @@ FysikRevyTeX can be configured by editing the file `revytex.conf`. This is also 
 #### 4. Rejoice!
 You should have a fully working FysikRevyTeX system! See **Day-to-day usage** for instructions on how to use FysikRevyTeX.
 
+> Hvis du har brug for hjælp til at huske alle kommandoerne, så prøv  
+
+    $ python create.py --help
+> eller
+
+    $ python create.py -h
+
 >#### 5. Installer PdfSizeOpt
 > [PdfSizeOpt][] er et (python 2) program, som kan optimere størrelsen på en PDF--fil. En manuskript--fil, som er limet sammen af mange, mindre, PDF--filer kan ofte reduceres i størrelse med en faktor 10.
 >
@@ -165,6 +172,9 @@ Revyster husker ikke altid, at skrive det rigtige år, eller den rigtige revy, i
 
 * **`python create.py role-distribution`**  
 Skriv roller ind i alle TeX-filer, når rollefordelingen er på plads. Læg filen `roller.csv` i din revy-mappe (eller skriv din fil ind under "Files" som "roller = [filnavn]" i `revytex.conf`). Der er et eksempel i git-mappen, men formatet er basalt set det samme som rollefordelingsskemaet, men i csv-format.
+
+* **`python create.py enforce-twoside`**  
+Giv valgmuligheden `twoside` til `\documentclass` i alle `.tex`-filer. Bør bruges sammen med valgmuligheden i `revytex.conf`, som indsætter blanke bagsider, men den er sat til som standard.
 
 ### Om `.csv`-filer
 `.csv`-filer kan også bruge semikolonner til at separere værdier, hvilket især er brugbart, når kommaer kan optræde i andre kontekster. Ikke desto mindre laver bl.a. Google Sheets `.csv`-filer med kommaer, så vi prøver at være smarte omkring det. Vi godtager også `.tsv`--filer, hvor seperatoren er et tabulatortegn (pas på med at vise dem til almindeligt revyster, som måske ikke kan se forskel på tabulatortegn og mellemrum). Vi går ud fra, at det tegn af de tre mulige (`tab`, `;` eller `,`), som optræder oftest i (c/t)sv-filen, er separatortegnet. Det er muligt, at dette kan give anledning til fejl...

@@ -1,3 +1,4 @@
+import re
 from base_classes import Role
 from tex import TeX
 from fuzzywuzzy import fuzz
@@ -20,6 +21,13 @@ undertrykkes ved at sige '-y' til scriptet)
 
 class ClobberInstructions:
     # skelet til rutiner, som skriver tex-filer om:
+
+    cmd = "thing-do"
+    # argumentet til programmet, som udløser den her handling
+    doc = "Does a thing"
+    # beskrivelse til "--help" argumentet.
+    # prøv at hold under 60 bogstaver
+    
     @staticmethod
     def init( revue ):
         # analyser, hvilke ændringer vi vil lave. Byg
@@ -49,6 +57,9 @@ class ClobberInstructions:
 
 class RoleDistribution( ClobberInstructions ):
     # automatisk rollefordeling.
+    cmd = "role-distribution"
+    doc = "Skriver rollefordelingen (fra roler.csv) ind i .tex-filerne"
+    
     @staticmethod
     def init( revue ):
 
@@ -201,15 +212,51 @@ def valueReplace( texname, confname ):
 
 # for de to her overskriver vi kun clobber-trinnet
 class UniformRevue( ClobberInstructions ):
+    cmd = "uniform-revue"
+    doc = "Skriv revyens navn (fra revytex.conf) ind i .tex-filerne"
     clobber = valueReplace( "revyname", "revue name" )
 
 class UniformYear( ClobberInstructions ):
+    cmd = "uniform-year"
+    doc = "Skriv revyåret (fra revyconf.tex) ind i .tex-filerne"
     clobber = valueReplace( "revyyear", "revue year" )
 
+class EnforceTwoside( ClobberInstructions ):
+    cmd = "enforce-twoside"
+    doc = "Sæt 'twoside' i alle .tex-filers \\documentclass"
+
+    @staticmethod
+    def clobber( tex, revue ):
+        try:
+            i,line = next(
+                ( (i,line) for i,line in enumerate( tex.info['tex'])
+                  if re.match(r"^[^%]*\\documentclass", line) )
+            )
+        except StopIteration:
+            return              # større problemer...
+        old_opts = re.match( r"\\documentclass([^{]*){", line )
+        if not old_opts:
+            return              # not skidt TeX...
+        if re.fullmatch( r"[][\s]*", old_opts[1] ):
+            tex.info['tex'][i] = line[ 0 : old_opts.start(1) ] \
+                + "[twoside]" \
+                + line[ old_opts.end(1): ]
+        elif not "twoside" in old_opts[1]:
+            tex.info['tex'][i] = re.sub( r"(\\documentclass[^[]*)\[",
+                                         "\\1[twoside,",
+                                         line,
+                                         count=1
+                                        )
+        return tex
+
 clobber_steps = {
-    "role-distribution" : RoleDistribution,
-    "uniform-revue"     : UniformRevue,
-    "uniform-year"      : UniformYear
+    # måske de er en bedre måde at strukturere det her på, efter cmd
+    # og doc blev indført...?
+    step.cmd: step for step in [RoleDistribution,
+                                UniformRevue,
+                                UniformYear,
+                                EnforceTwoside
+                                ]
 }
 
 def clobber_my_tex( revue, args ):
