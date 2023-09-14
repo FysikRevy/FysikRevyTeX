@@ -76,6 +76,13 @@ FysikRevyTeX can be configured by editing the file `revytex.conf`. This is also 
 #### 4. Rejoice!
 You should have a fully working FysikRevyTeX system! See **Day-to-day usage** for instructions on how to use FysikRevyTeX.
 
+> Hvis du har brug for hjælp til at huske alle kommandoerne, så prøv  
+
+    $ python create.py --help
+> eller
+
+    $ python create.py -h
+
 >#### 5. Installer PdfSizeOpt
 > [PdfSizeOpt][] er et (python 2) program, som kan optimere størrelsen på en PDF--fil. En manuskript--fil, som er limet sammen af mange, mindre, PDF--filer kan ofte reduceres i størrelse med en faktor 10.
 >
