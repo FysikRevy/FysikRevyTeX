@@ -102,7 +102,9 @@ på en verso-side i dobbeltsidet layout.
                             }
         for filename, bookmark, verso in arg_list:
             pagenum = len(writer.pages)
-            if pagenum % 2 == 1 and not verso:
+            if pagenum % 2 == 1 and not verso and\
+               self.conf.getboolean( "Collation",
+                                     "insert blank back pages" ):
                 writer.add_blank_page()
                 pagenum += 1
                 
