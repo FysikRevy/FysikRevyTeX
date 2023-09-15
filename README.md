@@ -117,6 +117,8 @@ Creates the act outline (a "table of contents") for the revue. Look for `aktover
     \usepackage[thumbindex,planfile=../aktoversigt.plan]{revy}
     
 > **TODO:** Skriv kaldet til `revy` om automatisk.
+>
+> Indekssiden bliver automatisk sat, når `create.py` bliver kaldt uden kommandoer, eller med `manus`. Det kan slås fra i `revytex.conf`.
 
 * **`python create.py roles`**<br />
 Creates the role/sketch matrix. Look for `rolleliste.pdf` in the `pdf/` directory.

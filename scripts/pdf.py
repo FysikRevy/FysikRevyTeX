@@ -78,7 +78,7 @@ på en verso-side i dobbeltsidet layout.
                 )
 
             # otherwise...
-            print( f, bookmark, verso )
+            print( f, bookmark, verso, args )
             raise TypeError("List must only contain PDF file paths, "
                             "a Revue object or an Actor object.")
 

@@ -61,10 +61,12 @@ def create_individual_pdfs(revue):
             ( os.path.join( path["pdf cache"],
                             "forside-{}.pdf".format(actor.name)
                            ), "Forside" ),
-            ( os.path.join( path["pdf"],"aktoversigt.pdf" ), "Aktoversigt" ),
-            ( os.path.join( path["pdf"],"thumbindex.pdf" ), "Registerindeks" ),
             ( os.path.join( path["pdf"],"rolleliste.pdf" ), "Rolleliste", True ),
-            actor,
+            ( os.path.join( path["pdf"],"aktoversigt.pdf" ), "Aktoversigt" )) +\
+            ( tuple() if conf.getboolean("TeXing","skip thumbindex")\
+              and not "thumbindex" in sys.argv
+    	      else ( os.path.join(path["pdf"],"thumbindex.pdf"), "Registerindeks" ),) +\
+    	    ( actor,
             ( os.path.join( path["pdf"],"kontaktliste.pdf"), "Kontaktliste" )
         )
         total_list.append((individual_list,
@@ -92,11 +94,13 @@ def create_song_manus_pdf(revue):
     # Create song manuscript:
     file_list = [os.path.join(path["pdf"],
                               "cache",
-                              "forside-sangmanuskript.pdf"),
-                 os.path.join(path["pdf"],
-                              "thumbindex.pdf"
-                              )
-                 ]
+                              "forside-sangmanuskript.pdf")]
+    if not revue.conf.getboolean("TeXing","skip thumbindex") \
+       or "thumbindex" in sys.argv:
+        file_list += [os.path.join(path["pdf"],
+                                   "thumbindex.pdf"
+                                   )
+                      ]
     for act in revue.acts:
         for material in act.materials:
             if material.category == path["songs"]:
@@ -182,11 +186,13 @@ actions = [
                             tex.topdf("forside.pdf")
                            )
               ),
+    
     Argument( "thumbindex",
               "TeX et nyt registerindeks",
               lambda tex: ( tex.create_thumbindex(),
                             tex.topdf("thumbindex.pdf")
                             )
+              ),
 
     Argument( "props",
               "Opdater rekvisitliste i Google Sheets (hvis det er sat op)",
@@ -262,18 +268,20 @@ flags = [
               )
     ]
 
-default_commands = ("aktoversigt", "thumbindex", "roles", "frontpage",
-                    "props", "contacts", "material", "individual",
-                    "songmanus")
-manus_commands = ("aktoversigt", "thumbindex", "roles", "frontpage", "props",
-                   "contacts", "material")
+default_commands = (tuple() if conf.getboolean("TeXing","skip thumbindex")
+                    else ("thumbindex",)) +\
+    ("aktoversigt", "roles", "frontpage", "props", "contacts", "material",
+     "individual", "songmanus")
+manus_commands = (tuple() if conf.getboolean("TeXing","skip thumbindex")
+                    else ("thumbindex",)) +\
+    ("aktoversigt", "roles", "frontpage", "props", "contacts", "material")
 
             
 if __name__ == "__main__":
 
     # Load configuration file:
     conf.load("revytex.conf")
-    conf.add_args([ x for x in sys.argv if x[0] != "-" ])
+    conf.add_args([ x for x in sys.argv[1:] if x[0] != "-" ])
     
     for toggle in toggles:
         if toggle.cmd in sys.argv:
@@ -298,7 +306,7 @@ if __name__ == "__main__":
     path = revue.conf["Paths"]
     conv = cv.Converter()
 
-    arglist = sys.argv[1:]
+    arglist = tuple( sys.argv[1:] )
     if len(conf.cmd_parts) == 0:
         arglist = default_commands
     elif "manus" in sys.argv:
@@ -314,10 +322,12 @@ if __name__ == "__main__":
     	    pdf = PDF()
     	    pdf.pdfmerge(
     	        (( os.path.join(path["pdf"],"forside.pdf"), "Forside" ),
-    	         ( os.path.join(path["pdf"],"aktoversigt.pdf"), "Aktoversigt" ),
-    	         ( os.path.join(path["pdf"],"thumbindex.pdf"), "Registerindeks" ),
     	         ( os.path.join(path["pdf"],"rolleliste.pdf"), "Rolleliste", True ),
-    	         revue,
+    	         ( os.path.join(path["pdf"],"aktoversigt.pdf"), "Aktoversigt" )) +\
+                ( tuple() if conf.getboolean("TeXing","skip thumbindex")\
+                  and not "thumbindex" in arglist
+    	          else ( os.path.join(path["pdf"],"thumbindex.pdf"), "Registerindeks" ),) +\
+    	        ( revue,
     	         # ( os.path.join(path["pdf"],"rekvisitliste.pdf"), "Rekvisitliste" ),
     	         ( os.path.join(path["pdf"],"kontaktliste.pdf"), "Kontaktliste" )
     	         ),
