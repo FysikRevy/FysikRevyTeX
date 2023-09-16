@@ -1,3 +1,4 @@
+# coding=utf-8
 from configparser import ConfigParser, ExtendedInterpolation
 import os
 import shutil
@@ -76,9 +77,6 @@ shutil.copy(os.path.join(src_dir, "templates", "contacts.csv"),
 # Create symbolic links for system scripts and directories:
 os.symlink(os.path.join(src_dir, "scripts"), os.path.join(dst_dir, paths["scripts"]), target_is_directory=True)
 os.symlink(os.path.join(src_dir, "create.py"), os.path.join(dst_dir, "create.py"))
-os.symlink(os.path.join(src_dir, "scripts", "revy.sty"), os.path.join(dst_dir, "revy.sty"))
-os.symlink(os.path.join(src_dir, "scripts", "revy.sty"), os.path.join(dst_dir, paths["songs"], "revy.sty"))
-os.symlink(os.path.join(src_dir, "scripts", "revy.sty"), os.path.join(dst_dir, paths["sketches"], "revy.sty"))
 
 
 # Change to the new directory:
@@ -96,10 +94,11 @@ print("""To get started, please do the following in the given order:
     1. Copy your TeX files to the right directories (e.g. songs in 'sange', sketches in 'sketches' etc.).
     2. Run 'python create.py plan' to automatically create the plan file.
     3. Edit the plan file by rearranging the files in the right order. Remember to also write the name of the act, e.g. "Akt 1".
-    4. Take a look at revytex.conf and change any settings you want.
-    5. Run 'python create.py' to create your first TeXhæfter.
-    6. Rejoice!
-   (7. Look into installing PdfSizeOpt, to make smaller PDFs. Check the README.)
+    4. Run 'python create.py enable-thumbtabs' (and maybe also 'enforce-twoside' and 'enforce-class', if you want the thumb index.
+    5. Take a look at revytex.conf and change any settings you want.
+    6. Run 'python create.py' to create your first TeXhæfter.
+    7. Rejoice!
+   (8. Look into installing PdfSizeOpt, to make smaller PDFs. Check the README.)
 
 For help remembering all the commands, run 'create.py' with '--help' or '-h'.
 

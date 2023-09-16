@@ -1,0 +1,25 @@
+\documentclass[a4paper,11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[danish]{babel}
+\usepackage[thumbindex,planfile=src_dir/aktoversigt.plan]{revy}
+\usepackage{calc}
+\usepackage{tikz}
+
+\version{<+VERSION+>}
+\revyname{<+REVUENAME+>}
+\revyyear{<+REVUEYEAR+>}
+\title{Registerindeks}
+
+\begin{document}
+\thispagestyle{empty}
+\newlength{\torightside}
+\setlength{\torightside}{ \paperwidth - 1in - \hoffset - \oddsidemargin + .6cm}
+\newlength{\totop}
+\setlength{\totop}{ -\headsep - \headheight - \topmargin - \voffset - 1in - .5cm}
+\vbox to 0pt{\vskip \totop \hbox to \torightside{\hss%
+    \rectothumbindexwithtitles%
+  }}
+\vbox to 0pt{\tikz \path (0,0) -- (0, -.5\textheight) node[rotate=90]{\parbox{\textheight}{\maketitle}}; }
+\end{document}

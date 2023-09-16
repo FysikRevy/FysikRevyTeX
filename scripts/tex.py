@@ -95,6 +95,7 @@ class TeX:
     def read(self, fname, encoding='utf-8'):
         "Read a TeX file without parsing it."
         self.fname = os.path.split(fname)[1]
+        self.fullpath = os.path.abspath( fname )
         self.info['modification_time'] = os.stat( fname ).st_mtime
         with open(fname, 'r', encoding=encoding) as f:
             self.tex = f.read()
@@ -116,6 +117,7 @@ class TeX:
         "Parse a TeX file and extract revue relevant information to a dictionary."
 
         self.fname = os.path.split(fname)[1]
+        self.fullpath = os.path.abspath( fname )
         self.info['modification_time'] = os.stat(fname).st_mtime
 
         # Create lists for other stuff:
@@ -308,6 +310,16 @@ class TeX:
         converter.textopdf(self, pdfname, outputdir, repetitions, encoding)
 
 
+    # def controls(self, controlname):
+    #     controlname = controlname.lstrip("\\")
+    #     startline = endline = i
+    #     startchar = line.find( "\\" + controlname )
+    #     pointer = startchar + len( controlname ) + 1
+    #     if line[ pointer ] in "[", "(":
+    #         line[ pointer + 1: ].split( line[ pointer ] )
+    #     [ i, line for i, line in enumerate( self.info['tex'] )
+    #       if "\\" + controlname in line ]
+
     #----------------------------------------------------------------------
 
     def create_act_outline(self, templatefile="", encoding='utf-8'):
@@ -361,6 +373,38 @@ class TeX:
 
         template.insert(1,self.tex)
         self.tex = "\n".join(template)
+
+
+    #----------------------------------------------------------------------
+
+    def create_thumbindex(self, templatefile="", encoding='utf-8'):
+        "Create a thumbindex outline from Revue object."
+
+        if self.revue == None:
+            raise RuntimeError("The TeX object needs to be instantiated with "
+                    "a Revue object in order to use create_act_outline().")
+
+        if templatefile == "":
+            templatefile = os.path.join(self.conf["Paths"]["templates"],
+                                        "thumbindex_template.tex")
+
+        self.tex = ""
+
+        with open(templatefile, 'r', encoding=encoding) as f:
+            template = f.read()
+        self.info[ "modification_time" ] = max( os.stat( templatefile ).st_mtime,
+                                                self.revue.modification_time
+                                               )
+
+        template = template.replace("<+VERSION+>",
+                                    self.conf["Frontpage"]["version"]\
+                                    .split(",")[-1]\
+                                    .strip()
+                                    )
+        template = template.replace("<+REVUENAME+>", self.revue.name)
+        template = template.replace("<+REVUEYEAR+>", self.revue.year)
+
+        self.tex = template
 
 
     #----------------------------------------------------------------------
