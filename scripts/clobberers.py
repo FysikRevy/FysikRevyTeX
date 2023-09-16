@@ -1,4 +1,5 @@
 import re
+import os
 from base_classes import Role
 from tex import TeX
 from fuzzywuzzy import fuzz
@@ -221,42 +222,192 @@ class UniformYear( ClobberInstructions ):
     doc = "Skriv revyåret (fra revyconf.tex) ind i .tex-filerne"
     clobber = valueReplace( "revyyear", "revue year" )
 
+def find_documentclass( tex_info_tex ):
+    return next(
+        ( (i,line) for i,line in enumerate( tex_info_tex )
+          if re.match(r"[^%]*\\documentclass", line) )
+    )
+
+def enable_classopts( opts, tex ):
+    if not isinstance( opts, list ):
+        opts = opts.split( "," ) # and just throw if you can't
+
+    try:
+        i,line = find_documentclass( tex.info['tex'] )
+    except StopIteration:
+        return tex          # større problemer...
+    old_opts = re.search( r"\\documentclass([^{]*){", line )
+    if not old_opts:
+        return tex          # noget skidt TeX...
+    if re.fullmatch( r"[][\s]*", old_opts[1] ):
+        tex.info['tex'][i] = line[ 0 : old_opts.start(1) ] \
+            + "[{}]".format( ",".join( opts ) ) \
+            + line[ old_opts.end(1): ]
+    else:
+        newopts = [ opt for opt in opts if not
+                    re.search( "[\\[,]{}[\\],]".format( opt ), old_opts[1] )
+                   ]
+        if len(newopts) > 0:
+            tex.info['tex'][i] = re.sub(
+                r"(\\documentclass[^[]*)\[",
+                "\\1[{},".format( ",".join( newopts )),
+                line,
+                count=1
+            )
+    return tex
+    
 class EnforceTwoside( ClobberInstructions ):
     cmd = "enforce-twoside"
     doc = "Sæt 'twoside' i alle .tex-filers \\documentclass"
 
     @staticmethod
     def clobber( tex, revue ):
+        return enable_classopts( "twoside", tex )
+
+class EnforceClass( ClobberInstructions ):
+    # den her *burde* kun være nødvendig i en overgangsperiode
+    cmd = "enforce-class"
+    doc = "Gennemtving brug af 'ucph-revy.cls' i stedet for 'revy.sty'."
+
+    def clobber( tex, revue ):
         try:
-            i,line = next(
-                ( (i,line) for i,line in enumerate( tex.info['tex'])
-                  if re.match(r"^[^%]*\\documentclass", line) )
-            )
+            classline = find_documentclass( tex.info['tex'] )
         except StopIteration:
-            return              # større problemer...
-        old_opts = re.match( r"\\documentclass([^{]*){", line )
-        if not old_opts:
-            return              # not skidt TeX...
-        if re.fullmatch( r"[][\s]*", old_opts[1] ):
-            tex.info['tex'][i] = line[ 0 : old_opts.start(1) ] \
-                + "[twoside]" \
-                + line[ old_opts.end(1): ]
-        elif not "twoside" in old_opts[1]:
-            tex.info['tex'][i] = re.sub( r"(\\documentclass[^[]*)\[",
-                                         "\\1[twoside,",
-                                         line,
-                                         count=1
-                                        )
+            return              # ikke mit problem
+        styline = next(( (i,line) for i,line in enumerate( tex.info['tex'] )\
+                         if re.match( r"[^%]*\\usepackage[^{]*{revy}",
+                                      line
+                                     )
+                        ), None)
+        if styline:
+            styopts = re.search( r"\\usepackage\[([^]]*)\]{revy}",
+                                 styline[1] )
+            if styopts:
+                styopts = styopts[1]
+        else:
+            styopts = None
+        clsopts = re.search( r"\\documentclass\[([^]]*)]", classline[1] )
+        if clsopts:
+            clsopts = clsopts[1]
+        newopts = ",".join([opt for opt in [clsopts,styopts]
+                            if opt and len(opt) > 0 ])
+        tex.info['tex'][classline[0]] = \
+            re.sub( r"documentclass[^}]*}",
+                    "documentclass{}{}ucph-revy{}".format(
+                        "[{}]".format( newopts ) if len(newopts) > 0
+                        else "",
+                        "{",
+                        "}"
+                    ),
+                    classline[1]
+                   )
+        if styline:
+            newsty = re.sub( r"\\usepackage[^{]*{revy}",
+                             "",
+                             styline[1]
+                            )
+            if re.fullmatch( r"\s*", newsty ):
+                tex.info['tex'] = tex.info['tex'][:styline[0]] \
+                    + tex.info['tex'][styline[0]+1:]
+            else:
+                tex.info['tex'][styline[0]] = newsty
+
+        return tex
+
+class EnableThumbtabs( ClobberInstructions ):
+    cmd = "enable-thumbtabs"
+    doc = "Slå TeXning af registermærkninger til i .tex-filerne."
+    warn = """
+Registermærkningerne kræver, at dine .tex-filer har
+  \\documentclass{ucph-revy}
+Se også enforce-class.
+"""
+
+    def clobber( tex, revue ):
+        tex = enable_classopts( "thumbindex", tex )
+        planpath = os.path.relpath(
+            os.path.abspath( "aktoversigt.plan" ),
+            start = os.path.dirname( tex.fullpath )
+        ).replace( "\\", "/" )
+        try:
+            i,line = find_documentclass( tex.info['tex'] )
+        except StopIteration:
+            return tex
+        documentopts = re.search( r"documentclass\[([^]]*)\]", line )
+        newopts = re.sub( r",?planfile=[^],]*", "", documentopts[1] )\
+            + ",planfile=" + planpath
+        tex.info['tex'][i] = line[:documentopts.start(1)] \
+            + newopts \
+            + line[documentopts.end(1):]
+#        tex.info['tex'][i] = line
+        return tex
+
+class OverleafCompat( ClobberInstructions ):
+    # Overleaf flytter altid den .tex-fil, der bliver kompileret, til
+    # rodmappen. Hvis "planfile" i .tex-filerne bare peger på
+    # "aktoversigt.plan" i rodmappen, så kan Overleaf ikke finde
+    # den. I stedet bruger vi standardindstillingen for
+    # "ucph-revy.cls", at "aktoversigt.plan" ligger i samme mappe som
+    # .tex-filen selv. Derfor fjerner vi bare indstillingen
+    # "planfile=../aktoversigt.plan". I stedet laver vi nye
+    # "aktoversigt.plan"-filer i undermapperne med .tex-filer (nok
+    # "sange" og "sketches") som peger på de andre .tex-filer inde fra
+    # de mapper.
+
+    # Den primære aktoversigt vil så stadig være den i rodmappen. Hvis
+    # den bliver lavet om, så skal den her funktion køres igen, for at
+    # opdatere de ekstra aktoversigter i undermapperne.
+    cmd = "overleaf-compat"
+    doc = "Strukturér, så registermærkninger også virker på Overleaf."
+    warn = """
+Husk, at køre med overleaf-compat igen, hvis du skriver om
+i atkoversigt.plan.
+"""
+
+    def clobber( tex, revue ):
+        try:
+            i,line = find_documentclass( tex.info['tex'] )
+        except StopIteration:
+            return tex
+        tex.info['tex'][i] = re.sub(
+            r"(documentclass\[[^]]*)planfile=[^],]*",
+            "\\1",
+            line,
+            count = 1
+        )
+
+        # den nye "aktoversigt.plan" fil:
+        materials = [material for act in revue.acts
+                     for material in act.materials ]
+        matdirs = set([ os.path.dirname( material.path )
+                        for material in materials ]
+                      )
+        dir_firsts = [ next( material.path for material in materials
+                             if os.path.dirname( material.path ) == matdir )
+                       for matdir in matdirs ]
+        for first in dir_firsts:
+            if os.path.samefile( first, tex.fullpath ):
+              out = []
+              with open("aktoversigt.plan", "r", encoding="utf-8") as plan:
+                    for line in plan.readlines():
+                        if line.endswith( ".tex\n" ):
+                            out += ( os.path.relpath(
+                                os.path.abspath( line ),
+                                start=os.path.dirname( tex.fullpath )
+                            ) ).replace( "\\", "/" )
+                        else:
+                            out += line 
+              with open( os.path.join( os.path.dirname( first ),
+                                       "aktoversigt.plan" ),
+                         "w", encoding="utf-8" ) as outf:
+                  outf.write( "".join( out ) )
+                                
         return tex
 
 clobber_steps = {
     # måske de er en bedre måde at strukturere det her på, efter cmd
     # og doc blev indført...?
-    step.cmd: step for step in [RoleDistribution,
-                                UniformRevue,
-                                UniformYear,
-                                EnforceTwoside
-                                ]
+    step.cmd: step for step in ClobberInstructions.__subclasses__()
 }
 
 def clobber_my_tex( revue, args ):
@@ -290,3 +441,4 @@ def clobber_my_tex( revue, args ):
                     )
             tex.write( fname )
             material.modification_time = tex.info[ "modification_time" ]
+

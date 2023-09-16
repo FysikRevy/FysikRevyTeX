@@ -44,6 +44,16 @@ TeX files for songs and sketches should go into the directories `sange` and `ske
 
 > TeX-filerne kan også bo i undermapper under `sange`- og `sketches`-mapperne. Der er godt nok en risiko for, at LaTeX ikke kan finde `revy.sty` i en undermappe, men det finder du nok ud af at løse ;).
 
+> ##### Om `ucph-revy.cls` og `revy.sty`
+> [Ret beset][Overleaf-class] burde revyens LaTeX-pakke vel altid have været en dokumentklasse. Så det er den nu. Den hedder `ucph-revy`, og den ligger på [CTAN][ucph-revy]. Den burde være til at finde for MikTeX og TeXLive, og måske dukker den også op i Overleaf en dag...
+>
+> Den eneste rigtig store tilføjelse til `ucph-revy` over `revy.sty` er LaTeX-koden til at lave registermærkninger på manuskriptsider, det er de grå og sorte kasser i kanten af siderne på billedet. I bund og grund udnytter TeX de samme filer som FysikRevyTeX, til at lave dem. Der er nogle kommandoer, der får det hele til at virke, længere nede på siden.
+
+[Overleaf-class]: https://www.overleaf.com/learn/latex/Understanding_packages_and_class_files
+[ucph-revy]: https://ctan.org/pkg/ucph-revy
+
+![Eksempel på manuskriptsider sat med ucph-revy.cls](https://raw.githubusercontent.com/FysikRevy/FysikRevyTeX/master/eksempel.png)
+
 #### 2. Create a new plan file
 A plan file defines the "layout" of the revue. To create a default file, run
 
@@ -176,7 +186,22 @@ Revyster husker ikke altid, at skrive det rigtige år, eller den rigtige revy, i
 Skriv roller ind i alle TeX-filer, når rollefordelingen er på plads. Læg filen `roller.csv` i din revy-mappe (eller skriv din fil ind under "Files" som "roller = [filnavn]" i `revytex.conf`). Der er et eksempel i git-mappen, men formatet er basalt set det samme som rollefordelingsskemaet, men i csv-format.
 
 * **`python create.py enforce-twoside`**  
-Giv valgmuligheden `twoside` til `\documentclass` i alle `.tex`-filer. Bør bruges sammen med valgmuligheden i `revytex.conf`, som indsætter blanke bagsider, men den er sat til som standard.
+Giv valgmuligheden `twoside` til `\documentclass` i alle `.tex`-filer. Bør bruges sammen med valgmuligheden i `revytex.conf`, som indsætter blanke bagsider, men den er sat til som standard. Den her indstilling er god i samspil med registermærkerne, se `enable-thumbtabs` længere nede.
+
+* **`python create.py enforce-class`**  
+Sætter `\documentclass{ucph-revy}` i alle `.tex`-filer. Fjerner samtidig `\usepackage{revy}`. `ucph-revy` burde være tilægnelig i en opdateret LaTeX-distribution. Ellers er den på [CTAN][ucph-revy], og der er også inkluderet en kopi af `.cls`-filen i `templates`-mappen.
+
+* **`python create.py enable-thumbtabs`**  
+Sætter indstillingerne, som får registermærkerne sat i de individuelle materialefiler. Det indebærer, at give valgmulighederne `thumbindex` og `planfile=../aktoversigt.plan` (eller hvad den rigtige relative sti nu er) til dokumentklassen i hver `.tex`-fil. Det gør kun noget, hvis dokumentklassen er `ucph-revy`, se `enforce-class` herover.
+
+Hvis du ikke bruger registermærker, og gerne vil undgå siden med registerindekset, så er der en indstilling til at slå den fra i `revytex.conf`-filen. Det er så stadig muligt, at få indekssiden med i en given kørsel, hvis du også giver kommandoen `thumbindex`. Altså for eksempel `python create.py thumbindex manus`. Hvorvidt der bliver sat registermærker på i de enkelte materialefiler afhænger stadig udelukkende af, om `thumbindex` er sat i `.tex`-filen.
+
+* **`python create.py overleaf-compat`**  
+[Overleaf][] har en med, at filer altid bliver kompileret fra rodmappen. Det passer ikke med den måde, `ucph-revy` leder efter `aktoversigt.plan`. Den her kommando flytter rundt på, hvordan filerne er organiseret omkring planfilen, så materiale kan kompileres med registermærkninger både lokalt og på Overleaf. Men læg mærke til, at det kun er registermærkerne, der bliver påvirket af det her.
+
+Det foregår ved, at fjerne `planfile`-argumentet fra `.tex`-filerne igen, så de altid går ud fra, at planfilen hedder `aktoversigt.plan`, og ligger i samme mappe. Derefter laver vi en kopi af `aktoversigt.plan` i alle mapperne, hvor der er `.tex`-filer, som er nævnt i `aktoversigt.plan`, hvor stierne er ændret, så de er rigtige set inde fra undermapperne. Det betyder så, at hvis der bliver lavet om på `aktoversigt.plan`, så skal den her kommando køres igen, for at opdatere kopierne. Læg mærke til, at det er når manuskriptet TeX-es lokalt, at det er nødvendigt, at kopierne er opdateret.
+
+[Overleaf]: https://overleaf.com
 
 ### Om `.csv`-filer
 `.csv`-filer kan også bruge semikolonner til at separere værdier, hvilket især er brugbart, når kommaer kan optræde i andre kontekster. Ikke desto mindre laver bl.a. Google Sheets `.csv`-filer med kommaer, så vi prøver at være smarte omkring det. Vi godtager også `.tsv`--filer, hvor seperatoren er et tabulatortegn (pas på med at vise dem til almindeligt revyster, som måske ikke kan se forskel på tabulatortegn og mellemrum). Vi går ud fra, at det tegn af de tre mulige (`tab`, `;` eller `,`), som optræder oftest i (c/t)sv-filen, er separatortegnet. Det er muligt, at dette kan give anledning til fejl...

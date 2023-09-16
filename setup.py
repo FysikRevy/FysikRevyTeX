@@ -77,9 +77,6 @@ shutil.copy(os.path.join(src_dir, "templates", "contacts.csv"),
 # Create symbolic links for system scripts and directories:
 os.symlink(os.path.join(src_dir, "scripts"), os.path.join(dst_dir, paths["scripts"]), target_is_directory=True)
 os.symlink(os.path.join(src_dir, "create.py"), os.path.join(dst_dir, "create.py"))
-os.symlink(os.path.join(src_dir, "scripts", "revy.sty"), os.path.join(dst_dir, "revy.sty"))
-os.symlink(os.path.join(src_dir, "scripts", "revy.sty"), os.path.join(dst_dir, paths["songs"], "revy.sty"))
-os.symlink(os.path.join(src_dir, "scripts", "revy.sty"), os.path.join(dst_dir, paths["sketches"], "revy.sty"))
 
 
 # Change to the new directory:

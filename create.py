@@ -307,7 +307,7 @@ if __name__ == "__main__":
     conv = cv.Converter()
 
     arglist = tuple( sys.argv[1:] )
-    if len(conf.cmd_parts) == 0:
+    if all( arg[0] == "-" for arg in arglist ):
         arglist = default_commands
     elif "manus" in sys.argv:
         arglist = arglist + manus_commands
