@@ -122,12 +122,10 @@ Creates the whole manuscript. Look for `manuskript.pdf` in the `pdf/` directory.
 Creates the act outline (a "table of contents") for the revue. Look for `aktoversigt.pdf` in the `pdf/` directory.
 
 > * **`python create.py thumbindex`**<br />
-> Bygger indekssiden til registermærkningerne. Husk, at hvis manuskripsider skal have registermærkninger, så skal `revy.sty` kaldes med argumenterne `thumbindex` og `planfile=`_[stil til planfilen]_. Fx:
+> Bygger indekssiden til registermærkningerne. Husk, at hvis manuskripsider skal have registermærkninger, så skal dokumentklassen kaldes med argumenterne `thumbindex` og `planfile=`_[stil til planfilen]_. Fx:
 
-    \usepackage[thumbindex,planfile=../aktoversigt.plan]{revy}
+    \documentclass[thumbindex,planfile=../aktoversigt.plan]{ucph-revy}
     
-> **TODO:** Skriv kaldet til `revy` om automatisk.
->
 > Indekssiden bliver automatisk sat, når `create.py` bliver kaldt uden kommandoer, eller med `manus`. Det kan slås fra i `revytex.conf`.
 
 * **`python create.py roles`**<br />
