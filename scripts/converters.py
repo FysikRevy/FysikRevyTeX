@@ -176,7 +176,6 @@ class Converter:
                 file_path = el
                 pdfname = ""
 
-            # Each element should be: file_path, pdfname, repetitions, encoding
             new_file_list.append((file_path, pdfname, outputdir, repetitions, encoding))
 
         with Pool(processes = cpu_count()) as pool:
