@@ -59,7 +59,7 @@ class ClobberInstructions:
 class RoleDistribution( ClobberInstructions ):
     # automatisk rollefordeling.
     cmd = "role-distribution"
-    doc = "Skriver rollefordelingen (fra roler.csv) ind i .tex-filerne"
+    doc = "Skriver rollefordelingen (fra roller.csv) ind i .tex-filerne"
     
     @staticmethod
     def init( revue ):
