@@ -129,13 +129,13 @@
       \advance\tabheight by -1cm%
       \def\undertab##1\text##2\stop{
         \ifx\done##2%
-          \divide\tabheight by ##1%
+          \divide\tabheight by \ifnum0=##1 1 \else ##1\fi%
         \fi
       }
       \def\overtab##1\text##2\stop{}%
       \revy@tabs
-      \def\overtableft{-1cm}
-      \def\overtabright{1cm}
+      \def\overtableft{-.75cm}
+      \def\overtabright{.5cm}
       \def\undertabright{\overtabright}
       \def\undertableft{\overtableft - 1cm}
       \def\underangle{|-}
