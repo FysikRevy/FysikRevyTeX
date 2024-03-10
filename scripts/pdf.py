@@ -41,6 +41,9 @@ på en verso-side i dobbeltsidet layout.
         def gen_arg_list( args ):
             if not isinstance( args, tuple ):
                 args = args,
+            if len(args) == 0:
+                return tuple()
+            
             f, bookmark, verso = args + ( "", None, False )[len(args):]
             
             if type( f ) == str and f[-3:] == "pdf":
