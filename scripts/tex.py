@@ -25,7 +25,7 @@ eol_re = re.compile(r"^.*\](.*).*$")
 
 
 def extract_multiple_lines(lines, line_number, start_delimiter='{', end_delimiter='}'):
-    "Extract the whole string of a command that spans multiple lines (e.g. \scene)."
+    "Extract the whole string of a command that spans multiple lines (e.g. \\scene)."
 
     line = lines[line_number]
 
@@ -167,7 +167,7 @@ class TeX:
                     if command not in ignore_list:
 
                         try:
-                            keyword = kw_re.findall(line)[0] # Extract (the first) keyword using regex
+                            keyword = kw_re.findall(line)[0].strip() # Extract (the first) keyword using regex
                         except IndexError:
                             # There is no ending '}' in the line.
                             keyword = extract_multiple_lines(lines, n)
@@ -212,11 +212,11 @@ class TeX:
 
                                 self.info["roles"].append(Role(abbreviation, name, role))
 
-                            elif command in ("sings", "says"):
+                            elif command in ("sings", "says", "does"):
                                 # We count how many abbreviations actually appear in the sketch/song
                                 # in order to find missing persons in the roles list.
-                                abbreviation = keyword
-                                self.info["appearing_roles"].add(abbreviation)
+                                abbreviations = re.split( r'\W*(?:\+|\\&|[oO]g|,)\W*', keyword )
+                                self.info["appearing_roles"].update( abbreviations )
                         else:
                             # Store information:
                             self.info[command] = keyword
