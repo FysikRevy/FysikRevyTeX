@@ -3,7 +3,7 @@ import os
 import subprocess
 from multiprocessing import Pool, cpu_count
 
-from PyPDF2 import PdfWriter,PdfReader
+from pypdf import PdfWriter,PdfReader
 
 from config import configuration as conf
 
