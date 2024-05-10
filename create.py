@@ -271,7 +271,7 @@ flags = [
 default_commands = (tuple() if conf.getboolean("TeXing","skip thumbindex")
                     else ("thumbindex",)) +\
     ("aktoversigt", "roles", "frontpage", "props", "contacts", "material",
-     "individual", "songmanus")
+     "individual", "songmanus", "manus")
 manus_commands = (tuple() if conf.getboolean("TeXing","skip thumbindex")
                     else ("thumbindex",)) +\
     ("aktoversigt", "roles", "frontpage", "props", "contacts", "material")
@@ -318,7 +318,7 @@ if __name__ == "__main__":
         print( "Some TeX files failed to compile. Can't create manuscripts.")
     else:
 
-    	if len(conf.cmd_parts) == 0 or "manus" in sys.argv:
+    	if "manus" in sys.argv:
     	    pdf = PDF()
     	    pdf.pdfmerge(
     	        (( os.path.join(path["pdf"],"forside.pdf"), "Forside" ),
