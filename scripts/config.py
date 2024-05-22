@@ -20,7 +20,9 @@ class Config:
 
     def load(self, config_file = "revytex.conf"):
         "Load a configuration file."
-        self.conf = ConfigParser(interpolation=ExtendedInterpolation())
+        self.conf = ConfigParser(interpolation = ExtendedInterpolation(),
+                                 inline_comment_prefixes = "#"
+                                )
         self.conf.read(config_file, encoding="utf8" )
         self.name = self.conf["Revue info"]["revue name"]
         self.year = self.conf["Revue info"]["revue year"]
