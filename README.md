@@ -16,16 +16,16 @@
 FysikRevyTeX has very few dependencies:
 
 * Python 3.3 or newer.
-* [PyPDF2][] for the PDF magic.
+* [PyPDF][] for the PDF magic.
 * [fuzzywuzzy][] til noget tekst-matche-magi
 
 When dependencies are met, just put the contents of FysikRevyTeX in a directory of your choice. No installation is required.
 
 FysikRevyTeX has been tested on Linux with Python 3.3 and PyPDF2 v. 1.20.
 
-> Opdateret og testet på Windows med Python 3.11 og PyPDF2 v. 3.0.1
+> Opdateret og testet på Windows med Python 3.12 og PyPDF v. 4.2.0
 
-[pypdf2]: https://pypi.python.org/pypi/PyPDF2
+[pypdf]: https://pypdf.readthedocs.io/en/stable/index.html
 [fuzzywuzzy]: https://pypi.org/project/fuzzywuzzy/
 
 ## Usage
