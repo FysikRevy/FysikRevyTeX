@@ -5,6 +5,7 @@ import os
 import sys
 import re
 sys.path.append("scripts")
+from multiprocessing import Pool
 
 import classy_revy as cr
 import setup_functions as sf
@@ -118,6 +119,25 @@ def create_song_manus_pdf(revue):
     pdf = PDF()
     pdf.pdfmerge(file_list, os.path.join(path["pdf"],"sangmanuskript.pdf"))
 
+def roles_csv( revue ):
+    mats = [ mat for act in revue.acts for mat in act.materials ]
+    conv = cv.Converter()
+    
+    with Pool() as pool:
+        counts = pool.map( conv.tex_to_wordcount, [ mat.path for mat in mats ] )
+
+    for mat, count in zip( mats, counts ):
+        mat.wordcounts = count
+    
+    try:
+        fn = conf["Files"]["roles sheet output"]
+    except KeyError:
+        revue.write_roles_csv()
+        print( "Wrote roles.csv (default name, can be set in revytex.conf)" )
+        return
+    revue.write_roles_csv( fn )
+    print( "Wrote {}".format( fn ))
+
 class Argument:
     def __init__(self, cmd, doc, action):
         self.cmd = cmd
@@ -227,6 +247,11 @@ actions = [
               lambda tex: ( tex.create_signup_form(),
                             tex.topdf("rolletilmelding.pdf")
                            )
+              ),
+
+    Argument( "roles-sheet",
+              "Lav en csv(/tsv) fil med en oversigt over rollerne.",
+              lambda tex: roles_csv( revue )
               )
     ]
 
@@ -267,6 +292,25 @@ flags = [
               verbose
               )
     ]
+
+def config_setter_for_format( form ):
+    return lambda setting: \
+        conf.conf.set( "Files", form.name, str( Path( setting ) ))
+
+role_settings = [
+    Argument( "--" + form.name,
+              form.description,
+              config_setter_for_format( form )
+             ) for form in roles_reader.formats
+]
+
+roles_sheet_filename = Argument(
+    "--roles-sheet-fn",
+    "Filnavn til output af rolle-oversigts-regneark fra roles-sheet.",
+    lambda fn: conf.conf.set( "Files", "roles sheet output", str( Path( fn ) ) )
+)
+
+settings = role_settings + [ roles_sheet_filename ]
 
 default_commands = (tuple() if conf.getboolean("TeXing","skip thumbindex")
                     else ("thumbindex",)) +\

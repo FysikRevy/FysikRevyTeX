@@ -6,6 +6,8 @@ import tempfile
 import uuid
 from multiprocessing import Pool, cpu_count
 from time import time
+from pathlib import Path
+from itertools import takewhile
 
 from config import configuration as conf
 
@@ -181,3 +183,59 @@ class Converter:
         with Pool(processes = cpu_count()) as pool:
             result = pool.starmap(self.textopdf, new_file_list)
 
+    def tex_to_wordcount(self, tex_file ):
+
+        try:
+            tex_file = Path( tex_file )
+        except TypeError as e:
+            e.args = ("for argument tex_file",) + e.args
+            raise e
+
+        with tempfile.TemporaryDirectory() as temp:
+            temp = Path( temp )
+            r = subprocess.run(( "pdflatex",
+                                 "-aux-directory={}".format( temp ),
+                                 "-output-directory={}".format( temp ),
+                                 "scripts/revywordcount.tex"),
+                               timeout = 10,
+                               input = str( tex_file.absolute() ),
+                               text = True,
+                               encoding = 'utf-8',
+                               stdout = subprocess.DEVNULL
+                               )
+            try:
+                with ( temp / "revywordcount.log" ).open() as f:
+                    counts = {}
+
+                    def type_dispatch( line ):
+                        if "3.08641" in line:
+                            return start_counting( "sung" )
+                        if "3.08643" in line:
+                            return start_counting( "spoken" )
+
+                    def start_counting( linetype ):
+                        role = "".join(
+                            [ line[-2:-1] for line
+                              in takewhile(
+                                  lambda line: not "\\3.08632 :" in line\
+                                           and not "\\3.08632 (" in line,
+                                  f
+                              )
+                              if "\\3.08632" in line
+                             ]
+                        )
+                        if not role in counts:
+                            counts[role] = {"spoken": 0, "sung": 0}
+                        for line in f:
+                            if "3.08633" in line or "3.08635" in line:
+                                counts[role][linetype] += 1
+                            if "3.0864" in line:
+                                return type_dispatch( line )
+
+                    for line in f:
+                        type_dispatch( line )
+
+                    return counts
+            except FileNotFoundError:
+                # ¯\_(ツ)_/¯
+                return {}

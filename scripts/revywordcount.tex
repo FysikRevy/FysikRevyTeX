@@ -1,0 +1,29 @@
+\makeatletter
+\AtBeginDocument{
+\let\o@song\song
+\def\song{%
+  \o@song
+  \let\o@sings\sings
+  \def\sings##1{\o@sings{\hspace{3.08641pt}##1}}%
+  \let\old@sings\sings
+  \let\o@scene\scene
+  \def\scene{\hspace{3.08646pt}\o@scene}%
+  \let\o@does\does
+  \def\does{\hspace{3.08646pt}\o@does}%
+  \let\o@endsong\endsong
+  \def\endsong{\hspace{3.08646pt}x\o@endsong}%
+}
+\let\o@sketch\sketch
+\def\sketch{%
+  \o@sketch
+  \let\o@says\says
+  \def\says##1{\o@says{\hspace{3.08643pt}##1}}%
+  \let\o@scene\scene
+  \def\scene{\hspace{3.08646pt}\o@scene}%
+  \let\o@does\does
+  \def\does{\hspace{3.08646pt}\o@does}%
+  \let\o@endsketch\endsketch
+  \def\endsketch{\hspace{3.08646pt}x\o@endsketch}%
+}}
+\csname ?\endcsname
+\input{wordcount}

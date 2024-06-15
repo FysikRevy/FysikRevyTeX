@@ -4,6 +4,7 @@ from time import localtime, strftime
 import base_classes as bc
 from tex import TeX
 from base_classes import Role
+from converters import Converter
 
 from config import configuration as conf
 from pathlib import Path
@@ -113,6 +114,18 @@ class Material:
                 actor.add_role(role)
                 list_of_actors.append(actor)
 
+    @property
+    def wordcounts(self):
+        try:
+            return self._wordcounts
+        except AttributeError:
+            self._wordcounts = Converter().tex_to_wordcount( self.path )
+            return self._wordcounts
+
+    @wordcounts.setter
+    def wordcounts( self, count ):
+        self._wordcounts = count
+            
 
 class Act:
     def __init__(self):
@@ -227,5 +240,49 @@ class Revue:
 
         return acts
 
-
-
+    def write_roles_csv( self, fn = "roles.csv" ):
+        fn = Path( fn )
+        sep_car = "\t" if fn.suffix == ".tsv" else ";"
+        table = [["","Akt","Titel","Filnavn","Roller"]]
+        for act in self.acts:
+            act_table = []
+            for mat in act.materials:
+                wordcount_overlap = []
+                for role in mat.roles:
+                    try:
+                        role.sung = mat.wordcounts[ role.abbreviation ]["sung"]
+                        role.spoken = mat.wordcounts[ role.abbreviation ]["spoken"]
+                    except KeyError:
+                        role.sung = ""
+                        role.spoken = ""
+                    wordcount_overlap += [ role.abbreviation ]
+                    
+                act_table += [
+                    ['Fork.', '', mat.title,
+                     Path( mat.path )\
+                           .relative_to( Path.cwd(),  )\
+                           .as_posix()
+                     ] + [ role.abbreviation for role in mat.roles ]\
+                       + [ abbr for abbr in mat.wordcounts
+                           if abbr not in wordcount_overlap ],
+                    ['Skuespiller','','','']\
+                     + [ role.actor for role in mat.roles ],
+                    ['Beskrivelse','','','']\
+                     + [ role.role for role in mat.roles ],
+                    ['Ord i sange','','','']\
+                     + [ role.sung for role in mat.roles ]\
+                     + [ mat.wordcounts[ abbr ]["sung"] for abbr in mat.wordcounts
+                         if abbr not in wordcount_overlap ],
+                    ['Ord i replikker','','','']\
+                     + [ role.spoken for role in mat.roles ]\
+                     + [ mat.wordcounts[ abbr ]["spoken"] for abbr in mat.wordcounts
+                         if abbr not in wordcount_overlap ]
+                ]
+            act_table[0][1] = act.name
+            table += act_table
+        with fn.open( mode="w", encoding="utf-8" ) as f:
+            f.write( "\n".join( [ sep_car.join(
+                [ '"{}"'.format( cell ) if sep_car in str(cell)
+                  else str(cell) if cell else ''
+                  for cell in row
+                 ] ) for row in table ] ) )

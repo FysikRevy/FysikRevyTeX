@@ -9,9 +9,9 @@ class Prop:
 
 class Role:
     def __init__(self, abbreviation, name, role):
-        self.abbreviation = abbreviation
-        self.actor = name
-        self.role = role
+        self.abbreviation = abbreviation.strip()
+        self.actor = name.strip()
+        self.role = role.strip()
         self.material = None
         self.material_path = ""
 

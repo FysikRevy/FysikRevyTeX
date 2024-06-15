@@ -153,6 +153,11 @@ Create a sign-up form for all sketches and songs. Look for `rolletilmelding.pdf`
 
 > Herfra kommer der et skift i stil, hvilket den opmærksomme læser (eller læseren, som kan bruge `git blame`) måske kan gætte følger med et skift i forfatter.
 
+* **`python create.py roles-sheet`**  
+Lav en `.csv` (bedst til Excel) eller `.tsv` (til Google Sheets) –fil med en oversigt over rollerne i manuskriptets TeX-filer, som inkluderer en ordtælling for hver rolle. Ændringer i den her fil kan tilbageføres til TeX-filerne med kommandoen `role-distribution` længere nede.
+
+    Filnavnet sættes enten i `conf`–filen, eller med valgmuligheden `--roles-sheet-fn=<filnavn>`.
+
 * **`python create.py props`**<br />
 Eksporterer de rekvisitter, som er skrevet ind i `props`--miljøet i `.tex`--filerne, til et regeark på Google Sheets. Integrationen kræver [gspread][].
 
