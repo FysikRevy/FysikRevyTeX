@@ -186,7 +186,12 @@ Farlige kommandoer, som skriver om i kilde-TeX-filerne. Men dog så usikre på s
 Revyster husker ikke altid, at skrive det rigtige år, eller den rigtige revy, i deres TeX-filer. De her kommandoer opdaterer alle TeX-filerne i `.plan`-en med revynavn hhv. -år fra `revytex.conf`-filen.
 
 * **`python create.py role-distribution`**  
-Skriv roller ind i alle TeX-filer, når rollefordelingen er på plads. Læg filen `roller.csv` i din revy-mappe (eller skriv din fil ind under "Files" som "roller = [filnavn]" i `revytex.conf`). Der er et eksempel i git-mappen, men formatet er basalt set det samme som rollefordelingsskemaet, men i csv-format.
+Skriv roller ind i alle TeX-filer. Rollefordelingsfiler kan have flere forskellige formater, men skal enten være en `.csv`, `.ssv` eller `.csv`-fil. Når du har en rollefordeligsfil, kan den enten skrives ind i `revytex.conf`, eller gives til kommandolinjen som `--<formatnavn>=<filnavn>`, altså `--pdf-matrix=roller.csv`, hvis du vil bruge eksempelfilen.
+
+    Formaterne er:
+    
+    * **`pdf-matrix`**: basically det samme format som rollefordeligsoversigten, som bliver typesat i manuskriptet, men som en `.csv`–fil. Eksempelfilen `roller.csv` er inkluderet her i repo'et.
+    * **`overview`**: formatet, som bliver udlæst af kommandoen `roles-sheet`. Dog er overskrift-kolonnen valgfri. Rækkerne med ordantal bliver ignoreret, og behøver ikke at være der. Kolonnen med aktnavne ignoreres, og behøver ikke at udfyldes. For hvert nummer kan filnavn eller titel udelades. Hvis begge er angivet prioriteres filnavnet.
 
 * **`python create.py enforce-twoside`**  
 Giv valgmuligheden `twoside` til `\documentclass` i alle `.tex`-filer. Bør bruges sammen med valgmuligheden i `revytex.conf`, som indsætter blanke bagsider, men den er sat til som standard. Den her indstilling er god i samspil med registermærkerne, se `enable-thumbtabs` længere nede.

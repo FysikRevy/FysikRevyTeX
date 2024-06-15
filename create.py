@@ -6,6 +6,7 @@ import sys
 import re
 sys.path.append("scripts")
 from multiprocessing import Pool
+from pathlib import Path
 
 import classy_revy as cr
 import setup_functions as sf
@@ -14,6 +15,7 @@ import config as cf
 from tex import TeX
 from clobberers import clobber_steps, clobber_my_tex
 from pdf import PDF
+import roles_reader
 
 from config import configuration as conf
 
@@ -130,7 +132,7 @@ def roles_csv( revue ):
         mat.wordcounts = count
     
     try:
-        fn = conf["Files"]["roles sheet output"]
+        fn = conf["Files"]["role overview"]
     except KeyError:
         revue.write_roles_csv()
         print( "Wrote roles.csv (default name, can be set in revytex.conf)" )
@@ -151,6 +153,7 @@ def write_help(*args):
     print("] ", end="")
     for toggle in toggles:
         print("[{}] ".format(toggle.cmd), end="")
+    print( "[--<tilvalg>=<ny indstilling>] ", end="" )
     print("[ <kommandoer> ]")
     print("""
 Som standard, hvis der ikke gives nogen kommandoer, lader scriptet som om
@@ -183,6 +186,18 @@ Flag:""")
         print("  {:<18} {}".format(clobber_steps[ clobber ].cmd,
                                   clobber_steps[ clobber ].doc)
               )
+
+    print("\nTilvalg, som kan tilsidesætte indstillinger i revytex.conf:")
+    print("""\
+De her sætter filnavnet for rollefordelingsfiler med et bestemt
+format. Argumentet efter =-tegnet skal være stien til filen. Fx:
+    --{}=./{}
+""".format( roles_reader.formats[0].name,
+            roles_reader.formats[0].default_filename
+           )
+          )
+    for setting in role_settings:
+          print("  {:<18} {}".format( setting.cmd + "=", setting.doc ) )
     sys.exit("\n")
 
 actions = [
@@ -286,11 +301,15 @@ flags = [
     Argument( "h",
               "Jeg har hjælp til dig",
               write_help
-              ),
+             ),
     Argument( "v",
               "Få mere verbost output fra LaTeX.",
               verbose
-              )
+             ),
+    Argument( "y",
+              "Sig ja til alt.",
+              lambda: conf.conf.set( "Behaviour", "always say yes", "yes" )
+             )
     ]
 
 def config_setter_for_format( form ):
@@ -329,7 +348,21 @@ if __name__ == "__main__":
     
     for toggle in toggles:
         if toggle.cmd in sys.argv:
-            toggle.action(conf) 
+            toggle.action(conf)
+    for arg in sys.argv:
+        for setting in settings:
+            if arg.startswith( setting.cmd ):
+                try:
+                    setting.action( arg.split( "=", maxsplit=1 )[1] )
+                except IndexError:
+                    print(
+                        "Fejl: {} skal have en indstilling, som skrives som:"\
+                        .format( setting.cmd )
+                    )
+                    print( "          '{}=<indstilling>' (uden mellemrum)."\
+                           .format( setting.cmd, setting.cmd )
+                    )
+                    sys.exit(1)
     for flag in flags:
         if flag.cmd in \
            "".join( [ match[1] for match in

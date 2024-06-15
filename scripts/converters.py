@@ -197,7 +197,7 @@ class Converter:
                                  "-aux-directory={}".format( temp ),
                                  "-output-directory={}".format( temp ),
                                  "scripts/revywordcount.tex"),
-                               timeout = 10,
+                               timeout = 60,
                                input = str( tex_file.absolute() ),
                                text = True,
                                encoding = 'utf-8',
