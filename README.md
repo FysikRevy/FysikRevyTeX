@@ -3,7 +3,7 @@
 * Completely rewritten in Python 3.
 * Parallel generation of PDFs for songs, sketches and individual manuscripts.
 * The manuscript has the traditional front page.
-> ...mere eller mindre
+    > ...mere eller mindre
 * The contact list has a more human readable syntax.
 
 [revytex]: https://github.com/dikurevy/RevyTeX
@@ -15,7 +15,9 @@
 ## Set up instructions
 FysikRevyTeX has very few dependencies:
 
-* Python 3.3 or newer.
+> ...for kernefunktionerne
+
+* Python 3.10 or newer.
 * [PyPDF][] for the PDF magic.
 
 When dependencies are met, just put the contents of FysikRevyTeX in a directory of your choice. No installation is required.
@@ -23,6 +25,16 @@ When dependencies are met, just put the contents of FysikRevyTeX in a directory 
 FysikRevyTeX has been tested on Linux with Python 3.3 and PyPDF2 v. 1.20.
 
 > Opdateret og testet på Windows med Python 3.12 og PyPDF v. 4.2.0
+
+> En del af FysikRevyTeX's ekstra funktioner har knopskudt ekstra afhængigheder, som der nu er indført `requirements.txt`–filer til at holde styr på. Hvis du kun vil installere PyPDF kan du give kommandoen
+
+    $ pip -r requirements.txt
+
+> i FysikRevyTeX's rodbibliotek. Hvis du vil installere afhængighederne til alle funktionerne, så er kommandoen
+
+    $ pip -r all-requirements.txt
+
+> Afhængigherne til de individuelle funktioner bliver beskrevet, når det bliver relevant herunder.
 
 [pypdf]: https://pypdf.readthedocs.io/en/stable/index.html
 
@@ -161,7 +173,7 @@ Lav en `.csv` (bedst til Excel) eller `.tsv` (til Google Sheets) –fil med en o
 For at bruge de her funktioner, skal python kunne kontakte din google-konto. For at sætte din google-konto op, skal du følge trinnene i [gspread][]s dokumentation (hvis du er i tvivl, brug trinene "For End Users". Men trinene "For Bots" virker også), eller [dokumentationen for Googles Forms–API][gforms-authorize].
 
 * **`python create.py props`**<br />
-Eksporterer de rekvisitter, som er skrevet ind i `props`--miljøet i `.tex`--filerne, til et regeark på Google Sheets. Integrationen kræver [gspread][].
+Eksporterer de rekvisitter, som er skrevet ind i `props`--miljøet i `.tex`--filerne, til et regeark på Google Sheets. Integrationen kræver [gspread][]. Den relevante `requirements`–fil hedder `sheets-requirements.txt`.
 
     For at sætte op, følg de her trin:
 
@@ -177,9 +189,9 @@ Sætter akter, titler og roller ind i en kopi af en Google Form, som er forbered
     
     Hvis du ikke er tilfreds med rollerne, som de står skrevet i TeX–filerne, så er `roles-sheet` og `role-distribution` effektive redskaber til hurtigt at lave dem om.
     
-    Den her kommando har afhængigheder (jf. [API–dokumentationen][gforms-deps]) til `google-api-python-client google-auth-httplib2 google-auth-oauthlib`.
+    Den her kommando har afhængigheder (jf. [API–dokumentationen][gforms-deps]) til en del google-pakker, og også til `oauth2client`, som [nok burde erstattes][oauthissue]. Sammenfattet i `forms-requirements.txt`
     
-    Hvis du vil læse kalenderfiler, så skal vi også bruge et [iCalendar–bibliotek][ical] og et [tidszonebibliotek][pytz]: `ical pytz`.
+    Hvis du vil læse kalenderfiler, så skal vi også bruge et [iCalendar–bibliotek][ical] og et [tidszonebibliotek][pytz], som er opremset i `cal-requirements.txt`.
 
 [gspread]: https://docs.gspread.org/en/latest/index.html
 
@@ -192,6 +204,8 @@ Sætter akter, titler og roller ind i en kopi af en Google Form, som er forbered
 [ical]: https://pypi.org/project/ical/
 
 [pytz]: https://pypi.org/project/pytz/
+
+[oauthissue]: https://github.com/FysikRevy/FysikRevyTeX/issues/17
 
 
 #### Flag og valgmuligheder ####
@@ -218,7 +232,7 @@ Skriv roller ind i alle TeX-filer. Rollefordelingsfiler kan have flere forskelli
     * **`pdf-matrix`**: basically det samme format som rollefordeligsoversigten, som bliver typesat i manuskriptet, men som en `.csv`–fil. Eksempelfilen `roller.csv` er inkluderet her i repo'et.
     * **`overview`**: formatet, som bliver udlæst af kommandoen `roles-sheet`. Dog er overskrift-kolonnen valgfri. Rækkerne med ordantal bliver ignoreret, og behøver ikke at være der. Kolonnen med aktnavne ignoreres, og behøver ikke at udfyldes. For hvert nummer kan filnavn eller titel udelades. Hvis begge er angivet prioriteres filnavnet.
     
-    Den her funktion afhænger af [thefuzz][] til at forbinde titler, som ikke er helt ens.
+    Den her funktion afhænger af [thefuzz][] til at forbinde titler, som ikke er helt ens. Den afhængighed er også skrevet ind i `dist-requirements.txt`.
 
 * **`python create.py enforce-twoside`**  
 Giv valgmuligheden `twoside` til `\documentclass` i alle `.tex`-filer. Bør bruges sammen med valgmuligheden i `revytex.conf`, som indsætter blanke bagsider, men den er sat til som standard. Den her indstilling er god i samspil med registermærkerne, se `enable-thumbtabs` længere nede.
