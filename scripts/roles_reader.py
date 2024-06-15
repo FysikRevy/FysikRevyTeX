@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Callable
 
 # dependencies
-from fuzzywuzzy import fuzz
+from thefuzz import fuzz
 
 # locals
 from base_classes import Role
@@ -124,7 +124,7 @@ def pdf_matrix( fname, revue ):
     
     # prøv at gætte sammenhængen mellem nummer-navne i
     # rollefordelingsfilen og manuskriptfilerne, med fuzzy
-    # matching, se https://pypi.org/project/fuzzywuzzy/
+    # matching, se https://pypi.org/project/thefuzz/
     materials = [ material for act in revue.acts
                   for material in act.materials ]
     

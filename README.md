@@ -17,7 +17,6 @@ FysikRevyTeX has very few dependencies:
 
 * Python 3.3 or newer.
 * [PyPDF][] for the PDF magic.
-* [fuzzywuzzy][] til noget tekst-matche-magi
 
 When dependencies are met, just put the contents of FysikRevyTeX in a directory of your choice. No installation is required.
 
@@ -26,7 +25,6 @@ FysikRevyTeX has been tested on Linux with Python 3.3 and PyPDF2 v. 1.20.
 > Opdateret og testet på Windows med Python 3.12 og PyPDF v. 4.2.0
 
 [pypdf]: https://pypdf.readthedocs.io/en/stable/index.html
-[fuzzywuzzy]: https://pypi.org/project/fuzzywuzzy/
 
 ## Usage
 ### Creating a new revue directory
@@ -219,6 +217,8 @@ Skriv roller ind i alle TeX-filer. Rollefordelingsfiler kan have flere forskelli
     
     * **`pdf-matrix`**: basically det samme format som rollefordeligsoversigten, som bliver typesat i manuskriptet, men som en `.csv`–fil. Eksempelfilen `roller.csv` er inkluderet her i repo'et.
     * **`overview`**: formatet, som bliver udlæst af kommandoen `roles-sheet`. Dog er overskrift-kolonnen valgfri. Rækkerne med ordantal bliver ignoreret, og behøver ikke at være der. Kolonnen med aktnavne ignoreres, og behøver ikke at udfyldes. For hvert nummer kan filnavn eller titel udelades. Hvis begge er angivet prioriteres filnavnet.
+    
+    Den her funktion afhænger af [thefuzz][] til at forbinde titler, som ikke er helt ens.
 
 * **`python create.py enforce-twoside`**  
 Giv valgmuligheden `twoside` til `\documentclass` i alle `.tex`-filer. Bør bruges sammen med valgmuligheden i `revytex.conf`, som indsætter blanke bagsider, men den er sat til som standard. Den her indstilling er god i samspil med registermærkerne, se `enable-thumbtabs` længere nede.
@@ -237,6 +237,9 @@ Sætter indstillingerne, som får registermærkerne sat i de individuelle materi
   Det foregår ved, at fjerne `planfile`-argumentet fra `.tex`-filerne igen, så de altid går ud fra, at planfilen hedder `aktoversigt.plan`, og ligger i samme mappe. Derefter laver vi en kopi af `aktoversigt.plan` i alle mapperne, hvor der er `.tex`-filer, som er nævnt i `aktoversigt.plan`, hvor stierne er ændret, så de er rigtige set inde fra undermapperne. Det betyder så, at hvis der bliver lavet om på `aktoversigt.plan`, så skal den her kommando køres igen, for at opdatere kopierne. Læg mærke til, at det er når manuskriptet TeX-es lokalt, at det er nødvendigt, at kopierne er opdateret.
 
 [Overleaf]: https://overleaf.com
+
+[thefuzz]: https://pypi.org/project/thefuzz/
+
 
 ### Om `.csv`-filer
 `.csv`-filer kan også bruge semikolonner til at separere værdier, hvilket især er brugbart, når kommaer kan optræde i andre kontekster. Ikke desto mindre laver bl.a. Google Sheets `.csv`-filer med kommaer, så vi prøver at være smarte omkring det. Vi godtager også `.tsv`--filer, hvor seperatoren er et tabulatortegn (pas på med at vise dem til almindeligt revyster, som måske ikke kan se forskel på tabulatortegn og mellemrum). Vi går ud fra, at det tegn af de tre mulige (`tab`, `;` eller `,`), som optræder oftest i (c/t)sv-filen, er separatortegnet. Det er muligt, at dette kan give anledning til fejl...

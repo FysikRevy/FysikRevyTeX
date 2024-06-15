@@ -4,7 +4,6 @@ from operator import itemgetter
 from pathlib import Path
 from base_classes import Role
 from tex import TeX
-from roles_reader import formats
 
 stoptext = """
         ╔═╗╔╦╗╔═╗╔═╗        
@@ -64,6 +63,7 @@ class RoleDistribution( ClobberInstructions ):
     
     @staticmethod
     def init( revue ):
+        from roles_reader import formats
 
         active_formats = [ form for form in formats
                            if revue.conf.conf.has_option( "Files", form.name )
