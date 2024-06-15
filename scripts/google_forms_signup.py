@@ -485,8 +485,6 @@ def new_form_from_template( template, revue ):
   except NameError as e:
     if "form_service" in e.args[0]:
       setup_connection()
-    elif "template_form" in e.args[0]:
-      update_template_form()
     else:
       raise e
     return new_form_from_template( revue )
@@ -516,5 +514,12 @@ def new_form_from_template( template, revue ):
   ).execute()
 
 def create_new_form( revue ):
-  create_form_from_template( template_form )
+  try:
+    new_form_from_template( template_form, revue )
+  except NameError as e:
+    if "template_form" in e.args[0]:
+      update_template_form()
+      return create_new_form( revue )
+    raise e
+
   summarize_conf()
