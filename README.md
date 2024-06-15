@@ -158,24 +158,51 @@ Lav en `.csv` (bedst til Excel) eller `.tsv` (til Google Sheets) –fil med en o
 
     Filnavnet sættes enten i `conf`–filen, eller med valgmuligheden `--roles-sheet-fn=<filnavn>`.
 
+#### Funktioner, der interagerer med Google dokumenttyper ####
+
+For at bruge de her funktioner, skal python kunne kontakte din google-konto. For at sætte din google-konto op, skal du følge trinnene i [gspread][]s dokumentation (hvis du er i tvivl, brug trinene "For End Users". Men trinene "For Bots" virker også), eller [dokumentationen for Googles Forms–API][gforms-authorize].
+
 * **`python create.py props`**<br />
 Eksporterer de rekvisitter, som er skrevet ind i `props`--miljøet i `.tex`--filerne, til et regeark på Google Sheets. Integrationen kræver [gspread][].
 
     For at sætte op, følg de her trin:
 
-    1. Start med at have en Google--konto. 
-    2. Følg skridtene til "Authentication" i [gspread][]s dokumentation. (Hvis du er i tvivl, brug trinene "For End Users". Men trinene "For Bots" virker også.)
-    3. Find eller lav et tomt ark i et regneark, som du har redigeringsrettigheder til i Google Sheets. Hvis arket ikke er tomt (helt præcist, hvis celle `A1` ikke er tom), bliver overskrifterne ikke autogenereret.
-    4. Skriv regnearkets og arkets navne ind i din `revytex.conf`, og sæt `skip gspread` til `no`.
-    5. Kør `python create.py props`, og se regnearket blive fyldt op (hvis dine revyster rent faktisk har skrevet deres rekvisitter ind...)
+    1. Sæt din google–konto op som beskrevet i starten af det her afsnit.
+    2. Find eller lav et tomt ark i et regneark, som du har redigeringsrettigheder til i Google Sheets. Hvis arket ikke er tomt (helt præcist, hvis celle `A1` ikke er tom), bliver overskrifterne ikke autogenereret.
+    3. Skriv regnearkets og arkets navne ind i din `revytex.conf`, og sæt `skip gspread` til `no`.
+    4. Kør `python create.py props`, og se regnearket blive fyldt op (hvis dine revyster rent faktisk har skrevet deres rekvisitter ind...)
+    
+* **`python create.py google-forms-signup`**  
+Sætter akter, titler og roller ind i en kopi af en Google Form, som er forberedt med pladsholdere til dem. Kan også sætte revydatoer ind, til til- eller afmelding, hvis den får en kalenderfil i iCalendar–format (i Google Calendar ligger der et link til sådan en fil i settings–siden for den enkelte kalender. Scriptet kan hente kalender–flier fra internettet, hvis det får en url). [Her er et eksempel på, hvordan pladsholderne kan sættes ind i en Form][forms-ex].
+
+    For at bruge, gør først din Google–konto klar, som beskrevet først i det her afsnit. Efter det spørger den her kommando selv efter de informationer, som den skal bruge, hvis de ikke er skrevet ind i `revytex.conf`. Hvis du vil skrive kommandoerne ind i `revytex.conf`, så får du til sidst en tekstblok, som kan klippe–klistres ind (men hvorfor skulle du egentlig ville det...?)
+    
+    Hvis du ikke er tilfreds med rollerne, som de står skrevet i TeX–filerne, så er `roles-sheet` og `role-distribution` effektive redskaber til hurtigt at lave dem om.
+    
+    Den her kommando har afhængigheder (jf. [API–dokumentationen][gforms-deps]) til `google-api-python-client google-auth-httplib2 google-auth-oauthlib`.
+    
+    Hvis du vil læse kalenderfiler, så skal vi også bruge et [iCalendar–bibliotek][ical] og et [tidszonebibliotek][pytz]: `ical pytz`.
+
+[gspread]: https://docs.gspread.org/en/latest/index.html
+
+[gforms-authorize]: https://developers.google.com/forms/api/quickstart/python#set_up_your_environment
+
+[forms-ex]: https://docs.google.com/forms/d/e/1FAIpQLSdDtqx_FdYhHTWVWstKFnMmUTI_Rc5hyOTOw6FPxRTupvXW5Q/viewform?usp=sf_link
+
+[gforms-deps]: https://developers.google.com/forms/api/quickstart/python#install_the_google_client_library
+
+[ical]: https://pypi.org/project/ical/
+
+[pytz]: https://pypi.org/project/pytz/
+
+
+#### Flag og valgmuligheder ####
 
 * **`python create.py --tex-all`**  
 Gennemtving gen-TeXning af alle filer. Kan også kobles på de andre kommandoer, for at tvinge gen-TeXning af udvalgte filer.
 
 * **`python create.py -v`**  
 Skriv output fra LaTeX til terminalen (v for "verbose"). Scriptet paralleliserer TeXningen, så du får nok en overvældende mængde output fra kommandoer, som TeXer flere ting. Men der er nok den eneste måde at få diagnostisk information fra kommandoer som `aktoversigt` eller `contacts`.
-
-[gspread]: https://docs.gspread.org/en/latest/index.html
 
 > De her var, og er, en valgmulighed i `revytex.conf`-filen, men de er en gode muligheder at have på kommandolinjen også.
 

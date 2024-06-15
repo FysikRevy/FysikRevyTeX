@@ -140,6 +140,10 @@ def roles_csv( revue ):
     revue.write_roles_csv( fn )
     print( "Wrote {}".format( fn ))
 
+def google_forms_signup( tex ):
+    from google_forms_signup import create_new_form
+    create_new_form( revue )
+
 class Argument:
     def __init__(self, cmd, doc, action):
         self.cmd = cmd
@@ -198,6 +202,11 @@ format. Argumentet efter =-tegnet skal være stien til filen. Fx:
           )
     for setting in role_settings:
           print("  {:<18} {}".format( setting.cmd + "=", setting.doc ) )
+
+    print( "" )
+    for setting in settings:
+        if setting not in role_settings:
+            print("  {:<18} {}".format( setting.cmd + "=", setting.doc ) )
     sys.exit("\n")
 
 actions = [
@@ -267,7 +276,12 @@ actions = [
     Argument( "roles-sheet",
               "Lav en csv(/tsv) fil med en oversigt over rollerne.",
               lambda tex: roles_csv( revue )
-              )
+              ),
+
+    Argument( "google-forms-signup",
+              "Skriv roller og revydage ind i en Google Forms tilmeldingsformular.",
+              google_forms_signup
+             )
     ]
 
 def create_parts(revue, args):
