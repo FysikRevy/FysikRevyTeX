@@ -6,19 +6,17 @@
 \usepackage{etoolbox}
 \usepackage{hyperref}
 \usepackage{setspace}
+\usepackage[link=off,group-min=4,foreign=international]{phonenumbers}
 
 \makeatletter
-\def\telnumpull#1#2#3#4#5{#1#2#3#4#5}
-\def\telnumspc#1#2#3#4#5{#1#2#3#4#5\,\telnumpull}
 \newif\ifincontact \incontactfalse
 \newcommand*{\contact}[5]{\setstretch{.7}%
   \ifincontact\incontactfalse\else\begin{flushright}\fi\begin{scriptsize}\noindent%
-%    \vspace{-.3em}%
     \makebox[2em][r]{\textit{ #1}}
-    #2\ifblank{#3}{}{---``#3''}
+    #2\ifblank{#3}{}{---„#3``}
     \hfill\phantom{.} \hfill\makebox{
-      \makebox[14.5ex][l]{\ifx&#4&\else\Telefon\,\telnumspc\string#4\fi}~\makebox[13em][l]{\Letter\,\sffamily{#5}}
-    }
+      \makebox{\ifx&#4&\else\Telefon\,\phonenumber{\string#4}\fi}\quad\makebox[13em][l]{\Letter\,\sffamily{#5}}%
+    }%
   \end{scriptsize}\@ifnextchar\contact{\incontacttrue\par}{\end{flushright}}
 }
 \makeatother
