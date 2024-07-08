@@ -128,9 +128,6 @@ class TeX:
         # List of keywords/commands to ignore, i.e. that are not relevant to extract:
         ignore_list = ["documentclass", "usepackage", "begin", "end", "maketitle", "act", "scene"]
 
-        # List of important keywords/commands:
-        important_list = ["prop", "role", "sings", "says"]
-
         with open(fname, mode='r', encoding=encoding) as f:
             lines = f.readlines()
 
@@ -173,50 +170,49 @@ class TeX:
                             keyword = extract_multiple_lines(lines, n)
 
                         # Now check whether the command is one of the important ones:
-                        if command in important_list:
-                            if command == "prop":
-                                prop = keyword
+                        if command == "prop":
+                            prop = keyword
 
-                                try:
-                                    responsible = opt_re.findall(line)[0]
-                                    index = line.rfind("]")
-                                except IndexError:
-                                    # There is no responsible for this item.
-                                    responsible = ""
-                                    index = line.rfind("}")
+                            try:
+                                responsible = opt_re.findall(line)[0]
+                                index = line.rfind("]")
+                            except IndexError:
+                                # There is no responsible for this item.
+                                responsible = ""
+                                index = line.rfind("}")
 
-                                description = line[index+1:].strip()
-                                self.info["props"].append(Prop(prop, responsible, description))
+                            description = line[index+1:].strip()
+                            self.info["props"].append(Prop(prop, responsible, description))
 
-                            elif command == "role":
-                                abbreviation = keyword
-                                try:
-                                    name = opt_re.findall(line)[0]
-                                except IndexError:
-                                    # Ikke noget navn endnu
-                                    name = ""
-                                try:
-                                    role = eol_re.findall(line)[0]
-                                except IndexError:
-                                    #ingen beskrivelse
-                                    role = ""
+                        elif command == "role":
+                            abbreviation = keyword
+                            try:
+                                name = opt_re.findall(line)[0]
+                            except IndexError:
+                                # Ikke noget navn endnu
+                                name = ""
+                            try:
+                                role = eol_re.findall(line)[0]
+                            except IndexError:
+                                #ingen beskrivelse
+                                role = ""
 
-                                if '/' in name:
-                                    print("Warning! '/' is not allowed in "
-                                          "actor names, but occurs in '{}' "
-                                          "in file '{}'. ".format(name,self.fname))
-                                    print("It will be replaced by a dash ('-').")
-                                    # Replace potential slash with a dash,
-                                    # to avoid problems with slashes in filenames.
-                                    name = name.replace("/", "-")
+                            if '/' in name:
+                                print("Warning! '/' is not allowed in "
+                                      "actor names, but occurs in '{}' "
+                                      "in file '{}'. ".format(name,self.fname))
+                                print("It will be replaced by a dash ('-').")
+                                # Replace potential slash with a dash,
+                                # to avoid problems with slashes in filenames.
+                                name = name.replace("/", "-")
 
-                                self.info["roles"].append(Role(abbreviation, name, role))
+                            self.info["roles"].append(Role(abbreviation, name, role))
 
-                            elif command in ("sings", "says", "does"):
-                                # We count how many abbreviations actually appear in the sketch/song
-                                # in order to find missing persons in the roles list.
-                                abbreviations = re.split( r'\W*(?:\+|\\&|[oO]g|,)\W*', keyword )
-                                self.info["appearing_roles"].update( abbreviations )
+                        elif command in ("sings", "says", "does"):
+                            # We count how many abbreviations actually appear in the sketch/song
+                            # in order to find missing persons in the roles list.
+                            abbreviations = re.split( r'\W*(?:\+|\\&|[oO]g|,)\W*', keyword )
+                            self.info["appearing_roles"].update( abbreviations )
                         else:
                             # Store information:
                             self.info[command] = keyword
