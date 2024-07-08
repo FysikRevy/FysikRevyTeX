@@ -23,6 +23,8 @@ opt_re = re.compile(r"^[^\[]*\[([^\]]*)\].*$")
 # Regular expression that extracts everything ] and to the end of the line:
 eol_re = re.compile(r"^.*\](.*).*$")
 
+# RegEx til at splitte tekst-lister, fx ( a, b + c og d ):
+text_list_re = re.compile(r'\W*(?:\+|\\&|[oO]g|,)\W*')
 
 def extract_multiple_lines(lines, line_number, start_delimiter='{', end_delimiter='}'):
     "Extract the whole string of a command that spans multiple lines (e.g. \\scene)."
@@ -213,7 +215,7 @@ class TeX:
                             # in order to find missing persons in the roles list.
                             abbreviations = \
                               ( abbr.strip() for abbr in \
-                                  re.split( r'\W*(?:\+|\\&|[oO]g|,)\W*', keyword )
+                                  re.split( text_list_re, keyword )
                                 if not abbr.strip().lower() == "alle"
                                )
                             self.info["appearing_roles"].update( abbreviations )
