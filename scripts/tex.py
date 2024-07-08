@@ -211,7 +211,11 @@ class TeX:
                         elif command in ("sings", "says", "does"):
                             # We count how many abbreviations actually appear in the sketch/song
                             # in order to find missing persons in the roles list.
-                            abbreviations = re.split( r'\W*(?:\+|\\&|[oO]g|,)\W*', keyword )
+                            abbreviations = \
+                              ( abbr.strip() for abbr in \
+                                  re.split( r'\W*(?:\+|\\&|[oO]g|,)\W*', keyword )
+                                if not abbr.strip().lower() == "alle"
+                               )
                             self.info["appearing_roles"].update( abbreviations )
                         else:
                             # Store information:
