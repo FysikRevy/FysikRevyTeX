@@ -16,19 +16,24 @@ class Material:
     # Material in the same way.
     def __init__(self, info_dict):
         "Extract data from dictionary returned by parsetexfile()."
-        self.title = info_dict["title"]
-        try:
-            self.status = info_dict["status"]
-        except KeyError:
+
+        def info_dict_get_or_empty_string( entry ):
+            # hvem ved, hvad de glemmer at skrive ind i tex-filen...
+            try:
+                return info_dict[ entry ]
+            except KeyError:
+                return ""
+        
+        self.title = info_dict_get_or_empty_string( "title" )
+        self.status = info_dict_get_or_empty_string( "status" )
+        if not self.status:
             print("No status on '{}' is set.".format(self.title))
-        self.props = info_dict["props"]
-        self.length = info_dict["eta"].replace('$','').split()[0]
+        self.props = info_dict_get_or_empty_string( "props" )
+        self.length = info_dict_get_or_empty_string( "eta" )\
+                         .replace('$','').split()[0]
         self.path = os.path.abspath(info_dict["path"])
         self.roles = info_dict["roles"]
-        try:
-            self.responsible = info_dict["responsible"]
-        except KeyError:
-            self.responsible = ""
+        self.responsible = info_dict_get_or_empty_string( "responsible" )
         if self.responsible not in [ role.actor for role in self.roles ]:
             print("Incorrect TeX responsible for '{}' ({})."
                   .format(self.title, self.responsible or "<unspecified>"))
@@ -42,10 +47,7 @@ class Material:
         path, self.file_name = os.path.split(self.path)
         self.category = Path( info_dict["path"] ).parts[0]
 
-        try:
-            self.melody = info_dict["melody"]
-        except KeyError:
-            self.melody = ""
+        self.melody = info_dict_get_or_empty_string( "melody" )
 
         # Meta data
         self.modification_time = info_dict['modification_time']
@@ -59,10 +61,11 @@ class Material:
         # Like this:
         self.supernumeraries = [ role for role in self.appearing_roles
                                  if role not in [
-                                         role.abbreviation for role in self.roles
+                                    role.abbreviation for role in self.roles
                                  ]
         ]
-        if conf.getboolean( "TeXing", "supernumeraries" ) and self.supernumeraries:
+        if conf.getboolean( "TeXing", "supernumeraries" )\
+        and self.supernumeraries:
             self.roles += [ Role( " ".join( self.supernumeraries ),
                                   "!!!!!!!",
                                   ""
@@ -70,13 +73,12 @@ class Material:
         
 
         # To be deprecated (most likely):
-        try:
-            self.author = info_dict["author"]
-        except KeyError:
+        self.author = info_dict_get_or_empty_string( "author" )
+        if not self.author:
             print("No author for '{}' is declared.".format(self.title))
-        self.year = info_dict["revyyear"]
-        self.revue = info_dict["revyname"]
-        self.version = info_dict["version"]
+        self.year = info_dict_get_or_empty_string( "revyyear" )
+        self.revue = info_dict_get_or_empty_string( "revyname" )
+        self.version = info_dict_get_or_empty_string( "version" )
 
     @classmethod
     def fromfile(cls, filename):
@@ -224,6 +226,7 @@ class Revue:
                             print("You need a name for the act before any TeX file is listed.")
                             print("Problematic file: {}".format(filename))
                             print("Error raised: {}".format(err))
+                            raise err
 
             # Store the very last act:
             acts.append(act)
