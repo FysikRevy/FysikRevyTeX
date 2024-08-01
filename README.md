@@ -47,6 +47,8 @@ The FysikRevyTex directory itself is not meant to be touched at any time (except
 
 where `path/to/directory` should be where you want to set up the revue directory, e.g. `../2014`. 
 
+> Windows er blevet mere striks omkring oprettelse af symlinks. Derfor har setup-programmet brug for administratorrettigheder, for at kunne oprette revy-mappen. (Dvs. den skal køres fra en terminal, som er startet ved at højreklikke på genvejen og vælge 'Kør som administrator'.)
+
 Enter your newly created directory (`cd path/to/directory`) and do the following:
 
 #### 1. Create TeX files
