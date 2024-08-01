@@ -75,9 +75,27 @@ shutil.copy(os.path.join(src_dir, "templates", "contacts.csv"),
             os.path.join(dst_dir, "contacts.csv"))
 
 # Create symbolic links for system scripts and directories:
-os.symlink(os.path.join(src_dir, "scripts"), os.path.join(dst_dir, paths["scripts"]), target_is_directory=True)
-os.symlink(os.path.join(src_dir, "create.py"), os.path.join(dst_dir, "create.py"))
+try:
+    os.symlink( os.path.join(src_dir, "scripts"),
+                os.path.join(dst_dir, paths["scripts"]),
+                target_is_directory=True
+               )
+    os.symlink( os.path.join(src_dir, "create.py"),
+                os.path.join(dst_dir, "create.py")
+               )
+except OSError as e:
+    if hasattr( e, "winerror" ) and e.winerror == 1314:
+        # TODO: other OS'es?
+        print( "\n" )
+        print( "Windows kræver højere brugerrettigheder for at lave symlinks.")
+        print( "Du kan give de rettigheder ved at køre setup.py fra en" )
+        print( "terminal, der er startet som administrator.\n" )
 
+        # you haven't seen anything
+        shutil.rmtree( dst_dir )
+
+    # we haven't fixed the error, though
+    raise e
 
 # Change to the new directory:
 os.chdir(dst_dir)
