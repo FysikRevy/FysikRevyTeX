@@ -354,16 +354,16 @@ manus_commands = (tuple() if conf.getboolean("TeXing","skip thumbindex")
     ("aktoversigt", "roles", "frontpage", "props", "contacts", "material")
 
             
-if __name__ == "__main__":
+def create( arguments = sys.argv ):
 
     # Load configuration file:
     conf.load("revytex.conf")
-    conf.add_args([ x for x in sys.argv[1:] if x[0] != "-" ])
+    conf.add_args([ x for x in arguments[1:] if x[0] != "-" ])
     
     for toggle in toggles:
-        if toggle.cmd in sys.argv:
+        if toggle.cmd in arguments:
             toggle.action(conf)
-    for arg in sys.argv:
+    for arg in arguments:
         for setting in settings:
             if arg.startswith( setting.cmd ):
                 try:
@@ -380,27 +380,24 @@ if __name__ == "__main__":
     for flag in flags:
         if flag.cmd in \
            "".join( [ match[1] for match in
-                      [ re.match( r"^-([^-]+)", arg ) for arg in sys.argv ]
+                      [ re.match( r"^-([^-]+)", arg ) for arg in arguments ]
                       if match ]
                      ):
             flag.action(conf) 
-    # if "--tex-all" in sys.argv:
-    #     conf["TeXing"]["force TeXing of all files"] = "yes"
-    # if "-v" in sys.argv:
-    #     conf["TeXing"]["verbose output"] = "yes"
 
-    if "plan" in sys.argv or not os.path.isfile("aktoversigt.plan"):
+    if "plan" in arguments or not os.path.isfile("aktoversigt.plan"):
         sf.create_plan_file("aktoversigt.plan")
         sys.exit("Plan file 'aktoversigt.plan' created successfully.")
 
+    global revue                # TODO: EVIL! :hiss:
     revue = cr.Revue.fromfile("aktoversigt.plan")
     path = revue.conf["Paths"]
     conv = cv.Converter()
 
-    arglist = tuple( sys.argv[1:] )
+    arglist = tuple( arguments[1:] )
     if all( arg[0] == "-" for arg in arglist ):
         arglist = default_commands
-    elif "manus" in sys.argv:
+    elif "manus" in arguments:
         arglist = arglist + manus_commands
 
     try:
@@ -409,7 +406,7 @@ if __name__ == "__main__":
         print( "Some TeX files failed to compile. Can't create manuscripts.")
     else:
 
-    	if "manus" in sys.argv:
+    	if "manus" in arguments:
     	    pdf = PDF()
     	    pdf.pdfmerge(
     	        (( os.path.join(path["pdf"],"forside.pdf"), "Forside" ),
@@ -425,3 +422,6 @@ if __name__ == "__main__":
     	        os.path.join(path["pdf"],"manuskript.pdf"))
     	
     	    print("Manuscript successfully created!")
+
+if __name__ == "__main__":
+    create()
