@@ -355,6 +355,9 @@ manus_commands = (tuple() if conf.getboolean("TeXing","skip thumbindex")
 
             
 def create( arguments = sys.argv ):
+    # husk, at det første element i `sys.argv` er scriptets eget filnavn
+    # hvis du selv kalder den her funktion, så giv den et array med strenge,
+    # hvoraf det første element er en dummy. Fx: create( ["","manus","-v"] )
 
     # Load configuration file:
     conf.load("revytex.conf")
