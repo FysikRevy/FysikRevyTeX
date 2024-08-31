@@ -409,7 +409,7 @@ def create( arguments = sys.argv ):
         print( "Some TeX files failed to compile. Can't create manuscripts.")
     else:
 
-    	if "manus" in arguments:
+    	if "manus" in arglist:
     	    pdf = PDF()
     	    pdf.pdfmerge(
     	        (( os.path.join(path["pdf"],"forside.pdf"), "Forside" ),
