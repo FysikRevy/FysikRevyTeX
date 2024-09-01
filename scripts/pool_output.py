@@ -2,7 +2,7 @@ import shutil
 import time
 from multiprocessing import Pool
 from itertools import cycle
-from math import ceil
+from math import ceil,floor
 
 headers = (  "Proces #{}"
             ,"Proc#{}"
@@ -23,7 +23,7 @@ def good_col_width( *widths ):
    "found by some arbitrary method. Takes widths as numbers."
    # måske noget med standardafvigelse ... ?
 
-   bins = [x for x in sorted( list( set( *widths ) ) )]
+   bins =  sorted( list( set( widths ) ) )
    relevant_bins = bins[ -floor( len( bins ) / 2 ) : ][-3:]
    #                     ^ must be in uppper half      ^ and then the last ≤3
    # don't get fooled by shorter results:
@@ -61,7 +61,7 @@ def list_queue( queue ):
    prns = [ info_fmt[0] + ind + ": " + info_fmt[1] + fn \
             for ( fn, ind ) in zip( fns, cycle( indices )) ]
 
-   w = good_col_width( len( prn ) - len_info_fmt for prn in prns )
+   w = good_col_width( *(len( prn ) - len_info_fmt for prn in prns) )
    if shutil.get_terminal_size().columns < w * 2 :
       for prn in prns:
          print( prn )
