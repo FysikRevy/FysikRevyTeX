@@ -1,6 +1,7 @@
 import shutil
 import time
 from multiprocessing import Pool
+from multiprocessing.managers import SyncManager
 from itertools import cycle
 from math import ceil,floor
 
@@ -15,8 +16,9 @@ headers = (  "Proces #{}"
 indices = "abcdefghijklmnopqrstuvwxyzæøåABCDEFGHIJKLMNOPQRSTUVWXYZÆØÅ0123456789"
 file_list_column_width = 24
 
-class PoolOutput:
-   def __init__( self, proc_count ):
+class PoolOutput( SyncManager ): # we might want to do some sync stuff later
+   def __init__( self, *queue ):
+      self.queue = queue
       pass
 
 def good_col_width( *widths ):
