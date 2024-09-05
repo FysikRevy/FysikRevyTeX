@@ -253,9 +253,8 @@ class Converter:
                 po.refresh()
             po.clonk()
             print()
-            rs = result.get()
             fail, fail_other, err, done, skip = [],[],[],[],[]
-            for ind,r in zip( cycle( indices ), rs ):
+            for ind,r in zip( cycle( indices ), result.get() ):
                 ro = [ (ind,) + r ]
                 match r[0]:
                     case None:
