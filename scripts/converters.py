@@ -4,12 +4,15 @@ import shutil
 import subprocess
 import tempfile
 import uuid
+from os import getpid
 from multiprocessing import Pool, cpu_count
-from time import time
+from time import time,sleep
 from pathlib import Path
-from itertools import takewhile
+from itertools import takewhile, cycle
 
 from config import configuration as conf
+from pool_output import \
+    PoolOutputManager, text_effect, print_columnized, indices, task_start
 
 # fordi https://learn.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/create-symbolic-links
 # tak, windows.
@@ -23,6 +26,22 @@ except ImportError:
         
 class ConversionError( Exception ):
     pass
+
+class Output:
+    def begin( self, pid, taskname ):
+        self.taskname = "{:<42}".format(
+            "\033[0;37;1m{}:\033[0m".format(taskname)
+        )
+    def activity( self, pid, number ):
+        pass
+    def skipped( self, pid ):
+        pass
+    def success( self, pid ):
+        print( self.taskname + "\033[0;32m Success!\033[0m" )
+    def done_with_warnings( self, pid ):
+        print( self.taskname + "\033[0;33m Had Errors!\033[0m" )
+    def failed( self, pid ):
+        print( self.taskname + "\033[0;31m Failed!\033[0m" )
         
 class Converter:
     def __init__(self):
@@ -33,11 +52,20 @@ class Converter:
         Dummy wrapper method to make multiprocessing work on a 
         decorated function.
         """
-        self._textopdf(*args, **kwargs)
+        return self._textopdf(*args, **kwargs)
 
-    def _textopdf(self, tex, pdfname="", outputdir="", repetitions=2, encoding='utf-8'):
+    def _textopdf(self,
+                  tex,
+                  pdfname="",
+                  outputdir="",
+                  repetitions=2,
+                  encoding='utf-8',
+                  output=Output()
+                  ):
     #def textopdf(self, tex, pdfname="", outputdir="", repetitions=2, encoding='utf-8'):
         "Generates a PDF from either a TeX file or TeX object."
+
+        output.begin( getpid(), pdfname or tex )
 
         if outputdir == "":
             outputdir = self.conf["Paths"]["pdf"]
@@ -106,7 +134,9 @@ class Converter:
                  > src_modtime
                  and not self.conf.getboolean( "TeXing", "force TeXing of all files" )
                 ):
-                return          # hop fra, når output er nyere end input
+                output.skipped( getpid() )
+                # hop fra, når output er nyere end input
+                return (None, pdfname or pdffile) 
         except FileNotFoundError:
             # outputfilen findes ikke. Vi laver den
             pass                
@@ -119,13 +149,36 @@ class Converter:
                 shutil.copy(os.path.join(src_dir,"revy.sty"), "revy.sty")
             portable_dir_link( src_dir, "src_dir" )
 
+        # for i in range(repetitions):
+        #     if self.conf.getboolean("TeXing","verbose output"):
+        #         rc = subprocess.call(["pdflatex", "-interaction=nonstopmode", texfile])
+        #     else:
+        #         rc = subprocess.call(["pdflatex", "-interaction=batchmode", texfile], 
+        #                              stdout=subprocess.DEVNULL)
+        rc = None
         for i in range(repetitions):
-            if self.conf.getboolean("TeXing","verbose output"):
-                rc = subprocess.call(["pdflatex", "-interaction=nonstopmode", texfile])
-            else:
-                rc = subprocess.call(["pdflatex", "-interaction=batchmode", texfile], 
-                                     stdout=subprocess.DEVNULL)
-
+            tex_proc = subprocess.Popen(
+                ["pdflatex", "-interaction=nonstopmode", texfile],
+                stdout = subprocess.PIPE,
+                stderr = subprocess.STDOUT,
+                text = True)
+            while True:
+                o,e = "",""
+                try:
+                    o,e = tex_proc.communicate( timeout = 1 )
+                except subprocess.TimeoutExpired:
+                    pass
+                else:
+                    output.activity(
+                        getpid(),
+                        sum( 1 for c in o if c == '\n' )
+                    )
+                    # TODO: useless, really...
+                    if self.conf.getboolean( "TeXing", "verbose output" ):
+                        print( o )
+                rc = tex_proc.returncode
+                if rc != None:
+                    break
 
         # Check whether the pdf was generated:
         # TODO: This needs to be done better.
@@ -135,38 +188,47 @@ class Converter:
         #     if rerun == 'y':
         #         rc = subprocess.call(["pdflatex", texfile]) 
 
-
-        print("{:<42}".format("\033[0;37;1m{}:\033[0m".format(pdfname or pdffile)), end="")
-        if rc == 0:
-            print("\033[0;32m Success!\033[0m")
-        elif os.path.exists( pdffile ):
-            print("\033[0;33m Had Errors!\033[0m" )
-        else:
-            print("\033[0;31m Failed!\033[0m")
-            raise ConversionError
-
-        if pdfname == "":
-            pdfname = pdffile
-        else:
-            os.rename(pdffile, pdfname)
-
         try:
-            if not os.path.isdir( dst_dir ):
-                os.makedirs( dst_dir )
-            shutil.move(pdfname, dst_dir)
-        except shutil.Error:
-            os.remove(os.path.join(dst_dir, pdfname))
-            shutil.move(pdfname, dst_dir)
+            try:
+                if not os.path.exists( pdffile ):
+                    raise ConversionError
+            
+                if pdfname == "":
+                    pdfname = pdffile
+                else:
+                    os.rename(pdffile, pdfname)
+                try:
+                    if not os.path.isdir( dst_dir ):
+                        os.makedirs( dst_dir )
+                    shutil.move(pdfname, dst_dir)
+                except shutil.Error:
+                    os.remove(os.path.join(dst_dir, pdfname))
+                    shutil.move(pdfname, dst_dir)
 
-        os.chdir(src_dir)
+            finally:
+                os.chdir(src_dir)
 
-        if input_is_tex_file:
-            os.remove("{}.aux".format(os.path.join(path,texfile[:-4])))
-            os.remove("{}.log".format(os.path.join(path,texfile[:-4])))
+                if input_is_tex_file:
+                    os.remove("{}.aux".format(os.path.join(path,texfile[:-4])))
+                    os.remove("{}.log".format(os.path.join(path,texfile[:-4])))
+                    output.activity( getpid(), 1 )
+                else:
+                    shutil.rmtree(temp)
+                    output.activity( getpid(), 1 )
+                
+        except Exception as e:
+            output.failed( getpid() )
+            return (e, pdfname or pdffile)
+        finally:
+            os.chdir( src_dir )
+            
+        if rc == 0:
+            output.success( getpid() )
         else:
-            shutil.rmtree(temp)
+            output.done_with_warnings( getpid() )
+        return (rc, pdfname or pdffile)
 
-        
+
     def parallel_textopdf(self, file_list, outputdir="", repetitions=2, encoding='utf-8'):
 
         new_file_list = []
@@ -180,8 +242,65 @@ class Converter:
 
             new_file_list.append((file_path, pdfname, outputdir, repetitions, encoding))
 
-        with Pool(processes = cpu_count()) as pool:
-            result = pool.starmap(self.textopdf, new_file_list)
+        with Pool(processes = cpu_count()) as pool,\
+             PoolOutputManager() as man:
+            po = man.PoolOutput( cpu_count() )
+            po.queue_add( *( a[1] if a[1] else a[0] for a in new_file_list ) )
+            new_file_list = [ f + ( po, ) for f in new_file_list ]
+            result = pool.starmap_async(self.textopdf, new_file_list)
+            while not result.ready():
+                sleep( 1 )
+                po.refresh()
+            po.clonk()
+            print()
+            rs = result.get()
+            fail, fail_other, err, done, skip = [],[],[],[],[]
+            for ind,r in zip( cycle( indices ), rs ):
+                ro = [ (ind,) + r ]
+                match r[0]:
+                    case None:
+                        skip += ro
+                    case 0:
+                        done += ro
+                    case int():
+                        err += ro
+                    case ConversionError():
+                        fail += ro
+                    case _:
+                        fail_other += ro
+            if fail:
+                print( "\nFølgende filer kunne ikke produceres pga. "\
+                       + text_effect( "kompileringsfejl", "error" )\
+                       + ":" )
+                print_columnized( *(
+                    ( len( f ) + 3, task_start( i + ": " ) + f )
+                    for i,_,f in fail
+                ))
+            if fail_other:
+                print( "\nFølgende filer kunne ikke produceres pgs. "\
+                       + text_effect( "andre fejl", "error" ) + "." )
+                for i,e,f in fail_other:
+                    print( task_start( i + ": " ) + f )
+                    print( repr( e ) )
+            if err:
+                print( "\nFølgende filer kunne produceres, men med "\
+                       + text_effect( "none", "warn" ) + ":"
+                      )
+                print_columnized( *(
+                    ( len( f ) + 3, task_start( i + ": " ) + f )
+                    for i,_,f in err
+                ))
+            print()
+            if done:
+                print( ( "{} filer blev " \
+                         + text_effect( "korrekt kompileret", "success" ) + "."
+                        ).format( len( done ))
+                      )
+            if skip:
+                print( ("{} filer havde ingen opdateringer, og blev "\
+                        + text_effect( "sprunget over", "skip" ) + "."
+                        ).format( len( skip ))
+                      )
 
     def tex_to_wordcount(self, tex_file ):
 
