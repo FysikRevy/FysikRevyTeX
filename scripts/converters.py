@@ -158,7 +158,7 @@ class Converter:
                         getpid(),
                         sum( 1 for c in o if c == '\n' )
                     )
-                    # TODO: useless, really...
+                    # output loads and break things
                     if self.conf.getboolean( "TeXing", "verbose output" ):
                         print( o )
                 rc = tex_proc.returncode
