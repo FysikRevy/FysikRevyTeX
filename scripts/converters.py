@@ -12,7 +12,8 @@ from itertools import takewhile, cycle
 
 from config import configuration as conf
 from pool_output import \
-    PoolOutputManager, text_effect, print_columnized, indices, task_start
+    PoolOutputManager, Output, text_effect, \
+    print_columnized, indices, task_start
 
 # fordi https://learn.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/create-symbolic-links
 # tak, windows.
@@ -27,22 +28,6 @@ except ImportError:
 class ConversionError( Exception ):
     pass
 
-class Output:
-    def begin( self, pid, taskname ):
-        self.taskname = "{:<42}".format(
-            "\033[0;37;1m{}:\033[0m".format(taskname)
-        )
-    def activity( self, pid, number ):
-        pass
-    def skipped( self, pid ):
-        pass
-    def success( self, pid ):
-        print( self.taskname + "\033[0;32m Success!\033[0m" )
-    def done_with_warnings( self, pid ):
-        print( self.taskname + "\033[0;33m Had Errors!\033[0m" )
-    def failed( self, pid ):
-        print( self.taskname + "\033[0;31m Failed!\033[0m" )
-        
 class Converter:
     def __init__(self):
         self.conf = conf
