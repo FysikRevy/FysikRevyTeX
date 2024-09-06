@@ -9,7 +9,6 @@ headers = (  "Proces #{}"
             ,"Pr{}"
             ,"P{}"
             ,"{}"
-            ,""
            )
 indices = "abcdefghijklmnopqrstuvwxyzæøåABCDEFGHIJKLMNOPQRSTUVWXYZÆØÅ0123456789"
 indicators = ".-=≡#"
@@ -71,9 +70,9 @@ class PoolOutput:
    @n_processes.setter
    def n_processes( self, x ):
       self._n = x
-      self.cell_width = floor( shutil.get_terminal_size().columns / x )
-      if self.cell_width < 3:
-         raise NotImplementedError
+      self.cell_width = max( 1,
+                             floor( shutil.get_terminal_size().columns / x )
+                            )
       try:
          old_strs = self.strs
       except AttributeError:
@@ -157,14 +156,27 @@ class PoolOutput:
       print( ", resultat: {}{}{}{}".format( yes, maybe, no, skip ) )
 
    def proc_headers( self ):
-      header_format = next(
-         header for header in headers
-         if len( header.format( self.n_processes ) ) < self.cell_width - 1
-      )
-      cell_format = "{:^" + str( self.cell_width - 1 ) + "}|"
-      for p in range( self.n_processes ):
-         print( cell_format.format( header_format.format( p + 1 ) ), end="" )
-      print()
+      try:
+         header_format = next(
+            header for header in headers
+            if len( header.format( self.n_processes ) ) < self.cell_width
+         )
+         cell_format = "{:^" + str( self.cell_width - 1 ) + "}|"
+         for p in range( self.n_processes ):
+            print( cell_format.format( header_format.format( p + 1 ) ), end="" )
+         print()
+      except StopIteration:
+         cell_format = "{:^{}}|"[ : self.cell_width + 5 ]
+         height = len( "{}".format( self.n_processes ) )
+         ns = [ "{:>{}}".format( n + 1, height )
+                for n in range( self.n_processes )
+               ]
+         print( "\n".join(
+            [ "".join([ cell_format.format( n[d], max( 1, self.cell_width - 1 ))
+                        for n in ns ])
+              for d in range( height )
+             ]
+         ))
 
    def preamble_once( self ):
       print()
@@ -217,7 +229,7 @@ class PoolOutput:
 
    def clonk( self ):
       # next line?
-      if self.clonk_count >= self.cell_width - 1:
+      if self.clonk_count >= max( 1, self.cell_width - 1 ):
          print()
          self.strs = [ "" ] * len( self.strs )
          self.clonk_count = 0
