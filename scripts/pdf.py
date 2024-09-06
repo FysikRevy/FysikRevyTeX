@@ -206,34 +206,33 @@ på en verso-side i dobbeltsidet layout.
             while not result.ready():
                 sleep( 1 )
                 po.refresh()
-            po.clonk()
-            print()
+            po.end_output()
             rs = result.get()
-            done, skip, error = [],[],[]
-            for i,f,r in zip( cycle( indices ), name_queue, rs ):
-                ro = [ i ]
-                match r:
-                    case None:
-                        skip += ro
-                    case 0:
-                        done += ro
-                    case _:
-                        error += [ ( i, f, r ) ]
-            if error:
-                print( "\nFølgende filer blev ikke færdiggjort pga. "\
-                       + text_effect( "fejl", "error" ) + ":"
-                      )
-                for i,f,e in error:
-                    print( task_start( i + ": " ) + f )
-                    print( e, end="" )
-            print()
-            if done:
-                print( "{} filer blev ".format( len( done ) )\
-                       + text_effect( "færdiggjort korrekt", "success" ) + "."
-                      )
-            if skip:
-                print( "{} filer havde ingen opdateringer, og blev "\
-                       .format( len( skip ) )\
-                       + text_effect( "sprunget over", "skip" ) + "."
-                      )
-            return rs
+        done, skip, error = [],[],[]
+        for i,f,r in zip( cycle( indices ), name_queue, rs ):
+            ro = [ i ]
+            match r:
+                case None:
+                    skip += ro
+                case 0:
+                    done += ro
+                case _:
+                    error += [ ( i, f, r ) ]
+        if error:
+            print( "\nFølgende filer blev ikke færdiggjort pga. "\
+                   + text_effect( "fejl", "error" ) + ":"
+                  )
+            for i,f,e in error:
+                print( task_start( i + ": " ) + f )
+                print( e, end="" )
+        print()
+        if done:
+            print( "{} filer blev ".format( len( done ) )\
+                   + text_effect( "færdiggjort korrekt", "success" ) + "."
+                  )
+        if skip:
+            print( "{} filer havde ingen opdateringer, og blev "\
+                   .format( len( skip ) )\
+                   + text_effect( "sprunget over", "skip" ) + "."
+                  )
+        return rs

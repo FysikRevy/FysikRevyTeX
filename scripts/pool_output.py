@@ -273,6 +273,10 @@ class PoolOutput:
             self.clonk()
       except AttributeError:
          pass
+
+   def end_output( self ):
+      self.clonk()
+      print()
       
 
 def good_col_width( *widths ):

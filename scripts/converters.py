@@ -252,55 +252,54 @@ class Converter:
             while not result.ready():
                 sleep( 1 )
                 po.refresh()
-            po.clonk()
-            print()
-            fail, fail_other, err, done, skip = [],[],[],[],[]
-            for ind,r in zip( cycle( indices ), result.get() ):
-                ro = [ (ind,) + r ]
-                match r[0]:
-                    case None:
-                        skip += ro
-                    case 0:
-                        done += ro
-                    case int():
-                        err += ro
-                    case ConversionError():
-                        fail += ro
-                    case _:
-                        fail_other += ro
-            if fail:
-                print( "\nFølgende filer kunne ikke produceres pga. "\
-                       + text_effect( "kompileringsfejl", "error" )\
-                       + ":" )
-                print_columnized( *(
-                    ( len( f ) + 3, task_start( i + ": " ) + f )
-                    for i,_,f in fail
-                ))
-            if fail_other:
-                print( "\nFølgende filer kunne ikke produceres pgs. "\
-                       + text_effect( "andre fejl", "error" ) + "." )
-                for i,e,f in fail_other:
-                    print( task_start( i + ": " ) + f )
-                    print( repr( e ) )
-            if err:
-                print( "\nFølgende filer kunne produceres, men med "\
-                       + text_effect( "none", "warn" ) + ":"
-                      )
-                print_columnized( *(
-                    ( len( f ) + 3, task_start( i + ": " ) + f )
-                    for i,_,f in err
-                ))
-            print()
-            if done:
-                print( ( "{} filer blev " \
-                         + text_effect( "korrekt kompileret", "success" ) + "."
-                        ).format( len( done ))
-                      )
-            if skip:
-                print( ("{} filer havde ingen opdateringer, og blev "\
-                        + text_effect( "sprunget over", "skip" ) + "."
-                        ).format( len( skip ))
-                      )
+            po.end_output()
+        fail, fail_other, err, done, skip = [],[],[],[],[]
+        for ind,r in zip( cycle( indices ), result.get() ):
+            ro = [ (ind,) + r ]
+            match r[0]:
+                case None:
+                    skip += ro
+                case 0:
+                    done += ro
+                case int():
+                    err += ro
+                case ConversionError():
+                    fail += ro
+                case _:
+                    fail_other += ro
+        if fail:
+            print( "\nFølgende filer kunne ikke produceres pga. "\
+                   + text_effect( "kompileringsfejl", "error" )\
+                   + ":" )
+            print_columnized( *(
+                ( len( f ) + 3, task_start( i + ": " ) + f )
+                for i,_,f in fail
+            ))
+        if fail_other:
+            print( "\nFølgende filer kunne ikke produceres pgs. "\
+                   + text_effect( "andre fejl", "error" ) + "." )
+            for i,e,f in fail_other:
+                print( task_start( i + ": " ) + f )
+                print( repr( e ) )
+        if err:
+            print( "\nFølgende filer kunne produceres, men med "\
+                   + text_effect( "none", "warn" ) + ":"
+                  )
+            print_columnized( *(
+                ( len( f ) + 3, task_start( i + ": " ) + f )
+                for i,_,f in err
+            ))
+        print()
+        if done:
+            print( ( "{} filer blev " \
+                     + text_effect( "korrekt kompileret", "success" ) + "."
+                    ).format( len( done ))
+                  )
+        if skip:
+            print( ("{} filer havde ingen opdateringer, og blev "\
+                    + text_effect( "sprunget over", "skip" ) + "."
+                    ).format( len( skip ))
+                  )
 
     def tex_to_wordcount(self, tex_file ):
 
