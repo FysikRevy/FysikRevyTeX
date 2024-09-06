@@ -101,7 +101,6 @@ på en verso-side i dobbeltsidet layout.
                and not any( os.path.getmtime( f ) > output_modtime
                             for f,_,_ in arg_list ):
                 output.skipped( os.getpid() )
-                raise ValueError()
                 return              # intet nyt ind = intet nyt ud
 
             # så kører bussen
