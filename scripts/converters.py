@@ -269,7 +269,7 @@ class Converter:
                     fail_other += ro
         if fail:
             print( "\nFølgende filer kunne ikke produceres pga. "\
-                   + text_effect( "kompileringsfejl", "error" )\
+                   + text_effect( "LaTeX-fejl", "error" )\
                    + ":" )
             print_columnized( *(
                 ( len( f ) + 3, task_start( i + ": " ) + f )
@@ -277,13 +277,13 @@ class Converter:
             ))
         if fail_other:
             print( "\nFølgende filer kunne ikke produceres pgs. "\
-                   + text_effect( "andre fejl", "error" ) + "." )
+                   + text_effect( "ikke-LaTeX-fejl", "error" ) + "." )
             for i,e,f in fail_other:
                 print( task_start( i + ": " ) + f )
                 print( repr( e ) )
         if err:
-            print( "\nFølgende filer kunne produceres, men med "\
-                   + text_effect( "none", "warn" ) + ":"
+            print( "\nFølgende filer kunne TeX'es, men med "\
+                   + text_effect( "advarsler", "warn" ) + ":"
                   )
             print_columnized( *(
                 ( len( f ) + 3, task_start( i + ": " ) + f )
@@ -292,7 +292,7 @@ class Converter:
         print()
         if done:
             print( ( "{} filer blev " \
-                     + text_effect( "korrekt kompileret", "success" ) + "."
+                     + text_effect( "korrekt TeX'et", "success" ) + "."
                     ).format( len( done ))
                   )
         if skip:
