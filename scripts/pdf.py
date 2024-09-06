@@ -1,14 +1,17 @@
 #import subprocess
 import os
 import subprocess
+import traceback
 from multiprocessing import Pool, cpu_count
 from time import sleep
 from pathlib import Path
+from itertools import cycle
 
 from pypdf import PdfWriter,PdfReader
 
 from config import configuration as conf
-from pool_output import PoolOutputManager, Output
+from pool_output import \
+    PoolOutputManager, Output, text_effect, indices, task_start
 
 class PDF:
     def __init__(self):
@@ -98,6 +101,7 @@ på en verso-side i dobbeltsidet layout.
                and not any( os.path.getmtime( f ) > output_modtime
                             for f,_,_ in arg_list ):
                 output.skipped( os.getpid() )
+                raise ValueError()
                 return              # intet nyt ind = intet nyt ud
 
             # så kører bussen
@@ -175,7 +179,7 @@ på en verso-side i dobbeltsidet layout.
                         )
 
             output.success( os.getpid() )
-            return 1
+            return 0
         except:
             output.failed( os.getpid() )
             raise
@@ -184,7 +188,7 @@ på en verso-side i dobbeltsidet layout.
         try:
             return self.pdfmerge( *args )
         except Exception as e:
-            return e
+            return "".join( traceback.format_exception( e ) )
     
     def parallel_pdfmerge(self, file_list):
         "Merge a list of lists of PDF files in parallel."
@@ -194,7 +198,8 @@ på en verso-side i dobbeltsidet layout.
         with Pool(processes = cpu_count()) as pool,\
              PoolOutputManager() as man:
             po = man.PoolOutput( cpu_count() )
-            po.queue_add( *( Path( dst ).name for _,dst in file_list ) )
+            name_queue = [ Path( dst ).name for _,dst in file_list ]
+            po.queue_add( *name_queue )
             result = pool.starmap_async(
                 self._catcher,
                 [ f + (po,) for f in file_list ]
@@ -202,6 +207,34 @@ på en verso-side i dobbeltsidet layout.
             while not result.ready():
                 sleep( 1 )
                 po.refresh()
-            # po.clonk()
-            print( result.get() )
-
+            po.clonk()
+            print()
+            rs = result.get()
+            done, skip, error = [],[],[]
+            for i,f,r in zip( cycle( indices ), name_queue, rs ):
+                ro = [ i ]
+                match r:
+                    case None:
+                        skip += ro
+                    case 0:
+                        done += ro
+                    case _:
+                        error += [ ( i, f, r ) ]
+            if error:
+                print( "\nFølgende filer blev ikke færdiggjort pga. "\
+                       + text_effect( "fejl", "error" ) + ":"
+                      )
+                for i,f,e in error:
+                    print( task_start( i + ": " ) + f )
+                    print( e, end="" )
+            print()
+            if done:
+                print( "{} filer blev ".format( len( done ) )\
+                       + text_effect( "færdiggjort korrekt", "success" ) + "."
+                      )
+            if skip:
+                print( "{} filer havde ingen opdateringer, og blev "\
+                       .format( len( skip ) )\
+                       + text_effect( "sprunget over", "skip" ) + "."
+                      )
+            return rs
