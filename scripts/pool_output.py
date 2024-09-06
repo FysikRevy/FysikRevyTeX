@@ -223,7 +223,7 @@ class PoolOutput:
          self.clonk_count = 0
 
       # decide which character to print
-      self.max_act_queue = self.max_act_queue[1:] + [ max( self.acts ) ]
+      self.max_act_queue = self.max_act_queue[1:] + [ max( self.acts or 0 ) ]
       max_act = max( self.max_act_queue ) or 1 # classic
       for i,s in enumerate( self.strs ):
          try:
