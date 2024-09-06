@@ -5,10 +5,11 @@ import subprocess
 import tempfile
 import uuid
 from os import getpid
-from multiprocessing import Pool, cpu_count
+from multiprocessing import Pool, cpu_count, ProcessError
 from time import time,sleep
 from pathlib import Path
 from itertools import takewhile, cycle
+from traceback import format_exception
 
 from config import configuration as conf
 from pool_output import \
@@ -203,7 +204,9 @@ class Converter:
                 
         except Exception as e:
             output.failed( getpid() )
-            return (e, pdfname or pdffile)
+            if isinstance( e, ConversionError ):
+                return ( e, pdfname or pdffile )
+            return ( "".join( format_exception( e ) ), pdfname or pdffile)
         finally:
             os.chdir( src_dir )
             
@@ -253,8 +256,9 @@ class Converter:
                 sleep( 1 )
                 po.refresh()
             po.end_output()
+            rs = result.get()
         fail, fail_other, err, done, skip = [],[],[],[],[]
-        for ind,r in zip( cycle( indices ), result.get() ):
+        for ind,r in zip( cycle( indices ), rs ):
             ro = [ (ind,) + r ]
             match r[0]:
                 case None:
@@ -280,7 +284,7 @@ class Converter:
                    + text_effect( "ikke-LaTeX-fejl", "error" ) + "." )
             for i,e,f in fail_other:
                 print( task_start( i + ": " ) + f )
-                print( repr( e ) )
+                print( e, end="" )
         if err:
             print( "\nFølgende filer kunne TeX'es, men med "\
                    + text_effect( "advarsler", "warn" ) + ":"
@@ -300,6 +304,9 @@ class Converter:
                     + text_effect( "sprunget over", "skip" ) + "."
                     ).format( len( skip ))
                   )
+        if fail or fail_other:
+            raise ProcessError()
+        return rs
 
     def tex_to_wordcount(self, tex_file ):
 

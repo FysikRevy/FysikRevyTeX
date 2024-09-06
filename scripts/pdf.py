@@ -1,11 +1,10 @@
-#import subprocess
 import os
 import subprocess
-import traceback
-from multiprocessing import Pool, cpu_count
+from multiprocessing import Pool, cpu_count, ProcessError
 from time import sleep
 from pathlib import Path
 from itertools import cycle
+from traceback import format_exception
 
 from pypdf import PdfWriter,PdfReader
 
@@ -187,13 +186,11 @@ på en verso-side i dobbeltsidet layout.
         try:
             return self.pdfmerge( *args )
         except Exception as e:
-            return "".join( traceback.format_exception( e ) )
+            return "".join( format_exception( e ) )
     
     def parallel_pdfmerge(self, file_list):
         "Merge a list of lists of PDF files in parallel."
 
-        #if type(file_list[0]) == str:
-        #    # Each element is a file path.
         with Pool(processes = cpu_count()) as pool,\
              PoolOutputManager() as man:
             po = man.PoolOutput( cpu_count() )
@@ -235,4 +232,6 @@ på en verso-side i dobbeltsidet layout.
                    .format( len( skip ) )\
                    + text_effect( "sprunget over", "skip" ) + "."
                   )
+        if error:
+            raise ProcessError()
         return rs
