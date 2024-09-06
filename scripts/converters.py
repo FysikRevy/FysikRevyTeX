@@ -50,7 +50,7 @@ class Converter:
     #def textopdf(self, tex, pdfname="", outputdir="", repetitions=2, encoding='utf-8'):
         "Generates a PDF from either a TeX file or TeX object."
 
-        output.begin( getpid(), pdfname or tex )
+        output.begin( getpid(), pdfname or self.task_name( tex ))
 
         if outputdir == "":
             outputdir = self.conf["Paths"]["pdf"]
@@ -213,6 +213,19 @@ class Converter:
             output.done_with_warnings( getpid() )
         return (rc, pdfname or pdffile)
 
+    def task_name( self, file_path ):
+        # class Material
+        try:
+            return Path( file_path.path ).name
+        except AttributeError:
+            pass
+        # class TeX
+        try:
+            return file_path.fname
+        except AttributeError:
+            pass
+        # string
+        return file_path
 
     def parallel_textopdf(self, file_list, outputdir="", repetitions=2, encoding='utf-8'):
 
@@ -230,7 +243,10 @@ class Converter:
         with Pool(processes = cpu_count()) as pool,\
              PoolOutputManager() as man:
             po = man.PoolOutput( cpu_count() )
-            po.queue_add( *( a[1] if a[1] else a[0] for a in new_file_list ) )
+            po.queue_add( *( a[1] if a[1] else self.task_name( a[0] )
+                             for a in new_file_list
+                            )
+                         )
             new_file_list = [ f + ( po, ) for f in new_file_list ]
             result = pool.starmap_async(self.textopdf, new_file_list)
             while not result.ready():
