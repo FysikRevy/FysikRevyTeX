@@ -26,6 +26,7 @@ def create_material_pdfs(revue):
             file_list.append(material)
 
     conv = cv.Converter()
+    print( "\n\033[1mMaterialefiler:\033[0m" )
     conv.parallel_textopdf(file_list)
     # for f in file_list:
     #    conv.textopdf(f)
@@ -56,6 +57,7 @@ def create_individual_pdfs(revue):
 
     # Create front pages:
     conv = cv.Converter()
+    print( "\n\033[1mPersonlige forsider:\033[0m" )
     conv.parallel_textopdf(frontpages_list, outputdir=path["pdf cache"])
 
     total_list = []
@@ -77,6 +79,7 @@ def create_individual_pdfs(revue):
                                        "{}.pdf".format(actor.name))))
 
     pdf = PDF()
+    print( "\n\033[1mPersonlige manuskripter:\033[0m" )
     pdf.parallel_pdfmerge(total_list)
     #pdf.pdfmerge(total_list)
 
