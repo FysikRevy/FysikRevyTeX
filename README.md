@@ -17,7 +17,7 @@ FysikRevyTeX has very few dependencies:
 
 > ...for kernefunktionerne
 
-* Python 3.10 or newer.
+* [Python][python] 3.10 or newer.
 * [PyPDF][] for the PDF magic.
 
 When dependencies are met, just put the contents of FysikRevyTeX in a directory of your choice. No installation is required.
@@ -36,6 +36,7 @@ FysikRevyTeX has been tested on Linux with Python 3.3 and PyPDF2 v. 1.20.
 
 > Afhængigherne til de individuelle funktioner bliver beskrevet, når det bliver relevant herunder.
 
+[python]: https://www.python.org/downloads/
 [pypdf]: https://pypdf.readthedocs.io/en/stable/index.html
 
 ## Usage

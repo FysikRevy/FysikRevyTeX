@@ -1,3 +1,4 @@
+# coding: utf-8
 import shutil
 from multiprocessing.managers import SyncManager
 from itertools import cycle,count,islice

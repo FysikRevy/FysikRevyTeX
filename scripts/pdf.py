@@ -1,3 +1,4 @@
+# coding: utf-8
 import os
 import subprocess
 from multiprocessing import Pool, cpu_count, ProcessError
