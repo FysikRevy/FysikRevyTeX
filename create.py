@@ -135,7 +135,7 @@ def roles_csv( revue ):
         mat.wordcounts = count
     
     try:
-        fn = conf["Files"]["role overview"]
+        fn = conf["Files"]["roles sheet output"]
     except KeyError:
         revue.write_roles_csv()
         print( "Wrote roles.csv (default name, can be set in revytex.conf)" )
