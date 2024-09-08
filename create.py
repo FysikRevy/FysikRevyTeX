@@ -5,8 +5,10 @@ import os
 import sys
 import re
 sys.path.append("scripts")
-from multiprocessing import Pool
+from multiprocessing import Pool, cpu_count
 from pathlib import Path
+from time import sleep
+from itertools import cycle
 
 import classy_revy as cr
 import setup_functions as sf
@@ -16,6 +18,9 @@ from tex import TeX
 from clobberers import clobber_steps, clobber_my_tex
 from pdf import PDF
 import roles_reader
+from pool_output import \
+    PoolOutputManager, Output, indices, task_start, \
+    text_effect, print_columnized
 
 from config import configuration as conf
 
@@ -125,23 +130,74 @@ def create_song_manus_pdf(revue):
     pdf.pdfmerge(file_list, os.path.join(path["pdf"],"sangmanuskript.pdf"))
 
 def roles_csv( revue ):
+
+    print( "\n\033[1mOrdtælling:\033[0m" )
+
     mats = [ mat for act in revue.acts for mat in act.materials ]
+    paths = [ Path( mat.path ) for mat in mats ]
     conv = cv.Converter()
     
-    with Pool() as pool:
-        counts = pool.map( conv.tex_to_wordcount, [ mat.path for mat in mats ] )
+    with Pool( processes = cpu_count() ) as pool,\
+         PoolOutputManager() as man:
+        po = man.PoolOutput( cpu_count() )
+        po.queue_add( *( path.name for path in paths ) )
+        counting = pool.starmap_async( conv.tex_to_wordcount,
+                                       ( (path,po) for path in paths )
+                                      )
+        while not counting.ready():
+            sleep( 1 )
+            po.refresh()
+        po.end_output()
+        rs = counting.get()
+
+    counts, error, warning, success = [],[],[],[]
+    for r,f,i in zip( rs, paths, cycle( indices ) ):
+        match r[0]:
+            case Exception():
+                error += [ (f,i) ]
+            case 0:
+                success += [ (f,i) ]
+            case _:
+                warning += [ (f,i) ]
+        counts += [ r[1] ]
+    if error:
+        print( "\nOrdtælling mislykkedes i følgende filer pga. "\
+               + text_effect( "LaTeX-fejl", "error" ) + ":"
+              )
+        print_columnized(
+            *( ( len( fn.name ) + 3, task_start( ind + ": " ) + fn.name )
+               for fn, ind in  error
+              )
+        )
+    if warning:
+        print( "\nOrdtælling blev fuldført i følgende filer, men med "\
+               + text_effect( "LaTeX-advarsler", "warn" ) + ":"
+              )
+        print_columnized(
+            *( ( len( fn.name ) + 3, task_start( ind + ": " ) + fn.name )
+               for fn, ind in warning
+              )
+        )
+    print()
+    if success:
+        print( "Ordtælling blev " \
+               + text_effect( "fuldført korrekt", "success" )\
+               + " i {} filer.".format( len( success ) )
+              )
 
     for mat, count in zip( mats, counts ):
         mat.wordcounts = count
-    
+
+    o = Output()
     try:
         fn = conf["Files"]["roles sheet output"]
     except KeyError:
+        o.begin( 0, "roles.csv (default name, can be set in revytex.conf)" )
         revue.write_roles_csv()
-        print( "Wrote roles.csv (default name, can be set in revytex.conf)" )
-        return
-    revue.write_roles_csv( fn )
-    print( "Wrote {}".format( fn ))
+    else:
+        o.begin( 0, fn )
+        revue.write_roles_csv( fn )
+    o.success( 0 )
 
 def google_forms_signup( tex ):
     from google_forms_signup import create_new_form

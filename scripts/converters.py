@@ -308,29 +308,50 @@ class Converter:
             raise ProcessError()
         return rs
 
-    def tex_to_wordcount(self, tex_file ):
+    def tex_to_wordcount(self, tex_file, output=Output() ):
 
         try:
             tex_file = Path( tex_file )
         except TypeError as e:
             e.args = ("for argument tex_file",) + e.args
             raise e
+        output.begin( getpid(), tex_file.name )
 
         with tempfile.TemporaryDirectory() as temp:
             temp = Path( temp )
-            r = subprocess.run(( "pdflatex",
-                                 "-aux-directory={}".format( temp ),
-                                 "-output-directory={}".format( temp ),
-                                 "scripts/revywordcount.tex"),
-                               timeout = 60,
-                               input = str( tex_file.absolute() ),
-                               text = True,
-                               encoding = 'utf-8',
-                               stdout = subprocess.DEVNULL
+            tex_fn = str( tex_file.absolute() )
+            r = subprocess.Popen(( "pdflatex",
+                                   "-aux-directory={}".format( temp ),
+                                   "-output-directory={}".format( temp ),
+                                   "scripts/revywordcount.tex"),
+                                 text = True,
+                                 encoding = 'utf-8',
+                                 stdin = subprocess.PIPE,
+                                 stdout = subprocess.PIPE,
+                                 stderr = subprocess.STDOUT
                                )
+            while True:
+                o,e = "",""
+                try:
+                    o,e = r.communicate( input = tex_fn, timeout = 1 )
+                except subprocess.TimeoutExpired:
+                    pass
+                else:
+                    output.activity(
+                        getpid(),
+                        sum( 1 for c in o if c == '\n' )
+                    )
+                    # output loads and break things
+                    if self.conf.getboolean( "TeXing", "verbose output" ):
+                        print( o )
+                tex_fn = None
+                rc = r.returncode
+                if rc != None:
+                    break
+
+            counts = {}
             try:
                 with ( temp / "revywordcount.log" ).open() as f:
-                    counts = {}
 
                     def type_dispatch( line ):
                         if "3.08641" in line:
@@ -359,8 +380,15 @@ class Converter:
 
                     for line in f:
                         type_dispatch( line )
+                        output.activity( getpid(), 1 )
 
-                    return counts
-            except FileNotFoundError:
+                    if rc:
+                        output.done_with_warnings( getpid() )
+                    else:
+                        output.success( getpid() )
+            except FileNotFoundError as e:
                 # ¯\_(ツ)_/¯
-                return {}
+                output.failed( getpid() )
+                rc = e
+
+            return rc, counts
