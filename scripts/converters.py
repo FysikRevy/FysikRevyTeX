@@ -48,7 +48,6 @@ class Converter:
                   encoding='utf-8',
                   output=Output()
                   ):
-    #def textopdf(self, tex, pdfname="", outputdir="", repetitions=2, encoding='utf-8'):
         "Generates a PDF from either a TeX file or TeX object."
 
         output.begin( getpid(), pdfname or self.task_name( tex ))
@@ -135,12 +134,6 @@ class Converter:
                 shutil.copy(os.path.join(src_dir,"revy.sty"), "revy.sty")
             portable_dir_link( src_dir, "src_dir" )
 
-        # for i in range(repetitions):
-        #     if self.conf.getboolean("TeXing","verbose output"):
-        #         rc = subprocess.call(["pdflatex", "-interaction=nonstopmode", texfile])
-        #     else:
-        #         rc = subprocess.call(["pdflatex", "-interaction=batchmode", texfile], 
-        #                              stdout=subprocess.DEVNULL)
         rc = None
         for i in range(repetitions):
             tex_proc = subprocess.Popen(
@@ -165,14 +158,6 @@ class Converter:
                 rc = tex_proc.returncode
                 if rc != None:
                     break
-
-        # Check whether the pdf was generated:
-        # TODO: This needs to be done better.
-        # if not os.path.isfile(pdffile):
-        #     rerun = input("Oh snap! Something went wrong when creating the PDF.\n"
-        #                   "Do you want to run pdflatex again, this time with output? (y/[n])")
-        #     if rerun == 'y':
-        #         rc = subprocess.call(["pdflatex", texfile]) 
 
         try:
             try:
