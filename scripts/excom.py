@@ -20,13 +20,14 @@ class PopenGen( subprocess.Popen ):
          if self.returncode != None:
             return
 
-def tex( texfile, outputname=None, searchdir=None ):
-   texinputs = ":".join( path.as_posix + "/" for path
-                         in ( Path( texfile ).parent,
-                              Path( searchdir )
-                             )
-                         if path != None
+def tex( texfile, outputname=None, searchdir=None, cachedir=None ):
+   texinputs_setup = (( searchdir, Path ),
+                      ( texfile, lambda d: Path( d ).parent )
+                      )
+   texinputs = ":".join( f( inp ).resolve().as_posix() + "/"
+                         for inp,f in texinputs_setup if inp != None
                         ) + ":"
+
    try:
       texinputs += os.environ["TEXINPUTS"]
    except KeyError:
@@ -39,6 +40,7 @@ def tex( texfile, outputname=None, searchdir=None ):
       [ conf["TeXing"]["tex command"], "-interaction=nonstopmode" ]\
         + jobname + [ str( texfile ) ],
       env = env,
+      cwd = cachedir,
       stdout = subprocess.PIPE,
       stderr = subprocess.STDOUT,
       text = True
