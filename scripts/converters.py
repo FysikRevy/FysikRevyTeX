@@ -15,6 +15,7 @@ from config import configuration as conf
 from pool_output import \
     PoolOutputManager, Output, text_effect, \
     print_columnized, indices, task_start
+import excom
 
 # fordi https://learn.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/create-symbolic-links
 # tak, windows.
@@ -126,80 +127,110 @@ class Converter:
             # outputfilen findes ikke. Vi laver den
             pass                
 
-        if input_is_tex_file:
-            os.chdir(path)
-        else:
-            os.chdir(temp)
-            if os.path.exists( os.path.join( src_dir, "revy.sty" ) ):
-                shutil.copy(os.path.join(src_dir,"revy.sty"), "revy.sty")
-            portable_dir_link( src_dir, "src_dir" )
+        tex_fp = Path( path ).resolve() / texfile
+        try:
+            tex_cache = Path( conf["Paths"]["tex cache"] )
+        except KeyError:
+            try:
+                tex_cache = Path( conf["Paths"]["cache"] ) / "tex"
+            except KeyError:
+                tex_cache = Path( "cache/tex" )
+        try:
+            tex_cache /= tex_fp.resolve().parent.relative_to( Path.cwd() )
+        except ValueError:
+            pass
+        tex_cache.mkdir( parents = True, exist_ok = True )
 
-        rc = None
-        for i in range(repetitions):
-            tex_proc = subprocess.Popen(
-                ["pdflatex", "-interaction=nonstopmode", texfile],
-                stdout = subprocess.PIPE,
-                stderr = subprocess.STDOUT,
-                text = True)
-            while True:
-                o,e = "",""
-                try:
-                    o,e = tex_proc.communicate( timeout = 1 )
-                except subprocess.TimeoutExpired:
-                    pass
-                else:
-                    output.activity(
-                        getpid(),
-                        sum( 1 for c in o if c == '\n' )
-                    )
-                    # output loads and break things
-                    if self.conf.getboolean( "TeXing", "verbose output" ):
-                        print( o )
-                rc = tex_proc.returncode
-                if rc != None:
-                    break
+        for _ in range(repetitions):
+            tex_proc = excom.tex( tex_fp,
+                                  outputname = pdfname or None,
+                                  cachedir = tex_cache
+                                 )
+            for o,e in tex_proc:
+                output.activity( getpid(), sum( 1 for c in o if c == "\n" ) )
 
         try:
+            out_pdf = tex_cache / ( pdfname or tex_fp.stem + ".pdf" )
+            Path( dst_dir ).mkdir( parents = True, exist_ok = True )
             try:
-                if not os.path.exists( pdffile ):
-                    raise ConversionError
+                out_pdf.replace( Path( dst_dir ) / out_pdf.name )
+            except FileNotFoundError:
+                raise ConversionError
+
+        # if input_is_tex_file:
+        #     os.chdir(path)
+        # else:
+        #     os.chdir(temp)
+        #     if os.path.exists( os.path.join( src_dir, "revy.sty" ) ):
+        #         shutil.copy(os.path.join(src_dir,"revy.sty"), "revy.sty")
+        #     portable_dir_link( src_dir, "src_dir" )
+
+        # rc = None
+        # for i in range(repetitions):
+        #     tex_proc = subprocess.Popen(
+        #         ["pdflatex", "-interaction=nonstopmode", texfile],
+        #         stdout = subprocess.PIPE,
+        #         stderr = subprocess.STDOUT,
+        #         text = True)
+        #     while True:
+        #         o,e = "",""
+        #         try:
+        #             o,e = tex_proc.communicate( timeout = 1 )
+        #         except subprocess.TimeoutExpired:
+        #             pass
+        #         else:
+        #             output.activity(
+        #                 getpid(),
+        #                 sum( 1 for c in o if c == '\n' )
+        #             )
+        #             # output loads and break things
+        #             if self.conf.getboolean( "TeXing", "verbose output" ):
+        #                 print( o )
+        #         rc = tex_proc.returncode
+        #         if rc != None:
+        #             break
+
+        # try:
+        #     try:
+        #         if not os.path.exists( pdffile ):
+        #             raise ConversionError
             
-                if pdfname == "":
-                    pdfname = pdffile
-                else:
-                    os.rename(pdffile, pdfname)
-                try:
-                    if not os.path.isdir( dst_dir ):
-                        os.makedirs( dst_dir )
-                    shutil.move(pdfname, dst_dir)
-                except shutil.Error:
-                    os.remove(os.path.join(dst_dir, pdfname))
-                    shutil.move(pdfname, dst_dir)
+        #         if pdfname == "":
+        #             pdfname = pdffile
+        #         else:
+        #             os.rename(pdffile, pdfname)
+        #         try:
+        #             if not os.path.isdir( dst_dir ):
+        #                 os.makedirs( dst_dir )
+        #             shutil.move(pdfname, dst_dir)
+        #         except shutil.Error:
+        #             os.remove(os.path.join(dst_dir, pdfname))
+        #             shutil.move(pdfname, dst_dir)
 
-            finally:
-                os.chdir(src_dir)
+        #     finally:
+        #         os.chdir(src_dir)
 
-                if input_is_tex_file:
-                    os.remove("{}.aux".format(os.path.join(path,texfile[:-4])))
-                    os.remove("{}.log".format(os.path.join(path,texfile[:-4])))
-                    output.activity( getpid(), 1 )
-                else:
-                    shutil.rmtree(temp)
-                    output.activity( getpid(), 1 )
+        #         if input_is_tex_file:
+        #             os.remove("{}.aux".format(os.path.join(path,texfile[:-4])))
+        #             os.remove("{}.log".format(os.path.join(path,texfile[:-4])))
+        #             output.activity( getpid(), 1 )
+        #         else:
+        #             shutil.rmtree(temp)
+        #             output.activity( getpid(), 1 )
                 
         except Exception as e:
             output.failed( getpid() )
             if isinstance( e, ConversionError ):
                 return ( e, pdfname or pdffile )
             return ( "".join( format_exception( e ) ), pdfname or pdffile)
-        finally:
-            os.chdir( src_dir )
+        # finally:
+        #     os.chdir( src_dir )
             
-        if rc == 0:
+        if tex_proc.returncode == 0:
             output.success( getpid() )
         else:
             output.done_with_warnings( getpid() )
-        return (rc, pdfname or pdffile)
+        return (tex_proc.returncode, pdfname or pdffile)
 
     def task_name( self, file_path ):
         # class Material
