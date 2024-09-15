@@ -1,5 +1,4 @@
 #  coding; utf-8
-
 import os, subprocess, uuid
 from pathlib import Path
 
@@ -26,38 +25,59 @@ class PopenGen( subprocess.Popen ):
             return
 
 class TeXProcess():
-   def __init__( self, texfile, cachedir=None,
+   def __init__( self, texfile, cdir=None, cachedir=None,
                  outputname=None, searchdirs=None
                  ):
+      if isinstance( searchdirs, str ):
+         raise TypeError( "searchdirs must be an iterable of directories. "
+                          "Got {}".format( searchdirs )
+                         )
       try:
          conf["TeXing"]["tex command"]
       except KeyError:
          conf["TeXing"]["tex command"] = "pdflatex"
 
-      self.texfile = Path( texfile )
-      self.src_dir = self.texfile.resolve().parent
-      dst_dir = Path( cachedir ).resolve() if cachedir else self.src_dir
-      if self.src_dir == dst_dir and outputname == None:
-         self.jobname = []
-      else:
-         dst_dir.mkdir( parents=True, exist_ok=True )
+      texfile = Path( texfile )
+      try:
+         cdir = Path( cdir ).resolve()
+         self.exec_dir = cdir
+         self.texfile = self.exec_dir / texfile
+      except TypeError:
+         self.texfile = texfile.resolve()
+         self.exec_dir = self.texfile.parent
+         cdir = Path.cwd()
+
+      if cachedir or outputname:
          try:
-            jobdir = dst_dir.relative_to( self.src_dir )
-         except ValueError:               # not subpath
-            self.cache_link = self.src_dir / Path( str( uuid.uuid4()))
-            portable_dir_link( str( dst_dir ), str( self.cache_link ) )
-            jobdir = self.cache_link.relative_to( self.src_dir )
-         self.jobname = [ "-job-name={}".format(
-            jobdir / ( Path( outputname ).stem if outputname
-                       else Path( texfile ).stem
-                      )
-         )]
-      self.searchdirs = searchdirs
+            jobdir = cdir / Path( cachedir )
+         except TypeError:
+            jobdir = cdir
+         try:
+            jobname = Path( outputname ).stem
+         except TypeError:
+            jobname = texfile.stem
+
+         self.job_name = [ "-job-name=" ]
+         try:
+            self.job_name[0] += str(
+               jobdir.relative_to( self.exec_dir ) / jobname
+            )
+         except ValueError:     # not subpath
+            self.cache_link = self.exec_dir / Path( str( uuid.uuid4() ))
+            portable_dir_link( str( jobdir ), str( self.cache_link ) )
+
+            self.job_name[0] += str(
+               self.cache_link.relative_to( self.exec_dir ) / jobname
+            )
+         else:
+            self.job_name = []
+
+      self.searchdirs = ( cdir / d for d in ( searchdirs or [] ) )
 
    def __enter__( self ):
       # TODO: testet på Windows, ikke på POSIX
       if self.searchdirs:
-         sl = ";".join( str( Path( d ).resolve() ) for d in self.searchdirs )
+         sl = ";".join( str( d ) for d in self.searchdirs )
          try:
             texinputs = ";".join(( sl, os.environ["TEXINPUTS"], "" ))
          except KeyError:
@@ -68,8 +88,8 @@ class TeXProcess():
 
       self.p = PopenGen(
          [ conf["TeXing"]["tex command"], "-interaction=nonstopmode" ]\
-         + self.jobname + [ str( self.texfile.name ) ],
-         cwd = str( self.src_dir ),
+         + self.job_name + [ str( self.texfile.name ) ],
+         cwd = str( self.exec_dir ),
          env = env,
          stdout = subprocess.PIPE,
          stderr = subprocess.STDOUT,
