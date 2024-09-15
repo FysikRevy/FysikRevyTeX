@@ -1,14 +1,19 @@
 #  coding; utf-8
 
-import os, subprocess
+import os, subprocess, uuid
 from pathlib import Path
 
 from config import configuration as conf
 
+# fordi https://learn.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/create-symbolic-links
+# tak, windows.
 try:
-   conf["TeXing"]["tex command"]
-except KeyError:
-   conf["TeXing"]["tex command"] = "pdflatex"
+    import _winapi
+    def portable_dir_link( source, target ):
+        _winapi.CreateJunction( source, target )
+except ImportError:
+    def portable_dir_link( source, target ):
+        os.symlink( source, target )
 
 class PopenGen( subprocess.Popen ):
    def __iter__( self ):
@@ -20,29 +25,61 @@ class PopenGen( subprocess.Popen ):
          if self.returncode != None:
             return
 
-def tex( texfile, outputname=None, searchdir=None, cachedir=None ):
-   texinputs_setup = (( searchdir, Path ),
-                      ( texfile, lambda d: Path( d ).parent )
+class TeXProcess():
+   def __init__( self, texfile, cachedir=None,
+                 outputname=None, searchdirs=None
+                 ):
+      try:
+         conf["TeXing"]["tex command"]
+      except KeyError:
+         conf["TeXing"]["tex command"] = "pdflatex"
+
+      self.texfile = Path( texfile )
+      self.src_dir = self.texfile.resolve().parent
+      dst_dir = Path( cachedir ).resolve() if cachedir else self.src_dir
+      if self.src_dir == dst_dir and outputname == None:
+         self.jobname = []
+      else:
+         dst_dir.mkdir( parents=True, exist_ok=True )
+         try:
+            jobdir = dst_dir.relative_to( self.src_dir )
+         except ValueError:               # not subpath
+            self.cache_link = self.src_dir / Path( str( uuid.uuid4()))
+            portable_dir_link( str( dst_dir ), str( self.cache_link ) )
+            jobdir = self.cache_link.relative_to( self.src_dir )
+         self.jobname = [ "-job-name={}".format(
+            jobdir / ( Path( outputname ).stem if outputname
+                       else Path( texfile ).stem
                       )
-   texinputs = ":".join( f( inp ).resolve().as_posix() + "/"
-                         for inp,f in texinputs_setup if inp != None
-                        ) + ":"
+         )]
+      self.searchdirs = searchdirs
 
-   try:
-      texinputs += os.environ["TEXINPUTS"]
-   except KeyError:
-      pass
-   env = { **os.environ, **{"TEXINPUTS": texinputs } }
-   jobname = [ "-job-name=" + str( Path( outputname ).stem ) ]\
-      if outputname else []
+   def __enter__( self ):
+      # TODO: testet på Windows, ikke på POSIX
+      if self.searchdirs:
+         sl = ";".join( str( Path( d ).resolve() ) for d in self.searchdirs )
+         try:
+            texinputs = ";".join(( sl, os.environ["TEXINPUTS"], "" ))
+         except KeyError:
+            texinputs = sl + ";"
+         env = { **os.environ, **{"TEXINPUTS": texinputs} }
+      else:
+         env = None
 
-   return PopenGen(
-      [ conf["TeXing"]["tex command"], "-interaction=nonstopmode" ]\
-        + jobname + [ str( texfile ) ],
-      env = env,
-      cwd = cachedir,
-      stdout = subprocess.PIPE,
-      stderr = subprocess.STDOUT,
-      text = True
-   )
+      self.p = PopenGen(
+         [ conf["TeXing"]["tex command"], "-interaction=nonstopmode" ]\
+         + self.jobname + [ str( self.texfile.name ) ],
+         cwd = str( self.src_dir ),
+         env = env,
+         stdout = subprocess.PIPE,
+         stderr = subprocess.STDOUT,
+         text = True
+      )
+      return self.p
 
+   def __exit__( self, *_ ):
+      try:
+         self.p.terminate()
+         self.cache_link.unlink()
+      except:
+         pass
