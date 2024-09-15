@@ -515,7 +515,9 @@ class TeX:
 
         self.tex = self.tex.replace("<+SUBTITLE+>", subtitle)
 
-        versions = [x.strip() for x in self.conf["Frontpage"]["version"].split(",")]
+        versions = [ x.strip() for x in
+                     self.conf["Frontpage"]["version"].split(",")
+                    ]
         self.tex = self.tex.replace("<+VERSION+>", versions[-1] or "??????")
         try:
             self.tex = self.tex.replace(
@@ -528,10 +530,16 @@ class TeX:
         except IndexError:
             self.tex = self.tex.replace("<+VERLIST+>", "")
 
-        if self.conf["Revue info"]["revue name"] == "\\FysikRevy\\texttrademark":
-            self.tex = self.tex.replace("<+REVUENAME+>", "\\FysikRevy")
-        else:
-            self.tex = self.tex.replace("<+REVUENAME+>", self.revue.name)
+        match re.sub( r'[^a-z]', "", self.revue.name.lower() ):
+            case n if "fysikrevy" in n:
+                logotype = "\\FysikRevy"
+            case n if "satyr" in n:
+                logotype = "\\SaTyR{}Revy"
+            case _:
+                logotype = self.revue.name
+
+        self.tex = self.tex.replace("<+REVUELOGOTYPE+>", logotype )
+        self.tex = self.tex.replace("<+REVUENAME+>", self.revue.name)
 
         self.tex = self.tex.replace("<+REVUEYEAR+>", self.revue.year)
         self.tex = self.tex.replace("<+TOPQUOTE+>",
