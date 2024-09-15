@@ -62,29 +62,26 @@ class Converter:
         if type(tex) == str and tex.strip()[-3:] == 'tex':
             # Object is a file path string.
             input_is_tex_file = True
-            src_modtime = os.stat( tex ).st_mtime
+            tex_fp = Path( tex )
+            src_modtime = tex_fp.stat().st_mtime
+            dst_dir = Path( src_dir ) \
+                / outputdir \
+                / tex_fp.parent.relative_to( src_dir )
         else:
             input_is_tex_file = False
             temp = tempfile.mkdtemp()
 
         if input_is_tex_file:
-            # Object is a file path string.
-            # The TeXing should be done in the original directory to avoid
-            # problems with e.g. included figures not being copied to the
-            # temporary directory.
-            path, texfile = os.path.split(tex.strip())
-            pdffile = "{}.pdf".format(texfile[:-4])
-            dst_dir = os.path.join(src_dir, outputdir,
-                                   os.path.relpath( path, src_dir ))
-        
+            pass
         elif type(tex) == str and tex.strip()[-3:] != 'tex':
             # Object is a string of TeX code.
             tempname = uuid.uuid4() # Generate unique name
             texfile = "{}.tex".format(tempname)
             pdffile = "{}.pdf".format(tempname)
+            tex_fp = Path( temp ) / texfile
             dst_dir = os.path.join(src_dir, outputdir)
 
-            with open(os.path.join(temp, texfile), 'w', encoding=encoding) as f:
+            with open( tex_fp, 'w', encoding=encoding) as f:
                 f.write(tex)
 
         elif type(tex).__name__ == "TeX":
@@ -96,7 +93,8 @@ class Converter:
             texfile = "{}.tex".format(fname)
             pdffile = "{}.pdf".format(fname)
             src_modtime = tex.info[ "modification_time" ]
-            tex.write(os.path.join(temp,texfile), encoding=encoding)
+            tex_fp = Path( temp ) / texfile
+            tex.write( tex_fp, encoding=encoding )
             dst_dir = os.path.join(src_dir, outputdir)
 
         elif type(tex).__name__ == "Material":
@@ -104,10 +102,10 @@ class Converter:
             # The TeXing should be done in the original directory to avoid
             # problems with e.g. included figures not being copied to the
             # temporary directory.
-            path, texfile = os.path.split(tex.path.strip())
-            pdffile = "{}.pdf".format(texfile[:-4])
+            tex_fp = Path( tex.path.strip() )
+            pdffile = "{}.pdf".format( tex_fp.stem )
             dst_dir = os.path.join(src_dir, outputdir,
-                                   os.path.relpath( path, src_dir ))
+                                   os.path.relpath( tex_fp.parent, src_dir ))
             input_is_tex_file = True
             src_modtime = tex.modification_time
 
@@ -127,7 +125,6 @@ class Converter:
             # outputfilen findes ikke. Vi laver den
             pass                
 
-        tex_fp = Path( path ).resolve() / texfile
         try:
             tex_cache = Path( conf["Paths"]["tex cache"] )
         except KeyError:
@@ -142,12 +139,15 @@ class Converter:
         tex_cache.mkdir( parents = True, exist_ok = True )
 
         for _ in range(repetitions):
-            tex_proc = excom.tex( tex_fp,
-                                  outputname = pdfname or None,
-                                  cachedir = tex_cache
-                                 )
-            for o,e in tex_proc:
-                output.activity( getpid(), sum( 1 for c in o if c == "\n" ) )
+            with excom.TeXProcess( tex_fp,
+                                   outputname = pdfname or None,
+                                   cachedir = tex_cache
+                                  ) as tex_proc:
+                for o,e in tex_proc:
+                    if o:
+                        output.activity( getpid(),
+                                         sum( 1 for c in o if c == "\n" )
+                                        )
 
         try:
             out_pdf = tex_cache / ( pdfname or tex_fp.stem + ".pdf" )
