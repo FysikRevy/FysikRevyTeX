@@ -106,14 +106,16 @@ class TeX:
     def write(self, fname, encoding='utf-8'):
         "Write to a TeX file."
         with open(fname, 'w', encoding=encoding) as f:
-            if 'tex' in self.info:
-                for l in self.info['tex']:
-                    f.write( l )
-            else:
-                f.write(self.tex)
+            for l in self:
+                f.write( l )
 
         self.info[ "modification_time" ] = os.path.getmtime( fname )
 
+    def __iter__(self):
+        if 'tex' in self.info:
+            yield from self.info['tex']
+        else:
+            yield from self.tex
 
     def parse(self, fname, encoding='utf-8'):
         "Parse a TeX file and extract revue relevant information to a dictionary."
