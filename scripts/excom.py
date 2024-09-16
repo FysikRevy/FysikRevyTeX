@@ -69,26 +69,26 @@ class TeXProcess():
             self.job_name[0] += str(
                self.cache_link.relative_to( self.exec_dir ) / jobname
             )
-         else:
-            self.job_name = []
+      else:
+          self.job_name = []
 
       self.searchdirs = ( cdir / d for d in ( searchdirs or [] ) )
 
    def __enter__( self ):
       # TODO: testet på Windows, ikke på POSIX
       if self.searchdirs:
-         sl = ";".join( str( d ) for d in self.searchdirs )
+         sl = os.pathsep.join( str( d ) for d in self.searchdirs )
          try:
-            texinputs = ";".join(( sl, os.environ["TEXINPUTS"], "" ))
+            texinputs = os.pathsep.join(( sl, os.environ["TEXINPUTS"], "" ))
          except KeyError:
-            texinputs = sl + ";"
+            texinputs = sl + os.pathsep
          env = { **os.environ, **{"TEXINPUTS": texinputs} }
       else:
          env = None
 
       self.p = PopenGen(
          [ conf["TeXing"]["tex command"], "-interaction=nonstopmode" ]\
-         + self.job_name + [ str( self.texfile.name ) ],
+         + self.job_name + [ str( self.texfile ) ],
          cwd = str( self.exec_dir ),
          env = env,
          stdout = subprocess.PIPE,
