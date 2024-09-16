@@ -55,6 +55,7 @@ class Converter:
 
         if outputdir == "":
             outputdir = self.conf["Paths"]["pdf"]
+        pdffile = None
 
         src_dir = os.getcwd()
         src_modtime = time()    # Gå ud fra helt ny
@@ -62,7 +63,7 @@ class Converter:
         if type(tex) == str and tex.strip()[-3:] == 'tex':
             # Object is a file path string.
             input_is_tex_file = True
-            tex_fp = Path( tex )
+            tex_fp = Path( tex ).resolve()
             src_modtime = tex_fp.stat().st_mtime
             dst_dir = Path( src_dir ) \
                 / outputdir \
@@ -75,6 +76,7 @@ class Converter:
             pass
         elif type(tex) == str and tex.strip()[-3:] != 'tex':
             # Object is a string of TeX code.
+            tex_iterator = ( x for x in ( tex, )  )
             tempname = uuid.uuid4() # Generate unique name
             texfile = "{}.tex".format(tempname)
             pdffile = "{}.pdf".format(tempname)
@@ -86,6 +88,7 @@ class Converter:
 
         elif type(tex).__name__ == "TeX":
             # Object is a TeX object.
+            tex_iterator = tex.__iter__()
             if tex.fname:
                 fname = tex.fname[:-4]
             else:
@@ -102,7 +105,7 @@ class Converter:
             # The TeXing should be done in the original directory to avoid
             # problems with e.g. included figures not being copied to the
             # temporary directory.
-            tex_fp = Path( tex.path.strip() )
+            tex_fp = Path( tex.path.strip() ).resolve()
             pdffile = "{}.pdf".format( tex_fp.stem )
             dst_dir = os.path.join(src_dir, outputdir,
                                    os.path.relpath( tex_fp.parent, src_dir ))
@@ -114,7 +117,7 @@ class Converter:
                             ".tex file, a TeX object or a Material object.")
 
         try:
-            if ( os.stat( os.path.join(dst_dir, pdfname or pdffile ) ).st_mtime
+            if ( os.stat( os.path.join(dst_dir, pdfname or pdffile or tex_fp.stem + ".pdf" ) ).st_mtime
                  > src_modtime
                  and not self.conf.getboolean( "TeXing", "force TeXing of all files" )
                 ):
@@ -123,7 +126,7 @@ class Converter:
                 return (None, pdfname or pdffile) 
         except FileNotFoundError:
             # outputfilen findes ikke. Vi laver den
-            pass                
+            pass
 
         try:
             tex_cache = Path( conf["Paths"]["tex cache"] )
@@ -138,16 +141,39 @@ class Converter:
             pass
         tex_cache.mkdir( parents = True, exist_ok = True )
 
-        for _ in range(repetitions):
-            with excom.TeXProcess( tex_fp,
-                                   outputname = pdfname or None,
-                                   cachedir = tex_cache
-                                  ) as tex_proc:
-                for o,e in tex_proc:
-                    if o:
-                        output.activity( getpid(),
-                                         sum( 1 for c in o if c == "\n" )
-                                        )
+        def call_tex( fn, cdir=None ):
+            for _ in range(repetitions):
+                with excom.TeXProcess( fn,
+                                       outputname = pdfname or None,
+                                       cachedir = tex_cache,
+                                       cdir = cdir
+                                      ) as tex_proc:
+                    for o,e in tex_proc:
+                        if o:
+                            output.activity( getpid(),
+                                             sum( 1 for c in o if c == "\n" )
+                                            )
+                            # output loads and break things
+                            if self.conf.getboolean(
+                                    "TeXing", "verbose output"
+                            ):
+                                print( o )
+                    t = tex_proc
+            return t
+
+        if input_is_tex_file:
+            tex_proc = call_tex( tex_fp )
+        else:
+            with tempfile.NamedTemporaryFile(
+                    delete_on_close=False,
+                    mode="wt",
+                    encoding=encoding,
+                    suffix=".tex"
+            ) as temp:
+                for t in tex_iterator:
+                    temp.write( t )
+                temp.close()
+                tex_proc = call_tex( temp.name, cdir=Path.cwd() )
 
         try:
             out_pdf = tex_cache / ( pdfname or tex_fp.stem + ".pdf" )
