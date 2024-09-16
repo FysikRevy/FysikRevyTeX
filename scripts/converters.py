@@ -170,6 +170,13 @@ class Converter:
                     encoding=encoding,
                     suffix=".tex"
             ) as temp:
+                try:
+                    # bagudkompatibilitet
+                    portable_dir_link( str( Path.cwd() ),
+                                       str( Path.cwd() / "src_dir" )
+                                      )
+                except:
+                    pass
                 for t in tex_iterator:
                     temp.write( t )
                 temp.close()
