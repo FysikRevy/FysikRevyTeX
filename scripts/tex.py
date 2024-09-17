@@ -115,7 +115,7 @@ class TeX:
         if 'tex' in self.info:
             yield from self.info['tex']
         else:
-            yield from self.tex
+            yield self.tex
 
     def parse(self, fname, encoding='utf-8'):
         "Parse a TeX file and extract revue relevant information to a dictionary."
