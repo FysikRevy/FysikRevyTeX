@@ -70,34 +70,23 @@ class Converter:
                 / tex_fp.parent.relative_to( src_dir )
         else:
             input_is_tex_file = False
-            temp = tempfile.mkdtemp()
 
         if input_is_tex_file:
             pass
         elif type(tex) == str and tex.strip()[-3:] != 'tex':
             # Object is a string of TeX code.
             tex_iterator = ( x for x in ( tex, )  )
-            tempname = uuid.uuid4() # Generate unique name
             texfile = "{}.tex".format(tempname)
             pdffile = "{}.pdf".format(tempname)
             tex_fp = Path( temp ) / texfile
             dst_dir = os.path.join(src_dir, outputdir)
 
-            with open( tex_fp, 'w', encoding=encoding) as f:
-                f.write(tex)
-
         elif type(tex).__name__ == "TeX":
             # Object is a TeX object.
             tex_iterator = tex.__iter__()
             if tex.fname:
-                fname = tex.fname[:-4]
-            else:
-                fname = uuid.uuid4() # Generate unique name
-            texfile = "{}.tex".format(fname)
-            pdffile = "{}.pdf".format(fname)
+                pdffile = "{}.pdf".format(fname)
             src_modtime = tex.info[ "modification_time" ]
-            tex_fp = Path( temp ) / texfile
-            tex.write( tex_fp, encoding=encoding )
             dst_dir = os.path.join(src_dir, outputdir)
 
         elif type(tex).__name__ == "Material":
@@ -116,14 +105,16 @@ class Converter:
             raise TypeError("Input should be either TeX code, a string of a "
                             ".tex file, a TeX object or a Material object.")
 
+        pdf_target = Path( dst_dir ).resolve() \
+            / ( pdfname or pdffile or tex_fp.stem + ".pdf" )
         try:
-            if ( os.stat( os.path.join(dst_dir, pdfname or pdffile or tex_fp.stem + ".pdf" ) ).st_mtime
-                 > src_modtime
-                 and not self.conf.getboolean( "TeXing", "force TeXing of all files" )
-                ):
+            if ( pdf_target.stat().st_mtime > src_modtime
+                 and not self.conf.getboolean(
+                     "TeXing", "force TeXing of all files"
+                 )):
                 output.skipped( getpid() )
                 # hop fra, når output er nyere end input
-                return (None, pdfname or pdffile) 
+                return (None, pdf_target.name)
         except FileNotFoundError:
             # outputfilen findes ikke. Vi laver den
             pass
@@ -137,7 +128,7 @@ class Converter:
                 tex_cache = Path( "cache/tex" )
         try:
             tex_cache /= tex_fp.resolve().parent.relative_to( Path.cwd() )
-        except ValueError:
+        except (ValueError, UnboundLocalError):
             pass
         tex_cache.mkdir( parents = True, exist_ok = True )
 
@@ -161,109 +152,46 @@ class Converter:
                     t = tex_proc
             return t
 
-        if input_is_tex_file:
-            tex_proc = call_tex( tex_fp )
-        else:
-            with tempfile.NamedTemporaryFile(
-                    delete_on_close=False,
-                    mode="wt",
-                    encoding=encoding,
-                    suffix=".tex"
-            ) as temp:
-                try:
-                    # bagudkompatibilitet
-                    portable_dir_link( str( Path.cwd() ),
-                                       str( Path.cwd() / "src_dir" )
-                                      )
-                except:
-                    pass
-                for t in tex_iterator:
-                    temp.write( t )
-                temp.close()
-                tex_proc = call_tex( temp.name, cdir=Path.cwd() )
-
         try:
-            out_pdf = tex_cache / ( pdfname or tex_fp.stem + ".pdf" )
+            if input_is_tex_file:
+                tex_proc = call_tex( tex_fp )
+            else:
+                with tempfile.NamedTemporaryFile(
+                        delete_on_close=False,
+                        mode="wt",
+                        encoding=encoding,
+                        suffix=".tex"
+                ) as temp:
+                    try:
+                        # bagudkompatibilitet
+                        portable_dir_link( str( Path.cwd() ),
+                                           str( Path.cwd() / "src_dir" )
+                                          )
+                    except:
+                        pass
+                    for t in tex_iterator:
+                        temp.write( t )
+                    temp.close()
+                    tex_proc = call_tex( temp.name, cdir=Path.cwd() )
+
+            out_pdf = tex_cache / pdf_target.name
             Path( dst_dir ).mkdir( parents = True, exist_ok = True )
             try:
-                out_pdf.replace( Path( dst_dir ) / out_pdf.name )
+                out_pdf.replace( pdf_target )
             except FileNotFoundError:
                 raise ConversionError
 
-        # if input_is_tex_file:
-        #     os.chdir(path)
-        # else:
-        #     os.chdir(temp)
-        #     if os.path.exists( os.path.join( src_dir, "revy.sty" ) ):
-        #         shutil.copy(os.path.join(src_dir,"revy.sty"), "revy.sty")
-        #     portable_dir_link( src_dir, "src_dir" )
-
-        # rc = None
-        # for i in range(repetitions):
-        #     tex_proc = subprocess.Popen(
-        #         ["pdflatex", "-interaction=nonstopmode", texfile],
-        #         stdout = subprocess.PIPE,
-        #         stderr = subprocess.STDOUT,
-        #         text = True)
-        #     while True:
-        #         o,e = "",""
-        #         try:
-        #             o,e = tex_proc.communicate( timeout = 1 )
-        #         except subprocess.TimeoutExpired:
-        #             pass
-        #         else:
-        #             output.activity(
-        #                 getpid(),
-        #                 sum( 1 for c in o if c == '\n' )
-        #             )
-        #             # output loads and break things
-        #             if self.conf.getboolean( "TeXing", "verbose output" ):
-        #                 print( o )
-        #         rc = tex_proc.returncode
-        #         if rc != None:
-        #             break
-
-        # try:
-        #     try:
-        #         if not os.path.exists( pdffile ):
-        #             raise ConversionError
-            
-        #         if pdfname == "":
-        #             pdfname = pdffile
-        #         else:
-        #             os.rename(pdffile, pdfname)
-        #         try:
-        #             if not os.path.isdir( dst_dir ):
-        #                 os.makedirs( dst_dir )
-        #             shutil.move(pdfname, dst_dir)
-        #         except shutil.Error:
-        #             os.remove(os.path.join(dst_dir, pdfname))
-        #             shutil.move(pdfname, dst_dir)
-
-        #     finally:
-        #         os.chdir(src_dir)
-
-        #         if input_is_tex_file:
-        #             os.remove("{}.aux".format(os.path.join(path,texfile[:-4])))
-        #             os.remove("{}.log".format(os.path.join(path,texfile[:-4])))
-        #             output.activity( getpid(), 1 )
-        #         else:
-        #             shutil.rmtree(temp)
-        #             output.activity( getpid(), 1 )
-                
         except Exception as e:
             output.failed( getpid() )
             if isinstance( e, ConversionError ):
                 return ( e, pdfname or pdffile )
-            return ( "".join( format_exception( e ) ), pdfname or pdffile)
-        # finally:
-        #     os.chdir( src_dir )
+            return ( "".join( format_exception( e ) ), pdf_target.name )
             
         if tex_proc.returncode == 0:
             output.success( getpid() )
         else:
             output.done_with_warnings( getpid() )
-        return (tex_proc.returncode, pdfname or pdffile)
+        return (tex_proc.returncode, pdf_target.name )
 
     def task_name( self, file_path ):
         # class Material
