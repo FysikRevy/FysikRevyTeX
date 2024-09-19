@@ -25,8 +25,8 @@ class PopenGen( subprocess.Popen ):
             return
 
 class TeXProcess():
-   def __init__( self, texfile, cdir=None, cachedir=None,
-                 outputname=None, searchdirs=None
+   def __init__( self, texfile, cdir=None, cachedir=None, outputname=None,
+                 searchdirs=None, interactive=None, encoding="utf-8"
                  ):
       if isinstance( searchdirs, str ):
          raise TypeError( "searchdirs must be an iterable of directories. "
@@ -72,7 +72,10 @@ class TeXProcess():
       else:
           self.job_name = []
 
-      self.searchdirs = ( cdir / d for d in ( searchdirs or [] ) )
+      self.searchdirs = [ cdir / d for d in ( searchdirs or [] ) ]
+      self.runmode = [ "-interaction=nonstopmode" ] if not interactive\
+          else []
+      self.encoding = encoding
 
    def __enter__( self ):
       # TODO: testet på Windows, ikke på POSIX
@@ -87,13 +90,15 @@ class TeXProcess():
          env = None
 
       self.p = PopenGen(
-         [ conf["TeXing"]["tex command"], "-interaction=nonstopmode" ]\
+         [ conf["TeXing"]["tex command"] ] + self.runmode \
          + self.job_name + [ str( self.texfile ) ],
          cwd = str( self.exec_dir ),
          env = env,
+         stdin = subprocess.PIPE,
          stdout = subprocess.PIPE,
          stderr = subprocess.STDOUT,
-         text = True
+         text = True,
+         encoding = self.encoding
       )
       return self.p
 
