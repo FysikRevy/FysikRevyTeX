@@ -134,15 +134,13 @@ def roles_csv( revue ):
     print( "\n\033[1mOrdtælling:\033[0m" )
 
     mats = [ mat for act in revue.acts for mat in act.materials ]
-    paths = [ Path( mat.path ) for mat in mats ]
-    conv = cv.Converter()
     
     with Pool( processes = cpu_count() ) as pool,\
          PoolOutputManager() as man:
         po = man.PoolOutput( cpu_count() )
-        po.queue_add( *( path.name for path in paths ) )
-        counting = pool.starmap_async( conv.tex_to_wordcount,
-                                       ( (path,po) for path in paths )
+        po.queue_add( *( cv.task_name( mat ) for mat in mats ) )
+        counting = pool.starmap_async( cv.tex_to_wordcount,
+                                       ( (mat,po,conf) for mat in mats )
                                       )
         while not counting.ready():
             sleep( 1 )
@@ -150,13 +148,16 @@ def roles_csv( revue ):
         po.end_output()
         rs = counting.get()
 
-    counts, error, warning, success = [],[],[],[]
-    for r,f,i in zip( rs, paths, cycle( indices ) ):
+    counts, error, warning, success, skip = [],[],[],[],[]
+    for r,m,i in zip( rs, mats, cycle( indices ) ):
+        f = Path( m.path ).name
         match r[0]:
             case Exception():
                 error += [ (f,i) ]
             case 0:
                 success += [ (f,i) ]
+            case None:
+                skip += [ (f,i) ]
             case _:
                 warning += [ (f,i) ]
         counts += [ r[1] ]
@@ -183,6 +184,11 @@ def roles_csv( revue ):
         print( "Ordtælling blev " \
                + text_effect( "fuldført korrekt", "success" )\
                + " i {} filer.".format( len( success ) )
+              )
+    if skip:
+        print( "{} filer er ikke opdateret, og den nye ".format( len( skip ))\
+               + "ordtælling blev " + text_effect( "sprunget over", "skip" )\
+               + "."
               )
 
     for mat, count in zip( mats, counts ):
