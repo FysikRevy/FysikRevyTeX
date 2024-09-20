@@ -189,9 +189,8 @@ class Revue:
         self.year = self.conf["Revue info"]["revue year"]
 
         # Make a list of all actors:
-        for act in self.acts:
-            for material in act.materials:
-                material.register_actors(self.actors)
+        for material in self.materials:
+            material.register_actors(self.actors)
         self.actors.sort(key=lambda actor: actor.name)
 
 
@@ -242,6 +241,10 @@ class Revue:
             acts = "{}\n{}".format(acts, self.acts[i])
 
         return acts
+
+    @property
+    def materials( self ):
+        return ( mat for act in self.acts for mat in act.materials )
 
     def write_roles_csv( self, fn = "roles.csv" ):
         fn = Path( fn )
