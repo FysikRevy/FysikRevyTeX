@@ -419,14 +419,14 @@ manus_commands = (tuple() if conf.getboolean("TeXing","skip thumbindex")
     ("aktoversigt", "roles", "frontpage", "props", "contacts", "material")
 
             
-def create( arguments = sys.argv ):
+def create( *arguments ):
     # husk, at det første element i `sys.argv` er scriptets eget filnavn
     # hvis du selv kalder den her funktion, så giv den et array med strenge,
     # hvoraf det første element er en dummy. Fx: create( ["","manus","-v"] )
 
     # Load configuration file:
     conf.load("revytex.conf")
-    conf.add_args([ x for x in arguments[1:] if x[0] != "-" ])
+    conf.add_args([ x for x in arguments if x[0] != "-" ])
     
     for toggle in toggles:
         if toggle.cmd in arguments:
@@ -462,26 +462,25 @@ def create( arguments = sys.argv ):
     path = revue.conf["Paths"]
     conv = cv.Converter()
 
-    arglist = tuple( arguments[1:] )
-    if all( arg[0] == "-" for arg in arglist ):
-        arglist = default_commands
+    if all( arg[0] == "-" for arg in arguments ):
+        arguments = default_commands
     elif "manus" in arguments:
-        arglist = arglist + manus_commands
+        arguments += manus_commands
 
     try:
-        create_parts( revue, arglist )
+        create_parts( revue, arguments )
     except cv.ConversionError:
         print( "Some TeX files failed to compile. Can't create manuscripts.")
     else:
 
-    	if "manus" in arglist:
+    	if "manus" in arguments:
     	    pdf = PDF()
     	    pdf.pdfmerge(
     	        (( os.path.join(path["pdf"],"forside.pdf"), "Forside" ),
     	         ( os.path.join(path["pdf"],"rolleliste.pdf"), "Rolleliste", True ),
     	         ( os.path.join(path["pdf"],"aktoversigt.pdf"), "Aktoversigt" )) +\
                 ( tuple() if conf.getboolean("TeXing","skip thumbindex")\
-                  and not "thumbindex" in arglist
+                  and not "thumbindex" in arguments
     	          else ( os.path.join(path["pdf"],"thumbindex.pdf"), "Registerindeks" ),) +\
     	        ( revue,
     	         # ( os.path.join(path["pdf"],"rekvisitliste.pdf"), "Rekvisitliste" ),
@@ -492,4 +491,4 @@ def create( arguments = sys.argv ):
     	    print("Manuscript successfully created!")
 
 if __name__ == "__main__":
-    create()
+    create( *(sys.argv[1:]) )
