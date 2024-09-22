@@ -1,6 +1,9 @@
 import os
 from configparser import ConfigParser, ExtendedInterpolation
 
+defaults = {
+}
+
 class Config:
     # Defining a shared state according to the Borg design pattern.
     __shared_state = {}
@@ -27,6 +30,15 @@ class Config:
         self.name = self.conf["Revue info"]["revue name"]
         self.year = self.conf["Revue info"]["revue year"]
         self.modification_time = os.stat( config_file ).st_mtime
+
+        for section in defaults:
+            if section not in self.conf:
+                self.comf[ section ] = defaults[ section ]
+            else:
+                for setting in defaults[ section ]:
+                    if setting not in self.conf[ section ]:
+                        self.conf[ section ][ setting ] = \
+                            defaults[ section ][ setting ]
 
 
     def add_args(self, args):
