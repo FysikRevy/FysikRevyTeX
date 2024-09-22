@@ -8,7 +8,7 @@ from os import getpid
 from multiprocessing import Pool, cpu_count, ProcessError
 from time import time,sleep
 from pathlib import Path
-from itertools import takewhile, cycle
+from itertools import takewhile, cycle, zip_longest
 from traceback import format_exception
 from subprocess import TimeoutExpired
 
@@ -357,16 +357,12 @@ def parallel_tex_to_pdf( file_list,
                          conf         = conf
                         ):
 
-    new_file_list = []
-    for el in file_list:
-        if type(el) == list and type(el[1]) == str:
-            file_path = el[0]
-            pdfname = el[1]
-        else:
-            file_path = el
-            pdfname = ""
-
-        new_file_list.append((file_path, pdfname, outputdir, repetitions, encoding))
+    default_args = [ None, None, outputdir, repetitions, encoding ]
+    new_file_list = [
+        [ el, "" ] + default_args[2:] if isinstance( el, str )
+        else list( el ) + default_args[ len( el ) : ]
+        for el in file_list
+    ]
 
     with Pool(processes = cpu_count()) as pool,\
          PoolOutputManager() as man:
@@ -375,7 +371,7 @@ def parallel_tex_to_pdf( file_list,
                          for a in new_file_list
                         )
                      )
-        new_file_list = [ f + ( po, conf ) for f in new_file_list ]
+        new_file_list = [ f + [ po, conf ] for f in new_file_list ]
         result = pool.starmap_async( tex_to_pdf, new_file_list)
         while not result.ready():
             sleep( 1 )
@@ -449,7 +445,7 @@ class Converter:
     
     def parallel_textopdf(self, file_list, outputdir="", repetitions=2, encoding='utf-8'):
         return parallel_tex_to_pdf(
-            file_list, outputdir, repetitions, encoding
+            file_list, outputdir, repetitions, encoding, self.conf
         )
 
     def tex_to_wordcount(self, tex_file, output=Output(), conf=None ):

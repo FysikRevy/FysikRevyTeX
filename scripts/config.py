@@ -2,6 +2,7 @@ import os
 from configparser import ConfigParser, ExtendedInterpolation
 
 defaults = {
+    "Files": { "contacts": "contacts.csv" }
 }
 
 class Config:

@@ -226,6 +226,7 @@ class TeX:
                         else:
                             # Store information:
                             self.info[command] = keyword
+        return self
 
     def update_roles( self, roles ):
         """Change the 'roles' section of the tex file to reflect the input list.
@@ -307,6 +308,8 @@ class TeX:
                        for role in self.info['roles']
         ]
         self.info['tex'] = self.info['tex'][:start_line + 1] + role_lines + self.info['tex'][end_line:]
+
+        return self
         
 
     def topdf(self, pdfname, outputdir="", repetitions=2, encoding='utf-8'):
@@ -315,6 +318,7 @@ class TeX:
         converter = cv.Converter()
         converter.textopdf(self, pdfname, outputdir, repetitions, encoding)
 
+        return self
 
     # def controls(self, controlname):
     #     controlname = controlname.lstrip("\\")
@@ -380,6 +384,7 @@ class TeX:
         template.insert(1,self.tex)
         self.tex = "\n".join(template)
 
+        return self
 
     #----------------------------------------------------------------------
 
@@ -412,6 +417,7 @@ class TeX:
 
         self.tex = template
 
+        return self
 
     #----------------------------------------------------------------------
 
@@ -478,6 +484,7 @@ class TeX:
         template.insert(1,self.tex)
         self.tex = "\n".join(template)
 
+        return self
 
     #----------------------------------------------------------------------
 
@@ -506,7 +513,7 @@ class TeX:
             templatefile = os.path.join(self.conf["Paths"]["templates"],
                                         "frontpage_template.tex")
         if subtitle == "":
-            subtitle = "tekster"
+            subtitle = "\\TeX{}ster"
 
         with open(templatefile, 'r', encoding=encoding) as f:
             template = f.read()
@@ -551,6 +558,7 @@ class TeX:
         self.tex = self.tex.replace("<+BOTTOMQUOTE+>",
                             self.conf["Frontpage"]["bottom quote"])
 
+        return self
 
     #----------------------------------------------------------------------
 
@@ -598,7 +606,7 @@ class TeX:
         template.insert(1,self.tex)
         self.tex = "\n".join(template)
 
-
+        return self
 
     #----------------------------------------------------------------------
 

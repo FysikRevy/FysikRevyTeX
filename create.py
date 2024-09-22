@@ -5,10 +5,11 @@ import os
 import sys
 import re
 sys.path.append("scripts")
-from multiprocessing import Pool, cpu_count
+from multiprocessing import Pool, cpu_count, ProcessError
 from pathlib import Path
 from time import sleep
 from itertools import cycle
+from dataclasses import dataclass
 
 import classy_revy as cr
 import setup_functions as sf
@@ -24,112 +25,86 @@ from pool_output import \
 
 from config import configuration as conf
 
-def create_material_pdfs(revue):
-    file_list = []
-    for act in revue.acts:
-        for material in act.materials:
-            file_list.append(material)
+tex_queue, merge_queue = [],[]
 
-    conv = cv.Converter()
-    print( "\n\033[1mMaterialefiler:\033[0m" )
-    conv.parallel_textopdf(file_list)
-    # for f in file_list:
-    #    conv.textopdf(f)
+@dataclass
+class Content:
+    pdfname: str
+    bookmark: str
+    start_verso: bool = False
+    rel_dir: Path = Path( conf["Paths"]["pdf"] )
 
-def create_individual_pdfs(revue):
-    path = revue.conf["Paths"]
-
-    ## Create front pages for individual actors, if they don't already exist:
-    # frontpages_list = []
-
-    # for actor in revue.actors:
-    #     file_name = "forside-{}.pdf".format(actor.name)
-    #     if not os.path.isfile(os.path.join(path["pdf cache"], file_name)):
-    #         tex = TeX(revue)
-    #         tex.create_frontpage(subtitle=actor.name)
-    #         frontpages_list.append([tex, file_name])
-
-    # Det burde ordne sig selv nu:
-    def tex_for_front_page( name ):
-        tex = TeX( revue )
-        tex.create_frontpage( subtitle = name )
-        return tex
-    
-    frontpages_list = [ [ tex_for_front_page( actor.name ),
-                          "forside-{}.pdf".format( actor.name )
-                         ] for actor in revue.actors
-                       ]
-
-    # Create front pages:
-    conv = cv.Converter()
-    print( "\n\033[1mPersonlige forsider:\033[0m" )
-    conv.parallel_textopdf(frontpages_list, outputdir=path["pdf cache"])
-
-    total_list = []
-    for actor in revue.actors:
-        individual_list = (
-            ( os.path.join( path["pdf cache"],
-                            "forside-{}.pdf".format(actor.name)
-                           ), "Forside" ),
-            ( os.path.join( path["pdf"],"rolleliste.pdf" ), "Rolleliste", True ),
-            ( os.path.join( path["pdf"],"aktoversigt.pdf" ), "Aktoversigt" )) +\
-            ( tuple() if conf.getboolean("TeXing","skip thumbindex")\
-              and not "thumbindex" in sys.argv
-    	      else ( os.path.join(path["pdf"],"thumbindex.pdf"), "Registerindeks" ),) +\
-    	    ( actor,
-            ( os.path.join( path["pdf"],"kontaktliste.pdf"), "Kontaktliste" )
-        )
-        total_list.append((individual_list,
-                           os.path.join(path["individual pdf"],
-                                       "{}.pdf".format(actor.name))))
-
-    pdf = PDF()
-    print( "\n\033[1mPersonlige manuskripter:\033[0m" )
-    pdf.parallel_pdfmerge(total_list)
-    #pdf.pdfmerge(total_list)
-
-
-def create_song_manus_pdf(revue):
-    path = revue.conf["Paths"]
-
-    # Create front page, if it doesn't already exist:
-    # if not os.path.exists(os.path.join(path["pdf"], "cache")):
-    #     os.mkdir(os.path.join(path["pdf"], "cache"))
-
-    # if not os.path.isfile(os.path.join(path["pdf"], "cache", "forside-sangmanuskript.pdf")):
-    # Det tager vare på sig selv nu
-    tex = TeX(revue)
-    tex.create_frontpage(subtitle="sangmanuskript")
-    tex.topdf("forside-sangmanuskript.pdf", outputdir=os.path.join(path["pdf"], "cache"))
-
-    # Create song manuscript:
-    file_list = [os.path.join(path["pdf"],
-                              "cache",
-                              "forside-sangmanuskript.pdf")]
-    if not revue.conf.getboolean("TeXing","skip thumbindex") \
-       or "thumbindex" in sys.argv:
-        file_list += [os.path.join(path["pdf"],
-                                   "thumbindex.pdf"
-                                   )
-                      ]
-    for act in revue.acts:
-        for material in act.materials:
-            if material.category == path["songs"]:
-                file_list.append(
-                    (
-                        os.path.join(
-                            path["pdf"],
-                            os.path.dirname( os.path.relpath( material.path )),
-                            "{}.pdf".format(material.file_name[:-4])
-                        ),
-                        material.title
-                    )
+    @property
+    def merge_args( self ):
+        return ( str( self.rel_dir / self.pdfname ),
+                      self.bookmark, self.start_verso
                 )
 
-    pdf = PDF()
-    pdf.pdfmerge(file_list, os.path.join(path["pdf"],"sangmanuskript.pdf"))
+    def tex_args( self, subtitle ):
+        return (
+            TeX( revue ).create_frontpage( subtitle=subtitle ),
+            self.pdfname, str( self.rel_dir )
+        )
 
-def roles_csv( revue ):
+class Contents:
+    frontpage = Content( "frontpage.pdf", "Forside" )
+    roles = Content( "rolleliste.pdf", "Rolleliste", True )
+    aktoversigt = Content( "aktoversigt.pdf", "Aktoversigt" )
+    thumbindex = Content( "thumbindex.pdf", "Registerindeks" )
+    contacts = Content( "kontaktliste.pdf", "Kontaktliste" )
+
+    def __init__( self,
+                  materials,
+                  frontpage = None,
+                  include = [],
+                  exclude = []
+                 ):
+        self.include = include
+        self.exclude = exclude
+        self.materials = materials
+        if frontpage:
+            if not isinstance( frontpage, Content ):
+                raise TypeError( "Argument frontpage most be a Content.",
+                                 frontpage
+                                )
+            self.frontpage = frontpage
+            if self.include:
+                self.include += [ frontpage ]
+
+    @property
+    def before( self ):
+        return ( self.frontpage, self.roles, self.aktoversigt, self.thumbindex )
+
+    @property
+    def after( self ):
+        return ( self.contacts, )
+
+    @property
+    def arglist( self ):
+        if conf.getboolean( "TeXing", "skip thumbindex" ):
+            self.exclude = [ self.thumbindex ] + [ x for x in self.exclude ]
+
+        def filtered_arglists( contents ):
+            return ( content.merge_args for content in contents
+                     if content not in self.exclude
+                     and not self.include or content in self.include
+                    )
+
+        yield from filtered_arglists( self.before )
+        yield self.materials
+        yield from filtered_arglists( self.after )
+
+    def queue_tex_frontpage( self, subtitle = "\\TeX{}ster" ):
+        tex_queue.append( self.frontpage.tex_args( subtitle ) )
+        return self
+
+    def queue_merge( self, pdfname ):
+        merge_queue.append(( [contents for contents in self.arglist],
+                             pdfname
+                            ))
+        return self
+
+def roles_csv():
 
     print( "\n\033[1mOrdtælling:\033[0m" )
 
@@ -205,7 +180,7 @@ def roles_csv( revue ):
         revue.write_roles_csv( fn )
     o.success( 0 )
 
-def google_forms_signup( tex ):
+def google_forms_signup():
     from google_forms_signup import create_new_form
     create_new_form( revue )
 
@@ -277,70 +252,97 @@ format. Argumentet efter =-tegnet skal være stien til filen. Fx:
 actions = [
     Argument( "aktoversigt",
               "TeX en ny aktoversigt",
-              lambda tex: ( tex.create_act_outline(),
-                        tex.topdf("aktoversigt.pdf")
-                        )
-              ),
+              lambda: tex_queue.append(( TeX( revue ).create_act_outline(),
+                                         Contents.aktoversigt.pdfname
+                                        ))
+             ),
 
     Argument( "roles",
               "TeX en ny rolleliste",
-              lambda tex: ( tex.create_role_overview(),
-                            tex.topdf("rolleliste.pdf")
-                           )
-              ),
+              lambda: tex_queue.append(( TeX( revue ).create_role_overview(),
+                                         Contents.roles.pdfname
+                                        ))
+             ),
 
     Argument( "frontpage",
               "TeX en ny forside",
-              lambda tex: ( tex.create_frontpage( ),
-                            tex.topdf("forside.pdf")
-                           )
-              ),
+              lambda: tex_queue.append(( TeX( revue ).create_frontpage(),
+                                         Contents.frontpage.pdfname
+                                        ))
+             ),
     
     Argument( "thumbindex",
               "TeX et nyt registerindeks",
-              lambda tex: ( tex.create_thumbindex(),
-                            tex.topdf("thumbindex.pdf")
-                            )
-              ),
+              lambda: tex_queue.append(( TeX( revue ).create_thumbindex(),
+                                         Contents.thumbindex.pdfname
+                                        ))
+             ),
 
     Argument( "props",
               "Opdater rekvisitliste i Google Sheets (hvis det er sat op)",
-              lambda tex: ( tex.create_props_list() )
+              lambda: TeX( revue ).create_props_list()
               # TODO: måske hører den funktion ikke hjemme i tex længere?
-              ),
+             ),
               
     Argument( "contacts",
               "TeX en ny kontaktliste",
-              lambda tex: ( tex.create_contacts_list("contacts.csv"),
-                            tex.topdf("kontaktliste.pdf")
-                           )
+              lambda: tex_queue.append((
+                  TeX( revue ).create_contacts_list(conf["Files"]["contacts"]),
+                  Contents.contacts.pdfname
+              ))
              ),
     
     Argument( "material",
               "Gen-TeX materialesiderne (hvis de er blevet ændret)",
-              lambda tex: create_material_pdfs(revue)
-              ),
+              lambda: tex_queue.extend( (mat,) for mat in revue.materials )
+             ),
 
     Argument( "individual",
               "Sammensæt nye individuelle manuskripter (hvis der er ændringer)",
-              lambda tex: create_individual_pdfs(revue)
-              ),
+              lambda: [
+                  Contents( materials = actor,
+                            frontpage = Content(
+                                "forside-{}.pdf".format( actor.name ),
+                                "Forside",
+                                rel_dir = Path( conf["Paths"]["pdf cache"] )
+                            )
+                           )\
+                      .queue_tex_frontpage( subtitle = actor.name )\
+                      .queue_merge(
+                          str(
+                              Path( conf["Paths"]["individual pdf"] )\
+                              / "{}.pdf".format( actor.name )
+                          )
+                      )
+                  for actor in revue.actors
+              ]
+             ),
 
     Argument( "songmanus",
               "Sammensæt et nyt sangmanuskript (hvis der er ændringer)",
-              lambda tex: create_song_manus_pdf(revue)
+              lambda: Contents(
+                  materials = [
+                      m for m in revue.materials
+                      if m.category == conf["Paths"]["songs"]
+                  ],
+                  frontpage = Content( "sangforside.pdf", "Forside" )
+              ).queue_tex_frontpage( subtitle = "sangmanuskript" )\
+               .queue_merge( str( Path( conf["Paths"]["pdf"] )\
+                                  / "sangmanuskript.pdf"
+                                 )
+                            )
               ),
 
     Argument( "signup",
               "TeX en ny tilmeldingsblanket",
-              lambda tex: ( tex.create_signup_form(),
-                            tex.topdf("rolletilmelding.pdf")
-                           )
-              ),
+              lambda: tex_queue.append(( TeX( revue ).create_signup_form(),
+                                         "rolletilmelding.pdf"
+                                        ))
+             ),
 
     Argument( "roles-sheet",
               "Lav en csv(/tsv) fil med en oversigt over rollerne.",
-              lambda tex: roles_csv( revue )
+              roles_csv
               ),
 
     Argument( "google-forms-signup",
@@ -349,15 +351,13 @@ actions = [
              )
     ]
 
-def create_parts(revue, args):
-    tex = TeX(revue)
-
+def execute_commands(revue, args):
     if any( x in args for x in clobber_steps ):
         clobber_my_tex( revue, args )
 
     for action in actions:
         if action.cmd in args:
-            action.action( tex )
+            action.action()
 
 def tex_all(conf):
     conf["TeXing"]["force TeXing of all files"] = "yes"
@@ -427,6 +427,8 @@ def create( *arguments ):
     # Load configuration file:
     conf.load("revytex.conf")
     conf.add_args([ x for x in arguments if x[0] != "-" ])
+    tex_queue.clear()
+    merge_queue.clear()
     
     for toggle in toggles:
         if toggle.cmd in arguments:
@@ -467,28 +469,24 @@ def create( *arguments ):
     elif "manus" in arguments:
         arguments += manus_commands
 
-    try:
-        create_parts( revue, arguments )
-    except cv.ConversionError:
-        print( "Some TeX files failed to compile. Can't create manuscripts.")
-    else:
+    execute_commands( revue, arguments )
+    if "manus" in arguments:
+        Contents( materials = revue )\
+            .queue_merge( str( Path( path["pdf"] ) / "manuskript.pdf" ) )
 
-    	if "manus" in arguments:
-    	    pdf = PDF()
-    	    pdf.pdfmerge(
-    	        (( os.path.join(path["pdf"],"forside.pdf"), "Forside" ),
-    	         ( os.path.join(path["pdf"],"rolleliste.pdf"), "Rolleliste", True ),
-    	         ( os.path.join(path["pdf"],"aktoversigt.pdf"), "Aktoversigt" )) +\
-                ( tuple() if conf.getboolean("TeXing","skip thumbindex")\
-                  and not "thumbindex" in arguments
-    	          else ( os.path.join(path["pdf"],"thumbindex.pdf"), "Registerindeks" ),) +\
-    	        ( revue,
-    	         # ( os.path.join(path["pdf"],"rekvisitliste.pdf"), "Rekvisitliste" ),
-    	         ( os.path.join(path["pdf"],"kontaktliste.pdf"), "Kontaktliste" )
-    	         ),
-    	        os.path.join(path["pdf"],"manuskript.pdf"))
+    try:
+        cv.parallel_tex_to_pdf( tex_queue )
+    except ProcessError:
+        print( "Some TeX files failed to compile. Can't create manuscripts.")
+        return
+    try:
+        PDF().parallel_pdfmerge( merge_queue )
+    except ProcessError:
+        print( "There was an error compiling or optimizing some pdfs." )
+        print( "Some target pdfs may not have been created." )
+        return
     	
-    	    print("Manuscript successfully created!")
+    print("Manuscript successfully created!")
 
 if __name__ == "__main__":
     create( *(sys.argv[1:]) )

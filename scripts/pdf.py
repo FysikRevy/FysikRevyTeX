@@ -55,39 +55,36 @@ på en verso-side i dobbeltsidet layout.
 
                 f, bookmark, verso = args + ( "", None, False )[len(args):]
 
-                if type( f ) == str and f[-3:] == "pdf":
-                    return ( f, bookmark, verso ),
+                if isinstance( f, Path ) \
+                   or type( f ) == str and f[-3:] == "pdf":
+                    return (( f, bookmark, verso ),)
+
+                if type( f ).__name__ == "Material":
+                    return ((
+                        os.path.join(
+                            self.conf["Paths"]["pdf"],
+                            os.path.dirname( os.path.relpath( f.path )),
+                            os.path.splitext( f.file_name )[0] + ".pdf"
+                        ),
+                        ( bookmark or f.title or None ),
+                        verso
+                    ),)
 
                 if type( f ).__name__ == "Revue":
                     return (
-                        (
-                            os.path.join(
-                                self.conf["Paths"]["pdf"],
-                                os.path.dirname( os.path.relpath( m.path )),
-                                os.path.splitext( m.file_name )[0] + ".pdf"
-                            ),
-                            ( bookmark or m.title or None ),
-                            verso )
-                        for act in f.acts
-                        for m in act.materials
+                        gen_arg_list(( m, bookmark, verso ))[0]
+                        for m in f.materials
                     )
 
                 if type( f ).__name__ == "Actor":
                     return (
-                        (
-                            os.path.join(
-                                self.conf["Paths"]["pdf"],
-                                os.path.dirname(
-                                    os.path.relpath( role.material.path )
-                                ),
-                                os.path.splitext(
-                                    role.material.file_name
-                                )[0] + ".pdf"
-                            ),
-                            ( bookmark or role.material.title or None ),
-                            verso )
+                        gen_arg_list(( role.material, bookmark, verso ))[0]
                         for role in f.roles
                     )
+
+                if isinstance( f, list ):
+                    return ( gen_arg_list(( el, bookmark, verso ))[0]
+                             for el in f )
 
                 # otherwise...
                 print( f, bookmark, verso, args )
@@ -98,7 +95,7 @@ på en verso-side i dobbeltsidet layout.
             output.activity( os.getpid(), 1 )
 
             if not self.conf.getboolean( "TeXing", "force TeXing of all files" )\
-               and not any( os.path.getmtime( f ) > output_modtime
+               and not any( Path( f ).stat().st_mtime > output_modtime
                             for f,_,_ in arg_list ):
                 output.skipped( os.getpid() )
                 return              # intet nyt ind = intet nyt ud
