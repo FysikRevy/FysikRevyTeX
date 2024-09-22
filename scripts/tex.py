@@ -102,6 +102,7 @@ class TeX:
         with open(fname, 'r', encoding=encoding) as f:
             self.tex = f.read()
 
+        return self
 
     def write(self, fname, encoding='utf-8'):
         "Write to a TeX file."
@@ -110,6 +111,7 @@ class TeX:
                 f.write( l )
 
         self.info[ "modification_time" ] = os.path.getmtime( fname )
+        return self
 
     def __iter__(self):
         if 'tex' in self.info:
@@ -490,7 +492,7 @@ class TeX:
         from google_sheets import send_props_to_gspread
         send_props_to_gspread( self.revue )
 
-
+        return self
 
     #----------------------------------------------------------------------
 
@@ -702,3 +704,4 @@ class TeX:
                             + template[1:2]
         )
 
+        return self
