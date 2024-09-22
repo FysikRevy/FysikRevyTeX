@@ -138,6 +138,8 @@ class PoolOutput:
          )
 
    def queue_add( self, *x ):
+      if not x:
+         return
       self.pause()
       print( "\n  Tilføjet til kø:" )
       prns = [ ( len( ind + ": " + fn ), task_start( ind + ": " ) + fn ) \
@@ -300,8 +302,12 @@ def good_col_width( *widths ):
    relevant_bins = bins[ -floor( len( bins ) / 2 ) : ][-3:]
    #                     ^ must be in uppper half      ^ and then the last ≤3
    # don't get fooled by shorter results:
-   return relevant_bins[-1] if relevant_bins[-1] < relevant_bins[0] + 3 \
-      else relevant_bins[0] + 1
+   try:
+      return relevant_bins[-1] if relevant_bins[-1] < relevant_bins[0] + 3 \
+         else relevant_bins[0] + 1
+   except IndexError:
+      # probably got called with no arguments
+      return shutil.get_terminal_size().columns
    
 def print_columnized( *prns ):
    "each prn in prns is a tuple ( <printed width>, <string to print> )"
