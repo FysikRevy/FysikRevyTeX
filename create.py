@@ -493,11 +493,13 @@ def create( *arguments ):
             .queue_merge( str( Path( path["pdf"] ) / "manuskript.pdf" ) )
 
     try:
+        print( "\033[1mTeXification:\033[0m\n" )
         cv.parallel_tex_to_pdf( tex_queue )
     except ProcessError:
         print( "Some TeX files failed to compile. Can't create manuscripts.")
         return
     try:
+        print( "\033[1mCollationizionation:\033[0m\n" )
         PDF().parallel_pdfmerge( merge_queue )
     except ProcessError:
         print( "There was an error compiling or optimizing some pdfs." )
