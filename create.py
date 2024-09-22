@@ -25,6 +25,9 @@ from pool_output import \
 
 from config import configuration as conf
 
+class ExitOnStopArgument( Exception ):
+    pass
+
 tex_queue, merge_queue = [],[]
 
 @dataclass
@@ -243,11 +246,12 @@ format. Argumentet efter =-tegnet skal være stien til filen. Fx:
     for setting in role_settings:
           print("  {:<18} {}".format( setting.cmd + "=", setting.doc ) )
 
-    print( "" )
+    print()
     for setting in settings:
         if setting not in role_settings:
             print("  {:<18} {}".format( setting.cmd + "=", setting.doc ) )
-    sys.exit("\n")
+    print()
+    raise ExitOnStopArgument
 
 actions = [
     Argument( "aktoversigt",
@@ -420,10 +424,22 @@ manus_commands = (tuple() if conf.getboolean("TeXing","skip thumbindex")
 
             
 def create( *arguments ):
-    # husk, at det første element i `sys.argv` er scriptets eget filnavn
-    # hvis du selv kalder den her funktion, så giv den et array med strenge,
-    # hvoraf det første element er en dummy. Fx: create( ["","manus","-v"] )
 
+    unkw_warn = ( x for x in 
+        [ "These arguments were not recognized, and will be ignored:" ] )
+    for arg in arguments:
+        if arg not in list( clobber_steps ) + actions + flags + settings\
+           and not re.match( "-[a-z]", arg ):
+            try:
+                print( next( unkw_warn ) )
+            except StopIteration:
+                pass
+            print( "  " + arg, end="" )
+    try:
+        next( unkw_warn )
+    except StopIteration:
+        print( "\n" )
+    
     # Load configuration file:
     conf.load("revytex.conf")
     conf.add_args([ x for x in arguments if x[0] != "-" ])
@@ -446,7 +462,7 @@ def create( *arguments ):
                     print( "          '{}=<indstilling>' (uden mellemrum)."\
                            .format( setting.cmd, setting.cmd )
                     )
-                    sys.exit(1)
+                    raise ValueError
     for flag in flags:
         if flag.cmd in \
            "".join( [ match[1] for match in
@@ -457,7 +473,9 @@ def create( *arguments ):
 
     if "plan" in arguments or not os.path.isfile("aktoversigt.plan"):
         sf.create_plan_file("aktoversigt.plan")
-        sys.exit("Plan file 'aktoversigt.plan' created successfully.")
+        print("Plan file 'aktoversigt.plan' created successfully.")
+        print("You probably want to rearrange its contents before continuing.")
+        raise ExitOnStopArgument
 
     global revue                # TODO: EVIL! :hiss:
     revue = cr.Revue.fromfile("aktoversigt.plan")
@@ -486,7 +504,10 @@ def create( *arguments ):
         print( "Some target pdfs may not have been created." )
         return
     	
-    print("Manuscript successfully created!")
+    print("Nothing seems to have gone wrong!")
 
 if __name__ == "__main__":
-    create( *(sys.argv[1:]) )
+    try:
+        create( *(sys.argv[1:]) )
+    except ExitOnStopArgument:
+        pass
