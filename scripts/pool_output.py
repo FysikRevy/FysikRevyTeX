@@ -11,7 +11,13 @@ headers = (  "Proces #{}"
             ,"P{}"
             ,"{}"
            )
-indices = "abcdefghijklmnopqrstuvwxyzæøåABCDEFGHIJKLMNOPQRSTUVWXYZÆØÅ0123456789"
+indices = "abcdefghijklmnopqrstuvwxyzæøå" \
+          "ABCDEFGHIJKLMNOPQRSTUVWXYZÆØÅ" \
+          "0123456789" \
+          "бгджзилпфцчшьюя" \
+          "БГДЖЗИЛПФЦЧШЬЮЯ" \
+          "αβγδεζηθικλμνξοπρσςτυφχψω" \
+          "ΔΘΛΞΣΦΨΩ"
 indicators = ".-=≡#"
 file_list_column_width = 24
 fmts = {  "none": "\033[0m"
