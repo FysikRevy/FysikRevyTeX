@@ -47,14 +47,7 @@ destination file, unless overridden in conf."""
             # not subpath, wasn't path
             dir_offset = Path()
     
-        try:
-            tex_cache = Path( conf["Paths"]["tex cache"] )
-        except KeyError:
-            try:
-                tex_cache = Path( conf["Paths"]["cache"] ) / "tex"
-            except KeyError:
-                tex_cache = Path( "cache/tex" )
-        tex_cache /= dir_offset
+        tex_cache = Path( conf["Paths"]["tex cache"] ) / dir_offset
         tex_cache.mkdir( parents = True, exist_ok = True )
 
         if not outputdir:

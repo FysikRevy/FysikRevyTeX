@@ -32,11 +32,6 @@ class TeXProcess():
          raise TypeError( "searchdirs must be an iterable of directories. "
                           "Got {}".format( searchdirs )
                          )
-      try:
-         conf["TeXing"]["tex command"]
-      except KeyError:
-         conf["TeXing"]["tex command"] = "pdflatex"
-
       texfile = Path( texfile )
       try:
          cdir = Path( cdir ).resolve()
