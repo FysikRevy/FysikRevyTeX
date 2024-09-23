@@ -407,6 +407,8 @@ def parallel_tex_to_pdf( file_list,
             ( len( f ) + 3, task_start( i + ": " ) + f )
             for i,_,f in err
         ))
+    if fail or err:
+        print( "Se logfiler fra LaTeX i " + conf["Paths"]["tex cache"] )
     print()
     if done:
         print( ( "{} filer blev " \

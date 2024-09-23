@@ -27,7 +27,7 @@ class PopenGen( subprocess.Popen ):
 class TeXProcess():
    def __init__( self, texfile, cdir=None, cachedir=None, outputname=None,
                  searchdirs=None, interactive=None, encoding="utf-8"
-                 ):
+                ):
       if isinstance( searchdirs, str ):
          raise TypeError( "searchdirs must be an iterable of directories. "
                           "Got {}".format( searchdirs )

@@ -157,6 +157,8 @@ def roles_csv():
                for fn, ind in warning
               )
         )
+    if error or warning:
+        print( "Logfiler fra LaTeX findes i " + conf["Paths"]["tex cache"] )
     print()
     if success:
         print( "Ordtælling blev " \
