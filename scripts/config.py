@@ -36,7 +36,7 @@ class Config:
 
         for section in defaults:
             if section not in self.conf:
-                self.comf[ section ] = defaults[ section ]
+                self.conf[ section ] = defaults[ section ]
             else:
                 for setting in defaults[ section ]:
                     if setting not in self.conf[ section ]:
