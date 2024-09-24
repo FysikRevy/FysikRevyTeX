@@ -32,25 +32,30 @@ def tex_files_under_dir( dir ):
     return [y for x in os.walk( dir ) for y in glob.glob( os.path.join( x[0], '*.tex'))]
 
 def create_plan_file(fname, encoding='utf-8'):
-    if os.path.isfile(fname):
-        choice = input("{} already exists. Remove it and create a new plan? y/[n]".format(fname))
-
-        if choice == "n" or choice == "":
-            sys.exit("Nothing to be done. Exiting.")
 
     songs = sorted( tex_files_under_dir( "sange" ), key=str.lower)
     sketches = sorted( tex_files_under_dir( "sketches" ), key=str.lower)
 
-    with open(fname, 'w', encoding=encoding) as f:
-        f.write("Sange\n")
-        for song in songs:
-            if song[-3:] == "tex":
-                f.write(os.path.join( "{}\n".format(song))\
-                          .replace(os.sep,"/")) # så TeX kan være med
+    try:
+        with open(fname, 'x', encoding=encoding) as f:
+            f.write("Sange\n")
+            for song in songs:
+                if song[-3:] == "tex":
+                    f.write(os.path.join( "{}\n".format(song))\
+                              .replace(os.sep,"/")) # så TeX kan være med
 
-        f.write("\nSketches\n")
-        for sketch in sketches:
-            if sketch[-3:] == "tex":
-                f.write(os.path.join( "{}\n".format(sketch))\
-                          .replace(os.sep,"/")) # så TeX kan være med
+            f.write("\nSketches\n")
+            for sketch in sketches:
+                if sketch[-3:] == "tex":
+                    f.write(os.path.join( "{}\n".format(sketch))\
+                              .replace(os.sep,"/")) # så TeX kan være med
+    except FileExistsError:
+        choice = input(
+            "{} already exists. Remove it and create a new plan? y/[n]"\
+            .format(fname)
+        )
+        if choice == "n" or choice == "":
+            raise
+        os.remove( fname )
+        return create_plan_file( fname, encoding )
 

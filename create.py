@@ -10,6 +10,8 @@ from pathlib import Path
 from time import sleep
 from itertools import cycle
 from dataclasses import dataclass
+from typing import Optional, Any
+from collections.abc import Callable
 
 import classy_revy as cr
 import setup_functions as sf
@@ -189,16 +191,29 @@ def google_forms_signup():
     from google_forms_signup import create_new_form
     create_new_form( revue )
 
+def plan_file():
+    try:
+        sf.create_plan_file( "aktoversigt.plan" )
+    except FileExistsError:
+        pass
+    else:
+        print("Plan file 'aktoversigt.plan' created successfully."),
+        print("You probably want to rearrange its contents "\
+              "before continuing.\n"),
+        raise ExitOnStopArgument( plan )
+
+@dataclass
 class Argument:
-    def __init__(self, cmd, doc, action):
-        self.cmd = cmd
-        self.doc = doc
-        self.action = action
+    cmd: str
+    doc: str
+    action: Callable[..., Any]
+    flag: Optional[ str ] = None
 
 def write_help(*args):
     print("TeX et revymanus.\n\nSyntaks:\n\n[pyton] create.py [-", end="")
-    for flag in flags:
-        print("[{}]".format(flag.cmd), end="")
+    have_flags = [ arg for arg in all_possible_args if arg.flag ]
+    for flag in have_flags:
+        print("[{}]".format(flag.flag), end="")
     print("] ", end="")
     for toggle in toggles:
         print("[{}] ".format(toggle.cmd), end="")
@@ -219,15 +234,14 @@ Kommandoen "manus" er det samme som at give kommandoerne
 Hele listen med kommandoer er:
 
 Flag:""")
-    for flag in flags:
-        print("  -{:<17} {}".format(flag.cmd, flag.doc))
+    for flag in have_flags:
+        print("  -{:<17} {}".format(flag.flag, flag.doc))
     print("\nTilvalg:")
     for toggle in toggles:
         print("  {:<18} {}".format(toggle.cmd, toggle.doc))
     print("\nKommandoer:", end="")
     print("""
-  manus              TeX'er kun det overordnede manus (se ovenfor)
-  plan               Laver en ny aktoversit.plan""")
+  manus              TeX'er kun det overordnede manus (se ovenfor)""")
     for action in actions:
         print("  {:<18} {}".format(action.cmd, action.doc))
     print("\nKommandoer, der skriver om i TeX-filerne:")
@@ -237,6 +251,10 @@ Flag:""")
               )
 
     print("\nTilvalg, som kan tilsidesætte indstillinger i revytex.conf:")
+    for setting in settings:
+        if setting not in role_settings:
+            print("  {:<18} {}".format( setting.cmd + "=", setting.doc ) )
+    print()
     print("""\
 De her sætter filnavnet for rollefordelingsfiler med et bestemt
 format. Argumentet efter =-tegnet skal være stien til filen. Fx:
@@ -249,13 +267,14 @@ format. Argumentet efter =-tegnet skal være stien til filen. Fx:
           print("  {:<18} {}".format( setting.cmd + "=", setting.doc ) )
 
     print()
-    for setting in settings:
-        if setting not in role_settings:
-            print("  {:<18} {}".format( setting.cmd + "=", setting.doc ) )
-    print()
-    raise ExitOnStopArgument
+    raise ExitOnStopArgument( help_arg )
 
-actions = [
+plan = Argument( "plan",
+                 "Lav en ny aktoversigt.plan ud fra mappens nuværende indhold.",
+                 plan_file
+                )
+
+actions = [ plan ] + [
     Argument( "aktoversigt",
               "TeX en ny aktoversigt",
               lambda: tex_queue.append(( TeX( revue ).create_act_outline(),
@@ -365,17 +384,19 @@ def execute_commands(revue, args):
         if action.cmd in args:
             action.action()
 
-def tex_all(conf):
-    conf["TeXing"]["force TeXing of all files"] = "yes"
+def tex_all():
+    conf.conf.set( "TeXing", "force TeXing of all files", "yes" )
 
-def verbose(conf):
-    conf["TeXing"]["verbose output"] = "yes"
+def verbose():
+    conf.conf.set( "TeXing", "verbose output", "yes" )
 
-toggles = [
-    Argument( "--help",
-              "Du kan få hjælp",
-              write_help
-              ),
+help_arg = Argument( "--help",
+                     "Du kan få hjælp",
+                     write_help,
+                     flag = "h"
+                    )
+
+toggles = [ help_arg ] + [
     Argument( "--tex-all",
               "TeX alt! (ligesom indstillingen i revytex.conf)",
               tex_all
@@ -383,17 +404,15 @@ toggles = [
     ]
 
 flags = [
-    Argument( "h",
-              "Jeg har hjælp til dig",
-              write_help
-             ),
     Argument( "v",
               "Få mere verbost output fra LaTeX.",
-              verbose
+              verbose,
+              flag = "v"
              ),
     Argument( "y",
               "Sig ja til alt.",
-              lambda: conf.conf.set( "Behaviour", "always say yes", "yes" )
+              lambda: conf.conf.set( "Behaviour", "always say yes", "yes" ),
+              flag = "y"
              )
     ]
 
@@ -422,6 +441,8 @@ latex_command = Argument(
 
 settings = role_settings + [ roles_sheet_filename, latex_command ]
 
+all_possible_args = actions + toggles + flags + settings
+
 default_commands = (tuple() if conf.getboolean("TeXing","skip thumbindex")
                     else ("thumbindex",)) +\
     ("aktoversigt", "roles", "frontpage", "props", "contacts", "material",
@@ -436,7 +457,8 @@ def create( *arguments ):
     unkw_warn = ( x for x in 
         [ "These arguments were not recognized, and will be ignored:" ] )
     for arg in arguments:
-        if arg not in list( clobber_steps ) + actions + flags + settings\
+        if arg not in list( clobber_steps ) \
+                       + [ a.cmd for a in all_possible_args ] \
            and not re.match( "-[a-z]", arg ):
             try:
                 print( next( unkw_warn ) )
@@ -471,22 +493,22 @@ def create( *arguments ):
                            .format( setting.cmd, setting.cmd )
                     )
                     raise ValueError
-    for flag in flags:
-        if flag.cmd in \
+    for flag in all_possible_args:
+        if flag.flag and flag.flag in \
            "".join( [ match[1] for match in
                       [ re.match( r"^-([^-]+)", arg ) for arg in arguments ]
                       if match ]
                      ):
-            flag.action(conf) 
+            flag.action()
 
-    if "plan" in arguments or not os.path.isfile("aktoversigt.plan"):
-        sf.create_plan_file("aktoversigt.plan")
-        print("Plan file 'aktoversigt.plan' created successfully.")
-        print("You probably want to rearrange its contents before continuing.")
-        raise ExitOnStopArgument
+    if not os.path.isfile("aktoversigt.plan"):
+        plan_file()
 
     global revue                # TODO: EVIL! :hiss:
-    revue = cr.Revue.fromfile("aktoversigt.plan")
+    try:
+        revue = cr.Revue.fromfile("aktoversigt.plan")
+    except FileNotFoundError:
+        plan_file()
     path = revue.conf["Paths"]
     conv = cv.Converter()
 
