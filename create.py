@@ -454,21 +454,27 @@ manus_commands = (tuple() if conf.getboolean("TeXing","skip thumbindex")
             
 def create( *arguments ):
 
-    unkw_warn = ( x for x in 
-        [ "These arguments were not recognized, and will be ignored:" ] )
+    known_flags = [ cmd.flag for cmd in all_possible_args if cmd.flag ]
+    wrong_args, wrong_flags = [], []
     for arg in arguments:
-        if arg not in list( clobber_steps ) \
-                       + [ a.cmd for a in all_possible_args ] \
-           and not re.match( "-[a-z]", arg ):
-            try:
-                print( next( unkw_warn ) )
-            except StopIteration:
-                pass
-            print( "  " + arg, end="" )
-    try:
-        next( unkw_warn )
-    except StopIteration:
-        print( "\n" )
+        if re.match( "-[a-z]", arg ):
+            wrong_flags += [ f for f in arg[1:] if not f in known_flags ]
+        elif arg not in \
+             list( clobber_steps ) + [ a.cmd for a in all_possible_args ]:
+            wrong_args += [ arg ]
+    if wrong_args:
+        print( "These arguments were not recognized, and will be ignored:" )
+        print( "    ", end="" )
+        for wrong in wrong_args:
+            print( wrong, end="  " )
+        print()
+    if wrong_flags:
+        print("These flag were not recognized, and will be ignored:  ", end="")
+        for wrong in wrong_flags:
+            print( wrong, end=" " )
+        print()
+    if wrong_flags or wrong_args:
+        print()
     
     # Load configuration file:
     conf.load("revytex.conf")
