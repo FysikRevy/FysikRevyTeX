@@ -217,9 +217,15 @@ Sætter akter, titler og roller ind i en kopi af en Google Form, som er forbered
 Gennemtving gen-TeXning af alle filer. Kan også kobles på de andre kommandoer, for at tvinge gen-TeXning af udvalgte filer.
 
 * **`python create.py -v`**  
-Skriv output fra LaTeX til terminalen (v for "verbose"). Scriptet paralleliserer TeXningen, så du får nok en overvældende mængde output fra kommandoer, som TeXer flere ting. Men der er nok den eneste måde at få diagnostisk information fra kommandoer som `aktoversigt` eller `contacts`.
+Skriv output fra LaTeX til terminalen (v for "verbose"). Scriptet paralleliserer TeXningen, så du får nok en overvældende mængde output fra kommandoer, som TeXer flere ting.
 
-> De her var, og er, en valgmulighed i `revytex.conf`-filen, men de er en gode muligheder at have på kommandolinjen også.
+> `--tex-all` og `-v` var, og er, en valgmulighed i `revytex.conf`-filen, men de er en gode muligheder at have på kommandolinjen også.
+
+* **`python create.py --single-thread` (eller `-s`)**  
+Slå parallelkørsel af TeX-ning og pdf-sammensætning fra. Hvis det giver problemer.
+
+* **`python create.py --max-parallel=`_\<antal\>_**  
+Sæt antallet af processer, som python må starte til at køre opgaver parallelt, hvis du tror, du ved bedre end standarderne. (Der kan måske være fornuft i at sætte tallet højere end standarden, som er antallet af os-kerner, siden vores opgaver skal læse og skrive en del. Alt afhængigt af forholdet mellem hastigheden af din disk og cpu. Her er plads til eksperimentering, hvis du tror, du ved bedre end standarderne.) Det samme som `-s`, hvis sat til 1.
 
 #### Omfattende omskrivninger
 Farlige kommandoer, som skriver om i kilde-TeX-filerne. Men dog så usikre på sig selv, at de be'r om bekræfigelse før de gør noget.

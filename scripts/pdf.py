@@ -189,9 +189,12 @@ på en verso-side i dobbeltsidet layout.
     def parallel_pdfmerge(self, file_list):
         "Merge a list of lists of PDF files in parallel."
 
-        with Pool(processes = cpu_count()) as pool,\
-             PoolOutputManager() as man:
-            po = man.PoolOutput( cpu_count() )
+        with Pool(processes = cpu_count()) as pool:
+            return self.submit_parallel_pdfmerge( pool, file_list )
+
+    def submit_parallel_pdfmerge( self, pool, file_list ):
+        with PoolOutputManager() as man:
+            po = man.PoolOutput( pool._processes )
             name_queue = [ Path( dst ).name for _,dst in file_list ]
             po.queue_add( *name_queue )
             result = pool.starmap_async(

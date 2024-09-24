@@ -343,13 +343,18 @@ def tex_to_wordcount( tex, output=Output(), conf=conf,
     queued_output( getpid() )
     return rc, counts
 
-def parallel_tex_to_pdf( file_list,
-                         outputdir    = "",
-                         repetitions  = 2,
-                         encoding     = 'utf-8',
-                         conf         = conf
-                        ):
+def parallel_tex_to_pdf( *args, **kwargs ):
 
+    with Pool(processes = cpu_count()) as pool:
+         return submit_parallel_tex_to_pdf( *args, **kwargs )
+
+def submit_parallel_tex_to_pdf( pool,
+                                file_list,
+                                outputdir    = "",
+                                repetitions  = 2,
+                                encoding     = 'utf-8',
+                                conf         = conf
+                               ):
     default_args = [ None, None, outputdir, repetitions, encoding ]
     new_file_list = [
         [ el, "" ] + default_args[2:] if isinstance( el, str )
@@ -357,9 +362,8 @@ def parallel_tex_to_pdf( file_list,
         for el in file_list
     ]
 
-    with Pool(processes = cpu_count()) as pool,\
-         PoolOutputManager() as man:
-        po = man.PoolOutput( cpu_count() )
+    with PoolOutputManager() as man:
+        po = man.PoolOutput( pool._processes )
         po.queue_add( *( a[1] if a[1] else task_name( a[0] )
                          for a in new_file_list
                         )

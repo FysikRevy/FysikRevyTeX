@@ -12,6 +12,7 @@ from itertools import cycle
 from dataclasses import dataclass
 from typing import Optional, Any
 from collections.abc import Callable
+from configparser import NoSectionError
 
 import classy_revy as cr
 import setup_functions as sf
@@ -113,23 +114,25 @@ def roles_csv():
 
     print( "\n\033[1mOrdtælling:\033[0m" )
 
-    mats = [ mat for act in revue.acts for mat in act.materials ]
-    
-    with Pool( processes = cpu_count() ) as pool,\
-         PoolOutputManager() as man:
-        po = man.PoolOutput( cpu_count() )
-        po.queue_add( *( cv.task_name( mat ) for mat in mats ) )
-        counting = pool.starmap_async( cv.tex_to_wordcount,
-                                       ( (mat,po,conf) for mat in mats )
-                                      )
-        while not counting.ready():
-            sleep( 1 )
-            po.refresh()
-        po.end_output()
-        rs = counting.get()
+    processes = int( conf["Behaviour"]["max_proc"] )
+    if processes <= 1:
+        rs = [ cv.tex_to_wordcount( mat ) for mat in revue.materials ]
+    else:
+        with Pool( processes = processes ) as pool,\
+             PoolOutputManager() as man:
+            po = man.PoolOutput( pool._processes )
+            po.queue_add( *( cv.task_name( mat ) for mat in revue.materials ) )
+            counting = pool.starmap_async(
+                cv.tex_to_wordcount, ((mat,po,conf) for mat in revue.materials )
+            )
+            while not counting.ready():
+                sleep( 1 )
+                po.refresh()
+            po.end_output()
+            rs = counting.get()
 
     counts, error, warning, success, skip = [],[],[],[],[]
-    for r,m,i in zip( rs, mats, cycle( indices ) ):
+    for r,m,i in zip( rs, revue.materials, cycle( indices ) ):
         f = Path( m.path ).name
         match r[0]:
             case Exception():
@@ -146,7 +149,7 @@ def roles_csv():
                + text_effect( "LaTeX-fejl", "error" ) + ":"
               )
         print_columnized(
-            *( ( len( fn.name ) + 3, task_start( ind + ": " ) + fn.name )
+            *( ( len( fn ) + 3, task_start( ind + ": " ) + fn )
                for fn, ind in  error
               )
         )
@@ -155,7 +158,7 @@ def roles_csv():
                + text_effect( "LaTeX-advarsler", "warn" ) + ":"
               )
         print_columnized(
-            *( ( len( fn.name ) + 3, task_start( ind + ": " ) + fn.name )
+            *( ( len( fn ) + 3, task_start( ind + ": " ) + fn )
                for fn, ind in warning
               )
         )
@@ -173,7 +176,7 @@ def roles_csv():
                + "."
               )
 
-    for mat, count in zip( mats, counts ):
+    for mat, count in zip( revue.materials, counts ):
         mat.wordcounts = count
 
     o = Output()
@@ -201,6 +204,25 @@ def plan_file():
         print("You probably want to rearrange its contents "\
               "before continuing.\n"),
         raise ExitOnStopArgument( plan )
+
+class SMP(Callable):
+    def fail( *_ ):
+        raise ValueError(
+            "Conflicting commands for number of parallel processes."
+        )
+    def succeed( self, n ):
+        conf.conf.set( "Behaviour", "max_proc", str( n ) )
+        self.do = self.fail
+    def __init__( self ):
+        try:
+            self.succeed( cpu_count() )
+        except NoSectionError:
+            conf.conf.add_section( "Behaviour" )
+            self.succeed( cpu_count() )
+        self.do = self.succeed
+    def __call__( self, n ):
+        self.do( n )
+set_max_parallel = SMP()
 
 @dataclass
 class Argument:
@@ -237,7 +259,7 @@ Flag:""")
     for flag in have_flags:
         print("  -{:<17} {}".format(flag.flag, flag.doc))
     print("\nTilvalg:")
-    for toggle in toggles:
+    for toggle in toggles + set_toggles:
         print("  {:<18} {}".format(toggle.cmd, toggle.doc))
     print("\nKommandoer:", end="")
     print("""
@@ -400,8 +422,19 @@ toggles = [ help_arg ] + [
     Argument( "--tex-all",
               "TeX alt! (ligesom indstillingen i revytex.conf)",
               tex_all
-              )
+              ),
+    Argument( "--single-thread",
+              "Brug ikke parallelkørsel.",
+              lambda: set_max_parallel( 1 ),
+              "s"
+             )
     ]
+
+set_toggles = [ Argument( "--max-parallel=",
+                          "Sæt max antal parallelle processer (min. 1).",
+                          set_max_parallel
+                         )
+                ]
 
 flags = [
     Argument( "v",
@@ -476,17 +509,18 @@ def create( *arguments ):
     if wrong_flags or wrong_args:
         print()
     
-    # Load configuration file:
+    # (Re)initialize:
     conf.load("revytex.conf")
     conf.add_args([ x for x in arguments if x[0] != "-" ])
     tex_queue.clear()
     merge_queue.clear()
+    set_max_parallel.__init__()
     
     for toggle in toggles:
         if toggle.cmd in arguments:
-            toggle.action(conf)
+            toggle.action()
     for arg in arguments:
-        for setting in settings:
+        for setting in settings + set_toggles:
             if arg.startswith( setting.cmd ):
                 try:
                     setting.action( arg.split( "=", maxsplit=1 )[1] )
@@ -525,21 +559,45 @@ def create( *arguments ):
         Contents( materials = revue )\
             .queue_merge( str( Path( path["pdf"] ) / "manuskript.pdf" ) )
 
-    if tex_queue:
-        try:
-            print( "\033[1mTeXification:\033[0m\n" )
-            cv.parallel_tex_to_pdf( tex_queue )
-        except ProcessError:
-            print("Some TeX files failed to compile. Can't create manuscripts.")
+    processes = min( int(conf["Behaviour"]["max_proc"]),
+                     max( len( tex_queue ), len( merge_queue ) )
+                    )
+    if processes <= 1:
+        rs = [ cv.tex_to_pdf( *tex_args ) for tex_args in tex_queue ]
+        if any( isinstance( r, Exception ) for r in rs ):
+            print("Some TeX files failed to compile. "\
+                      "Can't create manuscripts.")
+            print("Find TeX logfiles in {}".format(conf["Paths"]["tex cache"]) )
             return
-    if merge_queue:
-        try:
-            print( "\033[1mCollationizionation:\033[0m\n" )
-            PDF().parallel_pdfmerge( merge_queue )
-        except ProcessError:
+        rs = []
+        for merge_arg in merge_queue:
+            try:
+                rs += [ PDF().pdfmerge( *merge_arg ) ]
+            except Exception as e:
+                rs += [ e ]
+        if any( isinstance( r, Exception ) for r in rs ):
             print( "There was an error compiling or optimizing some pdfs." )
             print( "Some target pdfs may not have been created." )
             return
+    else:
+        with Pool( processes = processes ) as pool:
+            if tex_queue:
+                try:
+                    print( "\n\033[1mTeXification:\033[0m" )
+                    cv.submit_parallel_tex_to_pdf( pool, tex_queue )
+                except ProcessError:
+                    print("Some TeX files failed to compile. "\
+                          "Can't create manuscripts.")
+                    return
+            if merge_queue:
+                try:
+                    print( "\n\033[1mCollationizionation:\033[0m" )
+                    PDF().submit_parallel_pdfmerge( pool, merge_queue )
+                except ProcessError:
+                    print( "There was an error compiling or optimizing "\
+                           "some pdfs." )
+                    print( "Some target pdfs may not have been created." )
+                    return
     	
     print("Nothing seems to have gone wrong!")
 
