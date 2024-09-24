@@ -507,9 +507,6 @@ def create( *arguments ):
                      ):
             flag.action()
 
-    if not os.path.isfile("aktoversigt.plan"):
-        plan_file()
-
     global revue                # TODO: EVIL! :hiss:
     try:
         revue = cr.Revue.fromfile("aktoversigt.plan")
@@ -528,19 +525,21 @@ def create( *arguments ):
         Contents( materials = revue )\
             .queue_merge( str( Path( path["pdf"] ) / "manuskript.pdf" ) )
 
-    try:
-        print( "\033[1mTeXification:\033[0m\n" )
-        cv.parallel_tex_to_pdf( tex_queue )
-    except ProcessError:
-        print( "Some TeX files failed to compile. Can't create manuscripts.")
-        return
-    try:
-        print( "\033[1mCollationizionation:\033[0m\n" )
-        PDF().parallel_pdfmerge( merge_queue )
-    except ProcessError:
-        print( "There was an error compiling or optimizing some pdfs." )
-        print( "Some target pdfs may not have been created." )
-        return
+    if tex_queue:
+        try:
+            print( "\033[1mTeXification:\033[0m\n" )
+            cv.parallel_tex_to_pdf( tex_queue )
+        except ProcessError:
+            print("Some TeX files failed to compile. Can't create manuscripts.")
+            return
+    if merge_queue:
+        try:
+            print( "\033[1mCollationizionation:\033[0m\n" )
+            PDF().parallel_pdfmerge( merge_queue )
+        except ProcessError:
+            print( "There was an error compiling or optimizing some pdfs." )
+            print( "Some target pdfs may not have been created." )
+            return
     	
     print("Nothing seems to have gone wrong!")
 
