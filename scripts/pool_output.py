@@ -42,20 +42,20 @@ yes, maybe, no, skip = ( text_effect( ch, st ) \
 
 class Output:
    "implement PoolObject's interface for the old style output."
-    def begin( self, pid, taskname ):
-        self.taskname = "{:<42}".format(
-            "\033[0;37;1m{}:\033[0m".format(taskname)
-        )
-    def activity( self, pid, number ):
-        pass
-    def skipped( self, pid ):
-        pass
-    def success( self, pid ):
-        print( self.taskname + "\033[0;32m Success!\033[0m" )
-    def done_with_warnings( self, pid ):
-        print( self.taskname + "\033[0;33m Had Errors!\033[0m" )
-    def failed( self, pid ):
-        print( self.taskname + "\033[0;31m Failed!\033[0m" )
+   def begin( self, pid, taskname ):
+      self.taskname = "{:<42}".format(
+         "\033[0;37;1m{}:\033[0m".format(taskname)
+      )
+   def activity( self, pid, number ):
+      pass
+   def skipped( self, pid ):
+      pass
+   def success( self, pid ):
+      print( self.taskname + "\033[0;32m Success!\033[0m" )
+   def done_with_warnings( self, pid ):
+      print( self.taskname + "\033[0;33m Had Errors!\033[0m" )
+   def failed( self, pid ):
+      print( self.taskname + "\033[0;31m Failed!\033[0m" )
 
 class PoolOutput:
    sized_caches_defaults = (( "_acts", 0 )
