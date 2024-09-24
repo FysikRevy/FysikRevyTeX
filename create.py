@@ -414,7 +414,13 @@ roles_sheet_filename = Argument(
     lambda fn: conf.conf.set( "Files", "roles sheet output", str( Path( fn ) ) )
 )
 
-settings = role_settings + [ roles_sheet_filename ]
+latex_command = Argument(
+    "--latex-command",
+    "Brug en anden latex-kommando (end pdflatex).",
+    lambda fn: conf.conf.set( "TeXing", "latex command", fn.strip() )
+)
+
+settings = role_settings + [ roles_sheet_filename, latex_command ]
 
 default_commands = (tuple() if conf.getboolean("TeXing","skip thumbindex")
                     else ("thumbindex",)) +\

@@ -15,7 +15,7 @@ indices = "abcdefghijklmnopqrstuvwxyzæøå" \
           "ABCDEFGHIJKLMNOPQRSTUVWXYZÆØÅ" \
           "0123456789" \
           "бгджзилпфцчшьюя" \
-          "БГДЖЗИЛПФЦЧШЬЮЯ" \
+          "БГДЖИЛПФЦЧШЬЮЯ" \
           "αβγδεζηθικλμνξοπρσςτυφχψω" \
           "ΔΘΛΞΣΦΨΩ"
 indicators = ".-=≡#"
