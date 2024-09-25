@@ -21,11 +21,11 @@ def create_material_template(dir, texfile, config, encoding='utf-8'):
 
 
 def create_sketch_template(dir, config, encoding='utf-8'):
-    create_material_template(dir, "sketchskabelon.tex", config)
+    create_material_template(dir, "skabelon.tex", config)
 
 
 def create_song_template(dir, config, encoding='utf-8'):
-    create_material_template(dir, "sangskabelon.tex", config)
+    create_material_template(dir, "skabelon.tex", config)
 
 def tex_files_under_dir( dir ):
     # https://stackoverflow.com/questions/18394147/recursive-sub-folder-search-and-return-files-in-a-list-python#18394205

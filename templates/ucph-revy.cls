@@ -22,7 +22,7 @@
 %% LaTeX version 2005/12/01 or later.
 \NeedsTeXFormat{LaTeX2e}[2005/12/01]
 \ProvidesClass{ucph-revy}
-    [2023/05/23 v1.0.0 Initial publish]
+    [2024/09/24 v1.0.2  A class for making musical manuscripts]
 \RequirePackage{xstring}
 \newif\if@thumbindex\@thumbindexfalse
 \DeclareOption{thumbindex}{\@thumbindextrue}
@@ -46,7 +46,7 @@
 \else
   \expandafter\@gobble
 \fi{
-  \RequirePackage[T1]{fontenc}
+  \RequirePackage[OT1]{fontenc}
   \begingroup
     \count256=0
     \endlinechar=-1
@@ -403,11 +403,12 @@
     }%
   }%
   {\end{list}\smallskip\hfil\rule{6cm}{0.1mm}\medskip\par}
+\def\revy@itemwithout#1{\item [{\bf #1} \hfill] }
+\def\revy@itemwith#1[#2]{\item [{\bf #1} (#2) \hfill] }
 \def\revy@itemname#1{%
-  \def\@itemwithout##1{\item [{\bf ##1} \hfill] }
-  \def\@itemwith##1[##2]{\item [{\bf ##1} (##2) \hfill] }
   \expandafter\def\csname #1\endcsname##1{%
-    \@ifnextchar [{\@itemwith{##1}}{\@itemwithout{##1}}%]
+    \@ifnextchar [ %]
+    {\revy@itemwith{##1}}{\revy@itemwithout{##1}}%
   }
 }
 \newenvironment{roles}{
@@ -544,6 +545,7 @@
   \def\does##1{\scene \hspace{-1em}\role{##1}}
   \def\act##1{\textit{(##1)}}
 }{}
+\newcommand{\SaTyR}{S\hspace*{-.2ex}\raisebox{-.15em}{A}\hspace*{-.5ex}TyR}
 \let\revyinfo=\relax
 \newtoks\@titletoks
 \newtoks\@authortoks
