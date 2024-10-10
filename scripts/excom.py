@@ -92,8 +92,7 @@ class TeXProcess():
          stdin = subprocess.PIPE,
          stdout = subprocess.PIPE,
          stderr = subprocess.STDOUT,
-         text = True,
-         encoding = self.encoding
+         text = True
       )
       return self.p
 

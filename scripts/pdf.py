@@ -131,10 +131,19 @@ på en verso-side i dobbeltsidet layout.
 
                 output.activity( os.getpid(), 1 )            
 
-            with open(pdfname, "wb") as o:
-                writer.write( o )
-                o.close()
-                output.activity( os.getpid(), 1 )
+            write_attempts = 0
+            while write_attempts < 2:
+                write_attempts += 1
+                try:
+                    with open(pdfname, "wb") as o:
+                        writer.write( o )
+                        o.close()
+                        output.activity( os.getpid(), 1 )
+                        break
+                except FileNotFoundError:
+                    if write_attempts > 1:
+                        raise
+                    Path( pdfname ).parent.mkdir( parents = True )
 
             try:
                 pdfsizeopt = subprocess.Popen(
