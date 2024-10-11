@@ -1,5 +1,6 @@
-import os
+import os,re
 from time import localtime, strftime
+from datetime import timedelta
 
 import base_classes as bc
 from tex import TeX
@@ -8,6 +9,37 @@ from converters import Converter
 
 from config import configuration as conf
 from pathlib import Path
+
+re_m_s = re.compile( r"([\d,.]+) +minut[^\W\d_]*,?(?: *(\d+) +sekund)?" )
+
+def extract_duration( eta, fn ):
+    def brok():
+        print( "Unparsable eta ({}) in {}".format( eta, fn ) )
+        return timedelta( 0 )
+
+    e = eta.replace('$','').strip()
+    if ":" in e:
+        m,s = e.split(":")
+        try:
+            return timedelta( minutes=int(m), seconds=int(s) )
+        except ValueError:
+            return brok()
+    if "." in e or "," in e:
+        try:
+            return timedelta( minutes=float( e.replace( ",","." ) ) )
+        except ValueError:
+            pass
+    fromwords = re_m_s.match( e )
+    if fromwords:
+        # print( fromwords.groups() )
+        m,s = fromwords.groups()
+        if "." in m or "," in m:
+            return extract_duration( m, fn )
+        return timedelta( minutes=int( m ), seconds=(int(s) if s else 0) )
+    try:
+        return timedelta( minutes=int( e ) )
+    except ValueError:
+        return brok()
 
 class Material:
     # TODO: This class should perhaps inherit from the completely general
@@ -24,14 +56,19 @@ class Material:
             except KeyError:
                 return ""
         
+        self.path = os.path.abspath(info_dict["path"])
+        path, self.file_name = os.path.split(self.path)
+
         self.title = info_dict_get_or_empty_string( "title" )
         self.status = info_dict_get_or_empty_string( "status" )
         if not self.status:
             print("No status on '{}' is set.".format(self.title))
         self.props = info_dict_get_or_empty_string( "props" )
-        self.length = info_dict_get_or_empty_string( "eta" )\
-                         .replace('$','').split()[0]
-        self.path = os.path.abspath(info_dict["path"])
+        self.duration = extract_duration(
+            info_dict_get_or_empty_string( "eta" ), self.file_name
+        )
+        self.length = str( self.duration // timedelta( minutes = 1 ) )\
+            if self.duration else ""
         self.roles = info_dict["roles"]
         self.responsible = info_dict_get_or_empty_string( "responsible" )
         if self.responsible not in [ role.actor for role in self.roles ]:
@@ -44,7 +81,6 @@ class Material:
             role.add_material_path(self.path)
 
         # Extract the category (which is the directory):
-        path, self.file_name = os.path.split(self.path)
         self.category = Path( info_dict["path"] ).parts[0]
 
         self.melody = info_dict_get_or_empty_string( "melody" )
