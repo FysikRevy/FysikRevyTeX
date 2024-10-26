@@ -521,7 +521,10 @@ class TeX:
         def hoik( material ):
             self.info["modification_time"] = \
                 max(self.info["modification_time"], material.modification_time)
-            mat_actors = { role.actor for role in material.roles }
+            mat_actors = { role.actor for role in material.roles
+                           # DO NOT LEAVE THIS IN!!!!!!!
+                           if role.abbreviation != "X"
+                          }
             height = "{{{}em}}".format(material.duration.seconds / 60)
             return "&".join(
                 ["",
