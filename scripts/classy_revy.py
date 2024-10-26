@@ -1,6 +1,7 @@
 import os,re
 from time import localtime, strftime
 from datetime import timedelta
+from locale import strxfrm
 
 import base_classes as bc
 from tex import TeX
@@ -227,7 +228,7 @@ class Revue:
         # Make a list of all actors:
         for material in self.materials:
             material.register_actors(self.actors)
-        self.actors.sort(key=lambda actor: actor.name)
+        self.actors.sort(key=lambda actor: strxfrm(actor.name))
 
 
     @classmethod
