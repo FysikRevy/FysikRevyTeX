@@ -19,6 +19,7 @@ FysikRevyTeX has very few dependencies:
 
 * [Python][python] 3.10 or newer.
 * [PyPDF][] for the PDF magic.
+* [ordered_set][] for an ordered set.
 
 When dependencies are met, just put the contents of FysikRevyTeX in a directory of your choice. No installation is required.
 
@@ -26,7 +27,7 @@ FysikRevyTeX has been tested on Linux with Python 3.3 and PyPDF2 v. 1.20.
 
 > Opdateret og testet på Windows med Python 3.12 og PyPDF v. 4.2.0
 
-> En del af FysikRevyTeX's ekstra funktioner har knopskudt ekstra afhængigheder, som der nu er indført `requirements.txt`–filer til at holde styr på. Hvis du kun vil installere PyPDF kan du give kommandoen
+> En del af FysikRevyTeX's ekstra funktioner har knopskudt ekstra afhængigheder, som der nu er indført `requirements.txt`–filer til at holde styr på. Hvis du kun vil installere det absolut nødvendige kan du give kommandoen
 
     $ pip -r requirements.txt
 
@@ -38,6 +39,7 @@ FysikRevyTeX has been tested on Linux with Python 3.3 and PyPDF2 v. 1.20.
 
 [python]: https://www.python.org/downloads/
 [pypdf]: https://pypdf.readthedocs.io/en/stable/index.html
+[ordered_set]: https://pypi.org/project/ordered-set/
 
 ## Usage
 ### Creating a new revue directory

@@ -8,6 +8,7 @@ from itertools import cycle
 from traceback import format_exception
 
 from pypdf import PdfWriter,PdfReader
+from ordered_set import OrderedSet
 
 from config import configuration as conf
 from pool_output import \
@@ -78,8 +79,10 @@ på en verso-side i dobbeltsidet layout.
 
                 if type( f ).__name__ == "Actor":
                     return (
-                        gen_arg_list(( role.material, bookmark, verso ))[0]
-                        for role in f.roles
+                        gen_arg_list(( material, bookmark, verso ))[0]
+                        for material in OrderedSet(
+                                role.material for role in f.roles
+                        )
                     )
 
                 if isinstance( f, list ):
