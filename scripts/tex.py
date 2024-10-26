@@ -2,7 +2,11 @@
 import os
 import re
 import sys
+import locale
 from time import localtime, strftime
+from pathlib import Path
+from functools import cmp_to_key
+from datetime import timedelta
 
 from base_classes import Prop, Role
 import converters as cv
@@ -483,6 +487,89 @@ class TeX:
 
         template.insert(1,self.tex)
         self.tex = "\n".join(template)
+
+        return self
+
+    #----------------------------------------------------------------------
+    def create_timesheet( self, templatefile="", encoding='utf-8' ):
+        if not self.revue:
+            raise RuntimeError( "The TeX object needs to be instantiated with "
+                    "a Revue object in order to use create_role_overview().")
+        self.read( templatefile or (
+            Path( self.conf["Paths"]["templates"] ) / "timesheet_template.tex"
+        ))
+        self.info["modification_time"] = max( self.info["modification_time"],
+                                              self.revue.modification_time
+                                             )
+
+        front,back = self.tex\
+            .replace( "<+VERSION+>", self.conf["Frontpage"]["version"]\
+                                         .split(",")[-1]\
+                                         .strip()
+                     )\
+            .replace( "<+REVUENAME+>", self.revue.name )\
+            .replace( "<+REVUEYEAR+>", self.revue.year )\
+            .replace( "<+NACTORS+>", str(len(self.revue.actors)) )\
+            .replace( "<+ACTORS+>", "&".join(
+                [ "\\actor{{{}}}".format( actor.name )
+                  for actor in self.revue.actors
+                 ]
+            ))\
+            .split( "<+NUMBERS+>" )
+        self.info["tex"] = [ front ]
+
+        def hoik( material ):
+            self.info["modification_time"] = \
+                max(self.info["modification_time"], material.modification_time)
+            mat_actors = { role.actor for role in material.roles }
+            height = "{{{}em}}".format(material.duration.seconds / 60)
+            return "&".join(
+                ["",
+                 material.title ]\
+                + [ ("\\onstage" if actor.name in mat_actors else "\\offstage")\
+                    + height
+                    for actor in self.revue.actors
+                   ]
+            ) + "\\\\"
+
+        def timemarks( duration ):
+            interval = timedelta( minutes=10 )
+            marks = " ++(0,-{}em) "\
+                .format( interval.seconds / 60 )\
+                .join(
+                    [ "\\tikz \\draw (0,0)" ]\
+                    + [ "node {{{}:{:0>2}}}".format(
+                        (interval * mark).seconds // 60,
+                        (interval * mark).seconds % 60 )
+                        for mark in range( 1, duration // interval + 1 )
+                       ]
+                )
+            return marks + ";"
+
+        for act in self.revue.acts:
+            self.info["tex"] += [
+                "\\hline&{{\\bfseries {}}}\\\\\\hline".format( act.name ),
+                "\\multirow{{{}}}{{3em}}{{{}}}".format(
+                    int( len( act.materials ) * 1.5 ),
+                    timemarks(
+                        sum( (m.duration for m in act.materials), timedelta() )
+                    )
+                ),
+                "".join([ hoik( material ) for material in act.materials ])
+            ]
+
+        self.info["tex"] += [ back ]
+
+        # self.info["tex"] = [ front ]\
+        #     + [ line for act in self.revue.acts
+        #         for line in
+        #         [ "\\hline&{{\\bfseries {}}}\\\\\\hline".format( act.name ) ]\
+        #         + [ #"\\\\[.1666em]
+        #             "".join(
+        #                 [ hoik( material ) for material in act.materials ]
+        #         ) ]
+        #        ]\
+        #     + [ back ]
 
         return self
 

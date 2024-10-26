@@ -1,0 +1,49 @@
+\documentclass{ucph-revy}
+\usepackage[OT1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[danish]{babel}
+\usepackage{tikz}
+\usepackage[a1paper,lmargin=0.5cm,rmargin=0.5cm,bmargin=1cm]{geometry}
+\usepackage{longtable, array, multirow}
+
+\newlength{\height}
+\newcommand{\actor}[1]{\rotatebox{90}{#1\ }}
+
+\newcommand{\setheight}[1]{\setlength{\height}{#1}}
+\setheight{1.5em}
+\newcommand{\onstage}[1]{%
+  \tikz[baseline=(mid.south)]{
+    \draw (-.5em,0) -- (.5em,0) (-.5em,#1) -- +(1em,0);
+    \draw[ultra thick] (-.2em,0) -- +(0,#1)
+    (.2em,0) -- +(0,#1) coordinate[pos=.5] (mid);
+  }%
+}
+\newcommand{\offstage}[1]{\tikz[baseline=(mid)] \draw[gray,dashed] (0,.2em) -- (0,#1) coordinate[pos=.5] (mid);}
+\renewcommand{\arraystretch}{.8}
+
+\title{Tidsdiagram}
+\version{<+VERSION+>}
+
+\begin{document}
+\maketitle
+
+\begin{longtable}{p{3em}r*{<+NACTORS+>}{c}}
+  \hline
+  &Nummer / Person&<+ACTORS+>\\
+  \hline
+  \endhead
+  \hline
+  \endfoot
+  % &\multicolumn{39}{l}{
+  %   \tikz[remember picture,overlay] \coordinate (st) at (0,.166em);
+  %   \hfill
+  %   \tikz[remember picture,overlay] \draw (st) rectangle (0,0);
+  % }\\
+  <+NUMBERS+>
+\end{longtable}
+
+\end{document}
+%%% Local Variables:
+%%% mode: LaTeX
+%%% TeX-master: t
+%%% End:
