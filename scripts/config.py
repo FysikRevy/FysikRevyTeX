@@ -4,7 +4,9 @@ from configparser import ConfigParser, ExtendedInterpolation
 defaults = {
     "Files": { "contacts": "contacts.csv" },
     "Paths": { "tex cache": "${cache}/tex" },
-    "TeXing": { "tex command": "pdflatex" }
+    "TeXing": { "tex command": "pdflatex",
+                "timesheet scale": "5mm"
+               }
 }
 
 class Config:

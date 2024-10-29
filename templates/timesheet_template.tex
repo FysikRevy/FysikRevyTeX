@@ -6,20 +6,62 @@
 \usepackage[a1paper,lmargin=0.5cm,rmargin=0.5cm,bmargin=1cm]{geometry}
 \usepackage{longtable, array, multirow}
 
-\newlength{\height}
+\newlength{\mntheight}\setlength{\mntheight}{<+MNTHEIGHT+>}
 \newcommand{\actor}[1]{\rotatebox{90}{#1\ }}
 
-\newcommand{\setheight}[1]{\setlength{\height}{#1}}
-\setheight{1.5em}
-\newcommand{\onstage}[1]{%
-  \tikz[baseline=(mid.south)]{
-    \draw (-.5em,0) -- (.5em,0) (-.5em,#1) -- +(1em,0);
-    \draw[ultra thick] (-.2em,0) -- +(0,#1)
-    (.2em,0) -- +(0,#1) coordinate[pos=.5] (mid);
-  }%
+\newcommand{\timescale}[2][\relax]{     %[labels], n_minutes
+  \begin{tikzpicture}
+    \foreach \ten in {0,10,...,#2} {
+      \draw[thick] (0,-\ten*\mntheight) -- +(-1em,0)
+      \ifx\relax#1\else\ifnum\ten=0\else node[anchor=east] {\ten{}:00} \fi\fi
+      ;
+      \foreach \one [parse=true] in {1,...,#2-\ten} {
+        \ifnum\one=5
+          \draw (0,-\ten*\mntheight) ++(0,-\one*\mntheight) -- +(-1em,0);
+        \else
+          \draw (0,-\ten*\mntheight) ++(0,-\one*\mntheight) -- +(-.5em,0);
+          \ifnum\one=9\breakforeach\fi
+        \fi
+      }
+    }
+  \end{tikzpicture}
 }
-\newcommand{\offstage}[1]{\tikz[baseline=(mid)] \draw[gray,dashed] (0,.2em) -- (0,#1) coordinate[pos=.5] (mid);}
-\renewcommand{\arraystretch}{.8}
+\tikzset{
+  baseline=0,
+  pics/titleline/.style={code={
+      \draw[overlay,remember picture] (nameleft |- 0,0) +(-3pt,0) -- (3pt,0);
+    }},
+  numbertitle/.style n args={2}{insert path={ %name, n_minutes
+      +(0,0) pic {titleline} -- +(0,-3pt)
+      ++(0,-#2*\mntheight ) node[anchor=east,yshift=#2*.5*\mntheight] {#1}
+      pic {titleline} -- +(0,3pt)
+      ++(0,-0.16667*\mntheight)
+    }},
+  numbertime/.style n args={2}{insert path={ %name, n_minutes
+      +(0,0) -- +(0,-3pt)
+      ++(0,-#2*\mntheight ) node[anchor=west,yshift=#2*.5*\mntheight] {#1}
+      -- +(0,3pt)
+      ++(0,-0.16667*\mntheight)
+    }},
+  pics/offstage/.style={code={
+    \draw ++(-.2em,0) -| ++(-.2em,-#1*\mntheight) -- ++(.2em,0)
+    ++(.4em,0) -| ++(.2em,#1*\mntheight) -- ++(-.2em,0);
+  }},
+  offstage/.style={insert path={
+      +(0,0) pic {offstage=#1}
+      ++(0,-0.16667*\mntheight)
+      ++(0,-#1*\mntheight)
+    }},
+  pics/onstage/.style={code={
+      \coordinate (bottom) at (0,-#1*\mntheight);
+      \draw +(-.3em,0) -- +(.3em,0) (bottom) +(-.3em,0) -- +(.3em,0);
+      \draw[ultra thick] (bottom) ++(-.1em,0) -- (-.1em,0)
+      (bottom) ++(.1em,0) -- (.1em,0);
+    }},
+  onstage/.style={insert path={
+      +(0,0) pic {onstage=#1} ++(0,-#1*\mntheight) ++(0,-0.16667*\mntheight)
+    }}
+}
 
 \title{Tidsdiagram}
 \version{<+VERSION+>}
@@ -27,9 +69,17 @@
 \begin{document}
 \maketitle
 
-\begin{longtable}{p{3em}r*{<+NACTORS+>}{c}}
+\begin{longtable}{rlr*{<+NACTORS+>}{c}}
   \hline
-  &Nummer / Person&<+ACTORS+>\\
+  &\tikz[remember picture,overlay] \coordinate (nameleft) at (0,0);
+  &\hfill\begin{minipage}[b]{11em}
+    \begin{flushright}
+      \tikz \draw (0,.5\mntheight+.25em) [onstage=1]; = på scenen\hspace{1em}
+      \tikz \draw (0,.5\mntheight+.25em) [offstage=1]; = fri
+      \bigskip\newline Nummer / Person
+    \end{flushright}
+  \end{minipage}
+  &<+ACTORS+>\\
   \hline
   \endhead
   \hline

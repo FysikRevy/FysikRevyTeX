@@ -491,6 +491,7 @@ class TeX:
         return self
 
     #----------------------------------------------------------------------
+
     def create_timesheet( self, templatefile="", encoding='utf-8' ):
         if not self.revue:
             raise RuntimeError( "The TeX object needs to be instantiated with "
@@ -515,51 +516,51 @@ class TeX:
                   for actor in self.revue.actors
                  ]
             ))\
+            .replace( "<+MNTHEIGHT+>", self.conf["TeXing"]["timesheet scale"] )\
             .split( "<+NUMBERS+>" )
         self.info["tex"] = [ front ]
 
-        def hoik( material ):
-            self.info["modification_time"] = \
-                max(self.info["modification_time"], material.modification_time)
-            mat_actors = { role.actor for role in material.roles
-                           # DO NOT LEAVE THIS IN!!!!!!!
-                           if role.abbreviation != "X"
-                          }
-            height = "{{{}em}}".format(material.duration.seconds / 60)
-            return "&".join(
-                ["",
-                 material.title ]\
-                + [ ("\\onstage" if actor.name in mat_actors else "\\offstage")\
-                    + height
-                    for actor in self.revue.actors
-                   ]
-            ) + "\\\\"
-
-        def timemarks( duration ):
-            interval = timedelta( minutes=10 )
-            marks = " ++(0,-{}em) "\
-                .format( interval.seconds / 60 )\
-                .join(
-                    [ "\\tikz \\draw (0,0)" ]\
-                    + [ "node {{{}:{:0>2}}}".format(
-                        (interval * mark).seconds // 60,
-                        (interval * mark).seconds % 60 )
-                        for mark in range( 1, duration // interval + 1 )
-                       ]
-                )
-            return marks + ";"
-
         for act in self.revue.acts:
             self.info["tex"] += [
-                "\\hline&{{\\bfseries {}}}\\\\\\hline".format( act.name ),
-                "\\multirow{{{}}}{{3em}}{{{}}}".format(
-                    int( len( act.materials ) * 1.5 ),
-                    timemarks(
-                        sum( (m.duration for m in act.materials), timedelta() )
-                    )
+                "\\hline&&{{\\bfseries {}}}\\\\\\hline".format( act.name ),
+                "\\timescale[y]{{{}}}"\
+                .format(
+                    # int( len( act.materials ) * 1.5 ),
+                    ( sum( (m.duration for m in act.materials), timedelta() )
+                      + timedelta( seconds=10 ) * ( len( act.materials ) - 1 )
+                     ) // timedelta( minutes=1 )
+
                 ),
-                "".join([ hoik( material ) for material in act.materials ])
+                "&\\tikz{\\draw ",
+                " +(0,0) ".join([
+                    "[numbertime={{{}:{:0>2}}}{{{}}}]".format(
+                        material.duration // timedelta( minutes=1 ),
+                        material.duration.seconds % 60,
+                        material.duration / timedelta( minutes=1 )
+                    ) for material in act.materials ]),
+                ";}& \\tikz[remember picture]{ \\draw ",
+                " +(0,0) ".join([ "[numbertitle={{{}}}{{{}}}]".format(
+                    material.title,
+                    material.duration / timedelta( minutes=1 )
+                ) for material in act.materials ]),
+                ";}"
+                # "".join([ hoik( material ) for material in act.materials ])
             ]
+            for actor in self.revue.actors:
+                self.info["tex"] += [
+                    "&\\tikz{ \\draw (0,0) ",
+                    " +(0,0) ".join([
+                        "[" + ( "onstage" if actor.name in
+                                ( m_r.actor for m_r in material.roles )
+                                else "offstage" )\
+                        + "={}]".format( material.duration \
+                                         / timedelta( minutes=1 )
+                                        )
+                        for material in act.materials
+                    ]),
+                    ";}"
+                ]
+            self.info["tex"] += [ "\\\\" ]
 
         self.info["tex"] += [ back ]
 
