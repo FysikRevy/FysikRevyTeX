@@ -2,7 +2,11 @@
 import os
 import re
 import sys
+import locale
 from time import localtime, strftime
+from pathlib import Path
+from functools import cmp_to_key
+from datetime import timedelta
 
 from base_classes import Prop, Role
 import converters as cv
@@ -130,6 +134,7 @@ class TeX:
         self.info["props"] = []
         self.info["roles"] = []
         self.info["appearing_roles"] = set() # How many people/abbreviations that occur in the actual sketch/song.
+        self.info["instructors"] = []
 
         # List of keywords/commands to ignore, i.e. that are not relevant to extract:
         ignore_list = ["documentclass", "usepackage", "begin", "end", "maketitle", "act", "scene"]
@@ -153,7 +158,19 @@ class TeX:
                         # couldn't find a command, just ignore it
                         pass
                     else:
-                        if first_part not in ignore_list:
+                        # if they write \instructor[title] name
+                        if first_part == "instructor":
+                            opt = opt_re.search( line )
+                            title = opt[1] if opt else "Instruktør"
+                            self.info[ "instructors" ] += [
+                                Role( title[0].lower(),
+                                      eol_re.search( line )[1] if opt \
+                                        else re.search(r"^.\w+(.*)", line)[1]\
+                                               .strip(),
+                                      title
+                                     )
+                            ]
+                        elif first_part not in ignore_list:
                             # Find also the second part, i.e. whatever follows the first part (including
                             # the non-alphanumeric character):
                             end_part = re.findall(r"^.\w+(.*)", line)[0]
@@ -213,6 +230,17 @@ class TeX:
                                 name = name.replace("/", "-")
 
                             self.info["roles"].append(Role(abbreviation, name, role))
+
+                        # if they write \instructor[title]{name}
+                        elif "instructor" in command:
+                            opt = opt_re.search( line )
+                            title = opt[1] if opt else "Instruktør"
+                            self.info["instructors"] += [
+                                Role( title[0].lower(),
+                                      kw_re.search[1],
+                                      title
+                                     )
+                            ]
 
                         elif command in ("sings", "says", "does"):
                             # We count how many abbreviations actually appear in the sketch/song
@@ -468,10 +496,12 @@ class TeX:
                 for actor in self.revue.actors:
                     for role in actor.roles:
                         if role.material.title == mat.title:
+                            rolecell = "{:>3}".format(role.abbreviation)
+                            if role in actor.instructorships:
+                                rolecell = "\\textit{{{}}}".format(rolecell)
                             if actor.name == mat.responsible:
-                                self.tex += "&\\textbf{{\\color{{DodgerBlue}}{:>3}}}".format(role.abbreviation)
-                            else:
-                                self.tex += "&{:>3}".format(role.abbreviation)
+                                rolecell = "\\textbf{{\\color{{DodgerBlue}}{}}}".format(rolecell)
+                            self.tex += "&" + rolecell
                             break
                     else:
                         self.tex += r"& \q"
@@ -483,6 +513,99 @@ class TeX:
 
         template.insert(1,self.tex)
         self.tex = "\n".join(template)
+
+        return self
+
+    #----------------------------------------------------------------------
+
+    def create_timesheet( self, templatefile="", encoding='utf-8' ):
+        if not self.revue:
+            raise RuntimeError( "The TeX object needs to be instantiated with "
+                    "a Revue object in order to use create_role_overview().")
+        self.read( templatefile or (
+            Path( self.conf["Paths"]["templates"] ) / "timesheet_template.tex"
+        ))
+        self.info["modification_time"] = max( self.info["modification_time"],
+                                              self.revue.modification_time
+                                             )
+
+        front,back = self.tex\
+            .replace( "<+VERSION+>", self.conf["Frontpage"]["version"]\
+                                         .split(",")[-1]\
+                                         .strip()
+                     )\
+            .replace( "<+REVYNAME+>", self.revue.name )\
+            .replace( "<+REVYYEAR+>", self.revue.year )\
+            .replace( "<+NACTORS+>", str(len(self.revue.actors)) )\
+            .replace( "<+ACTORS+>", "&".join(
+                [ "\\actor{{{}}}".format( actor.name )
+                  for actor in self.revue.actors
+                 ]
+            ))\
+            .replace( "<+MNTHEIGHT+>", self.conf["TeXing"]["timesheet scale"] )\
+            .split( "<+NUMBERS+>" )
+        self.info["tex"] = [ front ]
+
+        for act in self.revue.acts:
+            self.info["tex"] += [
+                "\\hline&&{{\\bfseries {}}}\\\\\\hline".format( act.name ),
+                "\\timescale[y]{{{}}}"\
+                .format(
+                    # int( len( act.materials ) * 1.5 ),
+                    ( sum( (m.duration for m in act.materials), timedelta() )
+                      + timedelta( seconds=10 ) * ( len( act.materials ) - 1 )
+                     ) // timedelta( minutes=1 )
+
+                ),
+                "&\\tikz{\\draw ",
+                " +(0,0) ".join([
+                    "[numbertime={{{}:{:0>2}}}{{{}}}{{{}}}]".format(
+                        material.duration // timedelta( minutes=1 ),
+                        material.duration.seconds % 60,
+                        material.duration / timedelta( minutes=1 ),
+                        material.scenechange / timedelta( minutes=1 ) or \
+                          conf["TeXing"]["default scene change"]
+                    ) for material in act.materials ]),
+                ";}& \\tikz[remember picture]{ \\draw ",
+                " +(0,0) ".join([ "[numbertitle={{{}}}{{{}}}{{{}}}]".format(
+                    material.title,
+                    material.duration / timedelta( minutes=1 ),
+                    material.scenechange / timedelta( minutes=1 ) or \
+                      conf["TeXing"]["default scene change"]
+                ) for material in act.materials ]),
+                ";}"
+            ]
+            for actor in self.revue.actors:
+                self.info["tex"] += [
+                    "&\\tikz{ \\draw (0,0) ",
+                    " +(0,0) ".join([
+                        "[" + ( "onstage" if actor.name in
+                                ( m_r.actor for m_r in material.stage_roles )
+                                else "offstage" )\
+                        + "={{{}}}{{{}}}]"\
+                            .format(
+                                material.duration / timedelta( minutes=1 ),
+                                material.scenechange / timedelta( minutes=1 ) \
+                                  or conf["TeXing"]["default scene change"]
+                            )
+                        for material in act.materials
+                    ]),
+                    ";}"
+                ]
+            self.info["tex"] += [ "\\\\" ]
+
+        self.info["tex"] += [ back ]
+
+        # self.info["tex"] = [ front ]\
+        #     + [ line for act in self.revue.acts
+        #         for line in
+        #         [ "\\hline&{{\\bfseries {}}}\\\\\\hline".format( act.name ) ]\
+        #         + [ #"\\\\[.1666em]
+        #             "".join(
+        #                 [ hoik( material ) for material in act.materials ]
+        #         ) ]
+        #        ]\
+        #     + [ back ]
 
         return self
 

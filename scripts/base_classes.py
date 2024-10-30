@@ -30,9 +30,13 @@ class Actor:
     def __init__(self, name):
         self.name = name
         self.roles = []
+        self.instructorships = []
 
     def __repr__(self):
         return "{}".format(self.name)
 
     def add_role(self, role):
         self.roles.append(role)
+
+    def add_instructorship( self, instructorship ):
+        self.instructorships.append( instructorship )
