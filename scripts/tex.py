@@ -496,7 +496,7 @@ class TeX:
                 for actor in self.revue.actors:
                     for role in actor.roles:
                         if role.material.title == mat.title:
-                            rolecell = "{}".format(role.abbreviation)
+                            rolecell = "{:>3}".format(role.abbreviation)
                             if role in actor.instructorships:
                                 rolecell = "\\textit{{{}}}".format(rolecell)
                             if actor.name == mat.responsible:
