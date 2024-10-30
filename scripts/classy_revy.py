@@ -13,12 +13,19 @@ from pathlib import Path
 
 re_m_s = re.compile( r"([\d,.]+) +minut[^\W\d_]*,?(?: *(\d+) +sekund)?" )
 
-def extract_duration( eta, fn ):
+def extract_duration( eta, fn, property="eta" ):
+    brok_if_absent_in = [ "eta" ]
+    default_return = timedelta( 0 )
     def brok():
-        print( "Unparsable eta ({}) in {}".format( eta, fn ) )
-        return timedelta( 0 )
+        print( "Unparsable {} ({}) in {}".format( property, eta, fn ) )
+        return default_return
 
     e = eta.replace('$','').strip()
+    if not e:
+        if property in brok_if_absent_in:
+            return brok()
+        else:
+            return default_return
     if ":" in e:
         m,s = e.split(":")
         try:
@@ -35,7 +42,7 @@ def extract_duration( eta, fn ):
         # print( fromwords.groups() )
         m,s = fromwords.groups()
         if "." in m or "," in m:
-            return extract_duration( m, fn )
+            return extract_duration( m, fn, property )
         return timedelta( minutes=int( m ), seconds=(int(s) if s else 0) )
     try:
         return timedelta( minutes=int( e ) )
@@ -70,6 +77,10 @@ class Material:
         )
         self.length = str( self.duration // timedelta( minutes = 1 ) )\
             if self.duration else ""
+        self.scenechange = extract_duration(
+            info_dict_get_or_empty_string( "scenechange" ),
+            self.file_name, "scenechange"
+        )
         self.roles = info_dict["roles"]
         self.responsible = info_dict_get_or_empty_string( "responsible" )
         if self.responsible not in [ role.actor for role in self.roles ]:

@@ -533,18 +533,21 @@ class TeX:
                 ),
                 "&\\tikz{\\draw ",
                 " +(0,0) ".join([
-                    "[numbertime={{{}:{:0>2}}}{{{}}}]".format(
+                    "[numbertime={{{}:{:0>2}}}{{{}}}{{{}}}]".format(
                         material.duration // timedelta( minutes=1 ),
                         material.duration.seconds % 60,
-                        material.duration / timedelta( minutes=1 )
+                        material.duration / timedelta( minutes=1 ),
+                        material.scenechange / timedelta( minutes=1 ) or \
+                          conf["TeXing"]["default scene change"]
                     ) for material in act.materials ]),
                 ";}& \\tikz[remember picture]{ \\draw ",
-                " +(0,0) ".join([ "[numbertitle={{{}}}{{{}}}]".format(
+                " +(0,0) ".join([ "[numbertitle={{{}}}{{{}}}{{{}}}]".format(
                     material.title,
-                    material.duration / timedelta( minutes=1 )
+                    material.duration / timedelta( minutes=1 ),
+                    material.scenechange / timedelta( minutes=1 ) or \
+                      conf["TeXing"]["default scene change"]
                 ) for material in act.materials ]),
                 ";}"
-                # "".join([ hoik( material ) for material in act.materials ])
             ]
             for actor in self.revue.actors:
                 self.info["tex"] += [
@@ -553,9 +556,12 @@ class TeX:
                         "[" + ( "onstage" if actor.name in
                                 ( m_r.actor for m_r in material.roles )
                                 else "offstage" )\
-                        + "={}]".format( material.duration \
-                                         / timedelta( minutes=1 )
-                                        )
+                        + "={{{}}}{{{}}}]"\
+                            .format(
+                                material.duration / timedelta( minutes=1 ),
+                                material.scenechange / timedelta( minutes=1 ) \
+                                  or conf["TeXing"]["default scene change"]
+                            )
                         for material in act.materials
                     ]),
                     ";}"

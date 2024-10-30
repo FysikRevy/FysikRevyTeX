@@ -1,11 +1,13 @@
 import os
 from configparser import ConfigParser, ExtendedInterpolation
 
+# hvis de ikke er blevet rullet ud i revytex.conf endnu:
 defaults = {
     "Files": { "contacts": "contacts.csv" },
     "Paths": { "tex cache": "${cache}/tex" },
     "TeXing": { "tex command": "pdflatex",
-                "timesheet scale": "5mm"
+                "timesheet scale": "5mm",
+                "default scene change": ".16667"
                }
 }
 
