@@ -338,6 +338,15 @@ actions = [ plan ] + [
                   Contents.contacts.pdfname
               ))
              ),
+
+    Argument( "timesheet",
+              "Lav et tidsdiagram, som kan hjælpe med at lægge ninjaplanen.",
+              lambda: tex_queue.append(( TeX( revue ).create_timesheet(),
+                                         "tidsdiagram.pdf","",3
+                                         # kør tex 3 gange, fordi vi laver
+                                         # unoder med tikZ
+                                        ))
+              ),
     
     Argument( "material",
               "Gen-TeX materialesiderne (hvis de er blevet ændret)",

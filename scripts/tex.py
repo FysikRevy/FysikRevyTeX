@@ -534,8 +534,8 @@ class TeX:
                                          .split(",")[-1]\
                                          .strip()
                      )\
-            .replace( "<+REVUENAME+>", self.revue.name )\
-            .replace( "<+REVUEYEAR+>", self.revue.year )\
+            .replace( "<+REVYNAME+>", self.revue.name )\
+            .replace( "<+REVYYEAR+>", self.revue.year )\
             .replace( "<+NACTORS+>", str(len(self.revue.actors)) )\
             .replace( "<+ACTORS+>", "&".join(
                 [ "\\actor{{{}}}".format( actor.name )
@@ -580,7 +580,7 @@ class TeX:
                     "&\\tikz{ \\draw (0,0) ",
                     " +(0,0) ".join([
                         "[" + ( "onstage" if actor.name in
-                                ( m_r.actor for m_r in material.roles )
+                                ( m_r.actor for m_r in material.stage_roles )
                                 else "offstage" )\
                         + "={{{}}}{{{}}}]"\
                             .format(
