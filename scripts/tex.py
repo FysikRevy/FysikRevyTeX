@@ -134,6 +134,7 @@ class TeX:
         self.info["props"] = []
         self.info["roles"] = []
         self.info["appearing_roles"] = set() # How many people/abbreviations that occur in the actual sketch/song.
+        self.info["instructors"] = []
 
         # List of keywords/commands to ignore, i.e. that are not relevant to extract:
         ignore_list = ["documentclass", "usepackage", "begin", "end", "maketitle", "act", "scene"]
@@ -157,7 +158,19 @@ class TeX:
                         # couldn't find a command, just ignore it
                         pass
                     else:
-                        if first_part not in ignore_list:
+                        # if they write \instructor[title] name
+                        if first_part == "instructor":
+                            opt = opt_re.search( line )
+                            title = opt[1] if opt else "Instruktør"
+                            self.info[ "instructors" ] += [
+                                Role( title[0].lower(),
+                                      eol_re.search( line )[1] if opt \
+                                        else re.search(r"^.\w+(.*)", line)[1]\
+                                               .strip(),
+                                      title
+                                     )
+                            ]
+                        elif first_part not in ignore_list:
                             # Find also the second part, i.e. whatever follows the first part (including
                             # the non-alphanumeric character):
                             end_part = re.findall(r"^.\w+(.*)", line)[0]
@@ -217,6 +230,17 @@ class TeX:
                                 name = name.replace("/", "-")
 
                             self.info["roles"].append(Role(abbreviation, name, role))
+
+                        # if they write \instructor[title]{name}
+                        elif "instructor" in command:
+                            opt = opt_re.search( line )
+                            title = opt[1] if opt else "Instruktør"
+                            self.info["instructors"] += [
+                                Role( title[0].lower(),
+                                      kw_re.search[1],
+                                      title
+                                     )
+                            ]
 
                         elif command in ("sings", "says", "does"):
                             # We count how many abbreviations actually appear in the sketch/song
@@ -472,10 +496,12 @@ class TeX:
                 for actor in self.revue.actors:
                     for role in actor.roles:
                         if role.material.title == mat.title:
+                            rolecell = "{}".format(role.abbreviation)
+                            if role in actor.instructorships:
+                                rolecell = "\\textit{{{}}}".format(rolecell)
                             if actor.name == mat.responsible:
-                                self.tex += "&\\textbf{{\\color{{DodgerBlue}}{:>3}}}".format(role.abbreviation)
-                            else:
-                                self.tex += "&{:>3}".format(role.abbreviation)
+                                rolecell = "\\textbf{{\\color{{DodgerBlue}}{}}}".format(rolecell)
+                            self.tex += "&" + rolecell
                             break
                     else:
                         self.tex += r"& \q"

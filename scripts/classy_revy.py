@@ -81,7 +81,8 @@ class Material:
             info_dict_get_or_empty_string( "scenechange" ),
             self.file_name, "scenechange"
         )
-        self.roles = info_dict["roles"]
+        self.stage_roles = info_dict["roles"]
+        self.instructors = info_dict["instructors"]
         self.responsible = info_dict_get_or_empty_string( "responsible" )
         if self.responsible not in [ role.actor for role in self.roles ]:
             print("Incorrect TeX responsible for '{}' ({})."
@@ -137,6 +138,9 @@ class Material:
         info_dict["path"] = filename
         return cls(info_dict)
 
+    @property
+    def roles( self ):
+        return self.stage_roles + self.instructors
 
     def write(self, fname, encoding='utf-8'):
         "Write to a TeX file."
@@ -157,11 +161,15 @@ class Material:
                 if role.actor == actor.name:
                     # If the actor exists in the list, we add this role to him/her:
                     actor.add_role(role)
+                    if role in self.instructors:
+                        actor.add_instructorship( role )
                     break
             else:
                 # If not, we create a new actor and update the list:
                 actor = bc.Actor(role.actor)
                 actor.add_role(role)
+                if role in self.instructors:
+                    actor.add_instructorship( role )
                 list_of_actors.append(actor)
 
     @property
