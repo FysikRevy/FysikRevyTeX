@@ -3,7 +3,12 @@
 \usepackage[utf8]{inputenc}
 \usepackage[danish]{babel}
 \usepackage{tikz}
-\usepackage[a1paper,lmargin=0.5cm,rmargin=0.5cm,bmargin=1cm]{geometry}
+\usepackage[a1paper,
+            lmargin=0.5cm,
+            rmargin=0.5cm,
+            bmargin=1cm,
+            tmargin=5cm
+           ]{geometry}
 \usepackage{longtable, array, multirow}
 
 \newlength{\mntheight}\setlength{\mntheight}{<+MNTHEIGHT+>}
@@ -31,26 +36,25 @@
   pics/titleline/.style={code={
       \draw[overlay,remember picture] (nameleft |- 0,0) +(-3pt,0) -- (3pt,0);
     }},
-  numbertitle/.style n args={2}{insert path={ %name, n_minutes
+  numbertitle/.style n args={3}{insert path={ %name, n_minutes, scenechange_mins
       +(0,0) pic {titleline} -- +(0,-3pt)
       ++(0,-#2*\mntheight ) node[anchor=east,yshift=#2*.5*\mntheight] {#1}
       pic {titleline} -- +(0,3pt)
-      ++(0,-0.16667*\mntheight)
+      ++(0,-#3*\mntheight)
     }},
-  numbertime/.style n args={2}{insert path={ %name, n_minutes
+  numbertime/.style n args={3}{insert path={ %name, n_minutes, scenechange_mins
       +(0,0) -- +(0,-3pt)
       ++(0,-#2*\mntheight ) node[anchor=west,yshift=#2*.5*\mntheight] {#1}
       -- +(0,3pt)
-      ++(0,-0.16667*\mntheight)
+      ++(0,-#3*\mntheight)
     }},
   pics/offstage/.style={code={
     \draw ++(-.2em,0) -| ++(-.2em,-#1*\mntheight) -- ++(.2em,0)
     ++(.4em,0) -| ++(.2em,#1*\mntheight) -- ++(-.2em,0);
   }},
-  offstage/.style={insert path={
+  offstage/.style 2 args={insert path={ %n_minutes, scenechange_minutes
       +(0,0) pic {offstage=#1}
-      ++(0,-0.16667*\mntheight)
-      ++(0,-#1*\mntheight)
+      ++(0,-#1*\mntheight) ++(0,-#2*\mntheight)
     }},
   pics/onstage/.style={code={
       \coordinate (bottom) at (0,-#1*\mntheight);
@@ -58,13 +62,15 @@
       \draw[ultra thick] (bottom) ++(-.1em,0) -- (-.1em,0)
       (bottom) ++(.1em,0) -- (.1em,0);
     }},
-  onstage/.style={insert path={
-      +(0,0) pic {onstage=#1} ++(0,-#1*\mntheight) ++(0,-0.16667*\mntheight)
+  onstage/.style 2 args={insert path={ %n_minutes, scenechange_minutes
+      +(0,0) pic {onstage=#1} ++(0,-#1*\mntheight) ++(0,-#2*\mntheight)
     }}
 }
 
 \title{Tidsdiagram}
 \version{<+VERSION+>}
+\revyname{<+REVYNAME+>}
+\revyyear{<+REVYYEAR+>}
 
 \begin{document}
 \maketitle
@@ -72,10 +78,11 @@
 \begin{longtable}{rlr*{<+NACTORS+>}{c}}
   \hline
   &\tikz[remember picture,overlay] \coordinate (nameleft) at (0,0);
-  &\hfill\begin{minipage}[b]{11em}
+  &\hfill\begin{minipage}[b]{12em}
     \begin{flushright}
-      \tikz \draw (0,.5\mntheight+.25em) [onstage=1]; = på scenen\hspace{1em}
-      \tikz \draw (0,.5\mntheight+.25em) [offstage=1]; = fri
+      \tikz \draw (0,.5\mntheight+.25em) pic {onstage=1}; = på scenen
+      \hspace{1em}
+      \tikz \draw (0,.5\mntheight+.25em) pic {offstage=1}; = fri
       \bigskip\newline Nummer / Person
     \end{flushright}
   \end{minipage}
