@@ -17,7 +17,7 @@ FysikRevyTeX has very few dependencies:
 
 > ...for kernefunktionerne
 
-* [Python][python] 3.10 or newer.
+* [Python][python] 3.12 or newer.
 * [PyPDF][] for the PDF magic.
 * [ordered_set][] for an ordered set.
 
