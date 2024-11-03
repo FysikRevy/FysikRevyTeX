@@ -461,17 +461,23 @@ class TeX:
         self.tex = ""
 
         insts = {}
-        for inst in ( inst for mat in self.revue.materials for inst in mat.instructors ):
-            try:
-                insts[inst.abbreviation] |= { inst.role.lower() }
-            except KeyError:
-                insts[inst.abbreviation] = { inst.role.lower() }
+        for mat in self.revue.materials:
+            for inst in mat.instructors:
+                try:
+                    if inst.role.lower() not in (
+                            name.lower() for name
+                            in insts[inst.abbreviation]
+                    ):
+                        insts[inst.abbreviation] += [ inst.role ]
+                except KeyError:
+                    insts[inst.abbreviation] = [ inst.role ]
 
-        expls = [ r"\textit{{{}}} = {}".format( k, "/".join( insts[k] ) ) for k in insts ]
-        if any({ mat.responsible for mat in self.revue.materials } \
-               & { a.name for a in self.revue.actors } ):
+        expls = [ r"\textit{{{}}} = {}".format( k, "/".join( insts[k] ) )
+                  for k in insts
+                 ]
+        if { mat.responsible for mat in self.revue.materials } \
+           & { a.name for a in self.revue.actors }:
             expls += [ r"\resp{X} = \TeX ansvarlig" + "\n" ]
-        # self.tex += "\\expcol{{{}}}\n".format( expls[0] )
 
         with open(templatefile, 'r', encoding=encoding) as f:
             template = f.read().split("<+ROLEMATRIX+>")
