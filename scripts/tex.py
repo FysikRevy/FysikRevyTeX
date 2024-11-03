@@ -460,6 +460,19 @@ class TeX:
                                         "role_overview_template.tex")
         self.tex = ""
 
+        insts = {}
+        for inst in ( inst for mat in self.revue.materials for inst in mat.instructors ):
+            try:
+                insts[inst.abbreviation] |= { inst.role.lower() }
+            except KeyError:
+                insts[inst.abbreviation] = { inst.role.lower() }
+
+        expls = [ r"\textit{{{}}} = {}".format( k, "/".join( insts[k] ) ) for k in insts ]
+        if any({ mat.responsible for mat in self.revue.materials } \
+               & { a.name for a in self.revue.actors } ):
+            expls += [ r"\resp{X} = \TeX ansvarlig" + "\n" ]
+        # self.tex += "\\expcol{{{}}}\n".format( expls[0] )
+
         with open(templatefile, 'r', encoding=encoding) as f:
             template = f.read().split("<+ROLEMATRIX+>")
         self.info[ "modification_time" ] = os.stat( templatefile ).st_mtime
@@ -472,6 +485,7 @@ class TeX:
         template[0] = template[0].replace("<+REVUENAME+>", self.revue.name)
         template[0] = template[0].replace("<+REVUEYEAR+>", self.revue.year)
         template[0] = template[0].replace("<+NACTORS+>", str(len(self.revue.actors)))
+        template[0] = template[0].replace("<+EXPS+>", "\n\n".join(expls) + "\n")
 
         # Find longest title for pretty printing:
         pad = max(len(m.title) for act in self.revue.acts for m in act.materials)
@@ -484,7 +498,7 @@ class TeX:
             for j in range(i):
                 self.tex += "|   "
             self.tex += "@{}".format(self.revue.actors[i])
-        self.tex += r"}\\" + "\n" + r"\hline"
+        self.tex += r"}\\" + "\n\\hline\n"
 
         for act in self.revue.acts:
             self.tex += r"\multicolumn{{{width}}}{{|l|}}{{\textbf{{{title}}}}}\\".format(
@@ -496,12 +510,12 @@ class TeX:
                 for actor in self.revue.actors:
                     for role in actor.roles:
                         if role.material.title == mat.title:
-                            rolecell = "{:>3}".format(role.abbreviation)
+                            rolecell = role.abbreviation
                             if role in actor.instructorships:
                                 rolecell = "\\textit{{{}}}".format(rolecell)
                             if actor.name == mat.responsible:
-                                rolecell = "\\textbf{{\\color{{DodgerBlue}}{}}}".format(rolecell)
-                            self.tex += "&" + rolecell
+                                rolecell = "\\resp{{{}}}".format(rolecell)
+                            self.tex += "&{:>3}".format( rolecell )
                             break
                     else:
                         self.tex += r"& \q"
