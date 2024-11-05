@@ -51,15 +51,44 @@ begge er angivet prioriteres filnavnet.
             return gather_mat( actor_row )
         actors = trim_end( actor_row[ title_col + 3 : ] )
 
-        desc_row = next( row_gen )
+        instr_row = next( row_gen )
+        if any (instr_row[ title_col + 1 : title_col + 2 ] ):
+            return gather_mat( instr_row )
+        if "nstruktør" in instr_row[0]:
+            instrs = trim_end( instr_row[ title_col + 3 : ] )
+            desc_row = next( row_gen )
+        else:
+            instrs = None
+            desc_row = instr_row
+            
         if any( desc_row[ title_col + 1 : title_col + 2 ] ):
             return gather_mat( desc_row )
         descs = trim_end( desc_row[ title_col + 3 : ] )
 
-        roles = [ Role( abbr, actor, desc )
-                  for abbr, actor, desc in zip_longest( abbrs, actors, descs,
-                                                        fillvalue="" )
-                 ]
+        role_info = {
+            "roles": [ Role( abbr, actor, desc )
+                       for abbr, actor, desc
+                       in zip_longest( abbrs, actors, descs, fillvalue="" )
+                      ]
+        }
+        try:
+            role_info = {
+                "instructors": [ Role( instr[0].lower(),
+                                       actor,
+                                       instr if instr != "i" else ""
+                                      )
+                                 for instr, actor
+                                 in zip_longest( instrs, actors, fillvalue="" )
+                                 if instr
+                                ],
+                "roles": [ role for role, instr
+                           in zip( role_info["roles"], instrs )
+                           if not instr or role.role
+                          ] + role_info["roles"][ len(instrs) : ]
+            }
+        except TypeError:
+            # no instrs
+            pass
         
         if fn:
             translations[ title or fn ] = {
@@ -69,15 +98,13 @@ begge er angivet prioriteres filnavnet.
                      ),
                     Material.fromfile( fn )
                 ),
-                "conf": "fn",   # or some actual signal...
-                "roles": roles
-            }
+                "conf": "fn"   # or some actual signal...
+            } | role_info
         else:
             scorechart[ title ] = {
                 "scores": [ fuzz.partial_ratio( mat.title, title )
-                            for mat in materials ],
-                "roles": roles
-            }
+                            for mat in materials ]
+            } | role_info
 
     try:
         while True:
@@ -96,32 +123,39 @@ begge er angivet prioriteres filnavnet.
     return { "translations": translations, "scorechart": scorechart }
 
 def pdf_matrix( fname, revue ):
-    if "role_names" in revue.conf["Files"] \
-       and revue.conf["Files"]["role_names"]:
-        try:
-            rolenamerows = rows_from_csv_etc(
-                revue.conf["Files"]["role_names"]
-                )
-            print("Bruger {} som rollenavneliste.\n".format(
-                revue.conf["Files"]["role_names"]
-                ))
-        except FileNotFoundError:
-            print(
-                "Kunne ikke finde filen {}, "
-                + "som er angivet i conf-filen.\n"
-                .format( revue.conf["Files"]["role_names"] )
-                )
-        else:
-            rolenamedict = {}
-            for row in rolenamerows[1:]:
-                rolenames = {}
-                for abbr, name in zip( rolenamerows[0][1:], row[1:] ):
-                    if name:
-                        rolenames[ abbr ] = name
-                rolenamedict[ row[0] ] = rolenames
+    try:
+        rolenamerows = rows_from_csv_etc(
+            revue.conf["Files"]["role_names"]
+        )
+        print("Bruger {} som rollenavneliste.\n".format(
+            revue.conf["Files"]["role_names"]
+        ))
+    except FileNotFoundError:
+        print(
+            "Kunne ikke finde filen {}, "
+            + "som er angivet i conf-filen.\n"
+               .format( revue.conf["Files"]["role_names"] )
+        )
+    except KeyError:
+        # not in conf
+        pass
+    else:
+        rolenamedict = {}
+        
+        # skip to one after title line
+        rows_iterator = ( row for row in rolenamerows )
+        while True:
+            title_row = next( rows_iterator )
+            if not title_row[0]:
+                break
 
-    role_rows = rows_from_csv_etc( fname )
-    
+        for row in rows_iterator:
+            rolenames = {}
+            for abbr, name in zip( title_row[1:], row[1:] ):
+                if name:
+                    rolenames[ abbr ] = name
+            rolenamedict[ row[0] ] = rolenames
+
     # prøv at gætte sammenhængen mellem nummer-navne i
     # rollefordelingsfilen og manuskriptfilerne, med fuzzy
     # matching, se https://pypi.org/project/thefuzz/
@@ -134,18 +168,34 @@ def pdf_matrix( fname, revue ):
         except:
             return ""
 
+    role_rows = ( row for row in rows_from_csv_etc( fname ) )
+
+    instructor_abbrs = {}
+    while True:
+        preamble_row = next( role_rows )
+        if not preamble_row[0]:
+            title_row = preamble_row
+            break
+        if "=" in preamble_row[0]:
+            abbr, desc = [ x.strip() for x in preamble_row[0].split( "=" ) ]
+            instructor_abbrs[ abbr ] = desc
+    
     scorechart = {
         row[0]: {
             "scores": [ fuzz.partial_ratio( material.title, row[0] )
                         for material in materials ],
             "roles": [ Role( abbr, name,
                              rolename_when_exists( row[0], abbr ) )
-                       for abbr, name in zip(
-                               row[1:], role_rows[0][1:]
-                       ) if abbr
-            ]
+                       for abbr, name in zip( row[1:], title_row[1:] )
+                       if abbr and abbr not in instructor_abbrs
+                      ],
+            "instructors": [ Role( abbr, name, instructor_abbrs[ abbr ] )
+                             for abbr, name in zip( row[1:], title_row[1:] )
+                             if abbr and abbr in instructor_abbrs
+                            ] \
+                           if instructor_abbrs else None
         }
-        for row in role_rows[1:]
+        for row in role_rows
     }
     translations = {}
     return { "translations": translations, "scorechart": scorechart }

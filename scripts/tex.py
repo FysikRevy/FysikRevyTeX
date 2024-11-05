@@ -7,6 +7,7 @@ from time import localtime, strftime
 from pathlib import Path
 from functools import cmp_to_key
 from datetime import timedelta
+from ordered_set import OrderedSet
 
 from base_classes import Prop, Role
 import converters as cv
@@ -29,6 +30,11 @@ eol_re = re.compile(r"^.*\](.*).*$")
 
 # RegEx til at splitte tekst-lister, fx ( a, b + c og d ):
 text_list_re = re.compile(r'\W*(?:\+|\\&|[oO]g|,)\W*')
+
+def sublist(lst1, lst2):
+   ls1 = [element for element in lst1 if element in lst2]
+   ls2 = [element for element in lst2 if element in lst1]
+   return OrderedSet( ls1 ) == OrderedSet( ls2 )
 
 def extract_multiple_lines(lines, line_number, start_delimiter='{', end_delimiter='}'):
     "Extract the whole string of a command that spans multiple lines (e.g. \\scene)."
@@ -237,7 +243,7 @@ class TeX:
                             title = opt[1] if opt else "Instruktør"
                             self.info["instructors"] += [
                                 Role( title[0].lower(),
-                                      kw_re.search[1],
+                                      kw_re.search( line )[1],
                                       title
                                      )
                             ]
@@ -256,7 +262,7 @@ class TeX:
                             self.info[command] = keyword
         return self
 
-    def update_roles( self, roles ):
+    def update_roles( self, roles, instructors=None ):
         """Change the 'roles' section of the tex file to reflect the input list.
         Used for propagating role assignment."""
 
@@ -296,46 +302,104 @@ class TeX:
         # roller, som kun er i den nye, sorteret efter forkortelse
         self.info['roles'] = r + sorted( roles, key=lambda x: x.abbreviation )
 
-        # find rollesektionen
-        for n,whole_line in enumerate( self.info['tex'] ):
-            line = whole_line.strip()
+        environment_line_keyword = [
+            ( n,
+              ( kw_re.search(line)
+                or ( None, extract_multiple_lines( self.info["tex"], n ) )
+               )[1]
+             ) for n,line
 
-            #copy-paste fra parse ^^:
-            if len(line) > 0 and line[0] == '\\' and '{' in line:
-                command = re.findall(r"\w+", line)[0] # Extract (the first) command using regex
-                
-                if command in [ "begin", "end" ]:
-                    try:
-                        keyword = kw_re.findall(line)[0] # Extract (the first) keyword using regex
-                    except IndexError:
-                        # There is no ending '}' in the line.
-                        keyword = extract_multiple_lines(self.info['tex'], n)
+            in enumerate( line for line in (
+                line.strip() for line in self.info["tex"]
+            ))
 
-                    # end copy-paste
-                    # find linjerne, hvor rollelisten starter og slutter
-                    if keyword == "roles":
-                        if command == "begin":
-                            start_line = n
-                        if command == "end":
-                            end_line = n
-                        try: 
-                            if start_line and end_line:
-                                break
-                        except NameError:
-                            # ikke endnu
-                            pass
-        else:
-            # der var ikke nogen rolleliste
-            # (eller kun en halv, hvilket er værre)
-            print("\033[0;31m Failed!\033[0m  No roles list in {}".format(self.fname))
+            if ( line
+                 and line[0] == "\\"
+                 and "{" in line
+                 and ( cmd_re.search( line ) or ( None, "" ) )[1] \
+                     in ( "begin", "end" )
+                )
+        ]
+        
+        try:
+            roles_start, roles_end = [
+                n for n,keyword in environment_line_keyword
+                if keyword == "roles"
+            ]
+        except ValueError:
+            print("\033[0;31m Failed!\033[0m  "
+                  "I was confused by the roles list in {}".format(self.fname)
+                  )
             return
 
-        indent = re.search( r"^\s*", self.info['tex'][start_line + 1] ).group(0)
-        
-        role_lines = [ indent + "\\role{{{0.abbreviation}}}[{0.actor}] {0.role}\n".format( role )
-                       for role in self.info['roles']
-        ]
-        self.info['tex'] = self.info['tex'][:start_line + 1] + role_lines + self.info['tex'][end_line:]
+        indent = re.search( r"^\s*", self.info['tex'][roles_start + 1] )\
+                   .group(0)
+                            
+        insertions_reversed = [( roles_start, roles_end, [
+            indent + "\\role{{{0.abbreviation}}}[{0.actor}] {0.role}\n"\
+                      .format( role )
+            for role in self.info['roles']
+        ])]
+
+        try:
+            instr_lines = [
+                indent + "\\instructor{} {}\n".format(
+                    "[{}]".format( instr.role ) if instr.role else "",
+                    instr.actor
+                ) for instr in instructors
+            ]
+        except TypeError:
+            # instructors was Null, skip
+            pass
+        else:
+            try:
+                instr_start, instr_end = [
+                    n for n,keyword in environment_line_keyword
+                    if keyword == "instructors"
+                ]
+            
+            except ValueError:
+                if any( keyword == "instructors" for n,keyword
+                        in environment_line_keyword
+                       ):
+                    print("\033[0;31m Failed!\033[0m  "
+                          "I was confused by the instructors list in {}"\
+                          .format(self.fname)
+                          )
+                    return
+
+                # no instructors environment; make one just after roles
+                instr_start = roles_end
+                instr_end = roles_end + 1
+                if instr_lines:
+                    instr_lines = [ "\\begin{instructors}\n" ]\
+                        + instr_lines\
+                        + [ "\\end{instructors}\n" ]
+            else:
+               if not instr_lines:
+                  # delete the environment
+                  instr_start -= 1
+                  instr_end += 1
+
+            if not sublist(
+                    [ roles_start, roles_end ],
+                    sorted([ roles_start, roles_end, instr_start, instr_end ])
+            ):
+                print("\033[0;31m Failed!\033[0m  "
+                      "roles and/or instructors delimiters out of order in "
+                      "{}".format(self.fname)
+                      )
+                return
+
+            insertions_reversed = \
+                [( instr_start, instr_end, instr_lines )] + insertions_reversed
+            if instr_start < roles_start:
+                insertions_reversed = reversed( insertions_reversed )
+
+        for start, end, lines in insertions_reversed:
+            self.info["tex"] = self.info["tex"][ : start + 1]\
+                + lines\
+                + self.info["tex"][ end : ]
 
         return self
         
