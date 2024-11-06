@@ -1,3 +1,8 @@
+# kan udelades:
+i = Instruktør;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+k = Koreograf;
+
+# kan *ikke* udelades:
 ;Spange;Puk;Holmgaard;Josephine;Andrea;Rune Kut;Sylvester;Julie;Sune;Damgaard;August;Kristine;Frederik;Anna;Kildholt;Albert;Martin;Arentoft;Magnus;Tobias;Helen;Sofie;Oliver;Kevin;Thea;Victoria;Mads;Rune Prune;Helene
 FysikRevy;;;;B;S;;;S;;;;;;S;S;;;;;;;;;;;;;;
 Kvant er svært;;;;;;;;;;;;;;;;;;S2;;;;;;;;;;S1;
@@ -10,10 +15,10 @@ Faktor 10 atomfysik;;;;;;;A;;;;;;;;;;;;;;;;;;;;;B;
 Goblesketchen;;;;;;O;;;F;;;;;;;;G;;;M;;B;;;;;;;
 Funding er mit naavn;;F1;;;;;;;;M;;;;;;;;;F2;;;;;F3;;;;;
 Tilbage til studiet;;;;S1;S3;;;D3;;D2;;;;S2;;;;;;;;;;;D1;;;;
-Drom drom drom drom;;;;;Kor;;;;;;;;;;S2;Kor;;S1;;Kor;;;;;;;;;
+Drom drom drom drom;;;;;Kor;;;;;;;;;;S2;Kor;;S1;;Kor;;;;;;;;k;
 NBB bilen;;;S;;;;;;;;S;;;;;;;;;;;;;;;;;;
 Det kom fra speciale sumpen;;;;;;S;;;;;;;F;;;;;;;;;;;;;;;;
-Nu koder jeg der hjemme;S1;;;;;;;;;;;;;;;;;;;S3;;;S2;;;;;;
+Nu koder jeg der hjemme;S1;;;;;;;;;;;;;;;;;;;S3;;;S2;;;;;k;
 Den glemte præfaktor;;;;;;;;;;;;;;;;;S2;;;;;;S1;;;;;;
 Fysiker i jobcenter;;F;;;;;;;;;;;;;;;S;;;;;;;;;;;;
 JP forlæsning;;;;;;;B;;;;A;;;;;JP;;;;;;;;;;;;;
@@ -25,12 +30,12 @@ Boligfællesskabet;FILM;;;;;;;;B;;;;;;;;;;D;;;;;;;;;;
 Skål;;;;;;;;;;D1;;S2;;;;D3;;D2;;;;;;;;S1;;;
 Vejledningsmøde;;;;;;;;;;;;;;;S;;;;;;;;;;V;;;;
 Kvantehydromikromakrooptokernekaos;;;;;;;;;;D1;;;;S1;;;;;;;;;;D2;;S2;;;
-Fornøje DIKU-rik;;D4;;;;D5;;;;D1;;;;;;;D2;;S;;;;D3;;;;;;
+Fornøje DIKU-rik;;D4;;;;D5;;;;D1;;;;;;;D2;;S;;;;D3;;;;;k;
 Ligestilling stoledans;;;;;;;;;;;;;M;;;;;;;;;;;;;;;;HP
 Så Mødes Vi Igen: En fri fortolkning af Sergio Leone og Kosmologi i form af en sketch;;;;;;;;;;C0;;;;;;C1;;;;;;;;;;;;;
 Kvantefitness;;P3;;;;;;;P2;;;;;;;;P4;;;AS;;;;;;P6;;P1;P5
 Et helte kvad;;;;;;;;D1;;;;;D6;;;;;;;;S1;D4;D2;D5;;;S2;D3;
 Lockdownunderholdning;;;;;S2;;;S3;;;;;;S1;;;;;;;;;;;;;;;
-Align align;;;;;LAB ansvarlig;;S1;;;;;;;;;;;;;;;;S2;;;;;;
+Align align;;;;;LAB ansvarlig;;S1;;;;;;;;;;;;;;;;S2;;;;;k;
 Fuck Lort;;;;;S1;;;;;;D1;;;;S2;;;;;;;D2;;;;;;;
-Statfyseksamen;;;R;;;;;;;;;;;;;;;;;;;;;;;;;;
+Statfyseksamen;;;R;;;;;;;;;;;;;;;i;;;;;;;;;;;

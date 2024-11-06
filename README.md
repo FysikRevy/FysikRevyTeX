@@ -144,7 +144,7 @@ Creates the act outline (a "table of contents") for the revue. Look for `aktover
 > Indekssiden bliver automatisk sat, når `create.py` bliver kaldt uden kommandoer, eller med `manus`. Det kan slås fra i `revytex.conf`.
 
 * **`python create.py roles`**<br />
-Creates the role/sketch matrix. Look for `rolleliste.pdf` in the `pdf/` directory.
+Creates the role/sketch matrix. Look for `rolleliste.pdf` in the `pdf/` directory. Instruktører (oplistet i `instructors`-miljøet) markeres med det første bogstav i deres instruktørrolle (eller _i_) som minuskel og kursiv, hvis de ikke har andre roller.
 
 * **`python create.py contacts`**<br />
 Creates the contacts list. Look for `kontaktliste.pdf` in the `pdf/` directory.
@@ -168,8 +168,15 @@ Create a sign-up form for all sketches and songs. Look for `rolletilmelding.pdf`
 
 > Herfra kommer der et skift i stil, hvilket den opmærksomme læser (eller læseren, som kan bruge `git blame`) måske kan gætte følger med et skift i forfatter.
 
+* **`python create.py timesheet`**  
+TeX et diagram, der viser hvornår revy(s/t)er er på og af scenen, og i hvor lang tid. Det er beregnet til at være en hjælp til at lægge ninjaplan ud fra.
+
+    **En finte omkring instruktører:** Instruktører, koreografer o.lign. er i udgangspunktet ikke på scenen, selvom deres nummer er på. Så de burde ikke markeres i diagrammet, som om de er på scenen. En løsning er, at flytte dem til `instructors`-miljøet (det har været der hele tiden, kig i manualen til [ucph-revy][]). Det er (nu) også muligt at sætte folk i instruktørroller via den automatiske rollefordeling, som er beskrevet længere nede.
+
 * **`python create.py roles-sheet`**  
 Lav en `.csv` (bedst til Excel) eller `.tsv` (til Google Sheets) –fil med en oversigt over rollerne i manuskriptets TeX-filer, som inkluderer en ordtælling for hver rolle. Ændringer i den her fil kan tilbageføres til TeX-filerne med kommandoen `role-distribution` længere nede.
+
+    Der er også en ordtælling af replikker og sangtekster for hver rolle, som måske kan bruges som input i rollefordelingen. Og hvis rollefordelingen kan slutte med en fil i det her format, så har den TeX-ansvarlige sparet en opgave ;)
 
     Filnavnet sættes enten i `conf`–filen, eller med valgmuligheden `--roles-sheet-fn=<filnavn>`.
 
@@ -226,7 +233,7 @@ Skriv output fra LaTeX til terminalen (v for "verbose"). Scriptet paralleliserer
 * **`python create.py --single-thread` (eller `-s`)**  
 Slå parallelkørsel af TeX-ning og pdf-sammensætning fra. Hvis det giver problemer.
 
-* **`python create.py --max-parallel=`_\<antal\>_**  
+* **`python create.py --max-parallel=`〈_antal_〉**  
 Sæt antallet af processer, som python må starte til at køre opgaver parallelt, hvis du tror, du ved bedre end standarderne. (Der kan måske være fornuft i at sætte tallet højere end standarden, som er antallet af os-kerner, siden vores opgaver skal læse og skrive en del. Alt afhængigt af forholdet mellem hastigheden af din disk og cpu. Her er plads til eksperimentering, hvis du tror, du ved bedre end standarderne.) Det samme som `-s`, hvis sat til 1.
 
 #### Omfattende omskrivninger
@@ -241,7 +248,13 @@ Skriv roller ind i alle TeX-filer. Rollefordelingsfiler kan have flere forskelli
     Formaterne er:
     
     * **`pdf-matrix`**: basically det samme format som rollefordeligsoversigten, som bliver typesat i manuskriptet, men som en `.csv`–fil. Eksempelfilen `roller.csv` er inkluderet her i repo'et.
+    
+        De første par linjer i eksempelfilen udpeger hvilke forkortelser svarer til instruktørroller. De kan udelades, hvis det ikke er relevant (i så fald vil rollefordelingsprocessen ikke røre ved `instructors`-miljøet i .tex-filerne, hvis de indeholder et). Hvis de er med, _skal_ de forekomme før navnelinjen (vi går ud fra, at navnelinjen er den første linje, der starter med et tomt felt), de skal have formatet 〈_fork._〉` = `〈_instruktørrolle_〉. Hver forekomst skal stå i det første felt i sin række (eller skal være efterfulgt af mindst ét separatortegn, hvis du skriver rå tekst).
+        
+        Det er ikke muligt, at tildele samme revy(s)t flere roller i samme nummer i det her format.
     * **`overview`**: formatet, som bliver udlæst af kommandoen `roles-sheet`. Dog er overskrift-kolonnen valgfri. Rækkerne med ordantal bliver ignoreret, og behøver ikke at være der. Kolonnen med aktnavne ignoreres, og behøver ikke at udfyldes. For hvert nummer kan filnavn eller titel udelades. Hvis begge er angivet prioriteres filnavnet.
+    
+        Rækken, der hedder `"Instruktørroller"` kan udelades. For hvert nummer, hvor der ikke findes sådan en række, bliver `instructors`-miljøet ikke ændret, hvis det findes i den tilsvarende .tex-fil. Hvis en revy(s)t er blevet tildelt en forkortelse og en instruktørrolle, bliver forkortelsen ignoreret, og dén revyst vil kun få instruktørrollen skrevet ind. Hvis en revy(s)t er blevet tildelt både en instruktørrolle og en rollebeskrivelse, bliver begge skrevet ind i .tex-filen.
     
     Den her funktion afhænger af [thefuzz][] til at forbinde titler, som ikke er helt ens. Den afhængighed er også skrevet ind i `dist-requirements.txt`.
 
