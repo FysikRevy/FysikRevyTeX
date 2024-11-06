@@ -149,7 +149,8 @@ Navn i fordelingsfil:              => Skh.: Titel på gæt:
             translations[ best ] = {
                 "material": materials[ maxindex ],
                 "conf": scorechart[ best ][ "scores" ][ maxindex ],
-                "roles": scorechart[ best ][ "roles" ]
+                "roles": scorechart[ best ][ "roles" ],
+                "instructors": scorechart[ best ].get( "instructors", None )
             }
             for name in scorechart:
                 scorechart[ name ][ "scores" ][ maxindex ] = 0
@@ -167,7 +168,9 @@ Navn i fordelingsfil:              => Skh.: Titel på gæt:
                 ))
             
         return { translations[t]["material"].title:
-                 translations[t][ "roles" ]
+                 [ translations[t][ "roles" ],
+                   translations[t].get( "instructors", None )
+                  ]
                  for t in translations }
 
     warn = """
@@ -183,7 +186,7 @@ det nu, du skal springe fra.
         if tex.info[ "title" ] in translations:
             # beklager, Mario. Din fuktion bor i en anden fil
             tex.update_roles(
-                translations[ tex.info[ "title" ]]
+                *(translations[ tex.info[ "title" ]])
             )
         return tex
 

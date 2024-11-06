@@ -329,12 +329,22 @@ class Revue:
                            if abbr not in wordcount_overlap ],
                     ['Skuespiller','','','']\
                      + [ role.actor for role in mat.roles ],
+                    ['Instruktørrolle','','','']\
+                     + [ role.role or "i" if role in mat.instructors else ""
+                         for role in mat.roles
+                        ],
                     ['Beskrivelse','','','']\
-                     + [ role.role for role in mat.roles ],
+                     + [ role.role if role in mat.stage_roles else ""
+                         for role in mat.roles
+                        ],
                     ['Ord i sange','','','']\
                      + [ role.sung for role in mat.roles ]\
-                     + [ mat.wordcounts[ abbr ]["sung"] for abbr in mat.wordcounts
-                         if abbr not in wordcount_overlap ],
+                     + [ mat.wordcounts[ abbr ]["sung"]
+                         for abbr in mat.wordcounts
+                         if not any( abbr in o and abbr != o
+                                     for o in wordcount_overlap
+                                    )
+                        ],
                     ['Ord i replikker','','','']\
                      + [ role.spoken for role in mat.roles ]\
                      + [ mat.wordcounts[ abbr ]["spoken"] for abbr in mat.wordcounts

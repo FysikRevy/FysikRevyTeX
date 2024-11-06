@@ -12,7 +12,7 @@ def split_outside_quotes( seperator, line ):
                 [ f.replace('"','') for f in fields[ a : b + 1 ] ]
             ) ]\
             + fields[ b + 1 : ]
-    return [ field.strip() for field in fields ]
+    return [ field.strip(' "\n') for field in fields ]
 
 def rows_from_csv_etc( fname, encoding = "utf-8" ):
     """assume the seperator is the most common char in a file out of

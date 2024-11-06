@@ -5,10 +5,11 @@
 \usepackage{graphicx}
 \usepackage[usenames,dvipsnames,svgnames,table]{xcolor}
 \usepackage[a3paper]{geometry}
+\usepackage{calc}
 
 \frenchspacing
 
-\title{\large{Rolleoversigt}}
+\title{Rolleoversigt}
 
 \version{<+VERSION+>}
 \revyname{<+REVUENAME+>}
@@ -24,6 +25,8 @@
 
 \renewcommand{\baselinestretch}{1.0}
 \newcommand{\q}{\rule{5.5mm}{0mm}}
+\newcommand{\resp}[1]{\textbf{\color{DodgerBlue}{#1}}}
+\newcommand{\expcol}[1]{\multicolumn{2}{|r|}{#1}}
 
 \newcommand{\actor}[1]{\rotatebox{90}{#1\ }}
 \def\makeatactive{\catcode`\@=\active}
@@ -42,8 +45,14 @@
 \begin{tabular}{|rl|*{<+NACTORS+>}{@{}c@{}|}}
 \hline
 
-&Sketch / Navn
+\multicolumn{2}{|r|}{\begin{minipage}[b]{\widthof{Nummer / Skuespiller}}
+    \let\@\relax
+    \begin{flushright}
+      <+EXPS+>
 
+      \bigskip Nummer / Skuespiller
+    \end{flushright}
+  \end{minipage}}
 <+ROLEMATRIX+>
 
 \end{tabular}
