@@ -144,7 +144,8 @@ Creates the act outline (a "table of contents") for the revue. Look for `aktover
 > Indekssiden bliver automatisk sat, når `create.py` bliver kaldt uden kommandoer, eller med `manus`. Det kan slås fra i `revytex.conf`.
 
 * **`python create.py roles`**<br />
-Creates the role/sketch matrix. Look for `rolleliste.pdf` in the `pdf/` directory. Instruktører (oplistet i `instructors`-miljøet) markeres med det første bogstav i deres instruktørrolle (eller _i_) som minuskel og kursiv, hvis de ikke har andre roller.
+Creates the role/sketch matrix. Look for `rolleliste.pdf` in the `pdf/` directory.
+> Instruktører (oplistet i `instructors`-miljøet) markeres med det første bogstav i deres instruktørrolle (eller _i_) som minuskel og kursiv, hvis de ikke har andre roller.
 
 * **`python create.py contacts`**<br />
 Creates the contacts list. Look for `kontaktliste.pdf` in the `pdf/` directory.
