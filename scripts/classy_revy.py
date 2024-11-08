@@ -11,7 +11,9 @@ from converters import Converter
 from config import configuration as conf
 from pathlib import Path
 
-re_m_s = re.compile( r"([\d,.]+) +minut[^\W\d_]*,?(?: *(\d+) +sekund)?" )
+re_m_s = [ re.compile( r"(\d[\d,.: ]*)[^\d]*" + word )
+           for word in [ "inut", "ekund" ]
+          ]
 
 def extract_duration( eta, fn, property="eta" ):
     brok_if_absent_in = [ "eta" ]
@@ -31,19 +33,18 @@ def extract_duration( eta, fn, property="eta" ):
         try:
             return timedelta( minutes=int(m), seconds=int(s) )
         except ValueError:
-            return brok()
+            pass
     if "." in e or "," in e:
         try:
             return timedelta( minutes=float( e.replace( ",","." ) ) )
         except ValueError:
             pass
-    fromwords = re_m_s.match( e )
-    if fromwords:
-        # print( fromwords.groups() )
-        m,s = fromwords.groups()
-        if "." in m or "," in m:
-            return extract_duration( m, fn, property )
-        return timedelta( minutes=int( m ), seconds=(int(s) if s else 0) )
+    m,s = [ (r.search( e ) or [ None, "0" ])[1] for r in re_m_s ]
+    for t in m,s:
+        if "." in t or "," in t or ":" in t:
+            return extract_duration( t, fn, property )
+    if not m == s == "0":
+        return timedelta( minutes=int( m ), seconds=int(s) )
     try:
         return timedelta( minutes=int( e ) )
     except ValueError:
