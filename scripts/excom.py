@@ -52,7 +52,7 @@ class TeXProcess():
          except TypeError:
             jobname = texfile.stem
 
-         self.job_name = [ "-job-name=" ]
+         self.job_name = [ "-jobname=" ]
          try:
             self.job_name[0] += str(
                jobdir.relative_to( self.exec_dir ) / jobname
