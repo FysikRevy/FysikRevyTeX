@@ -29,11 +29,11 @@ FysikRevyTeX has been tested on Linux with Python 3.3 and PyPDF2 v. 1.20.
 
 > En del af FysikRevyTeX's ekstra funktioner har knopskudt ekstra afhængigheder, som der nu er indført `requirements.txt`–filer til at holde styr på. Hvis du kun vil installere det absolut nødvendige kan du give kommandoen
 
-    $ pip -r requirements.txt
+    $ pip install -r requirements.txt
 
 > i FysikRevyTeX's rodbibliotek. Hvis du vil installere afhængighederne til alle funktionerne, så er kommandoen
 
-    $ pip -r all-requirements.txt
+    $ pip install -r all-requirements.txt
 
 > Afhængigherne til de individuelle funktioner bliver beskrevet, når det bliver relevant herunder.
 
