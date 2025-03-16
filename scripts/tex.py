@@ -143,7 +143,7 @@ class TeX:
         self.info["instructors"] = []
 
         # List of keywords/commands to ignore, i.e. that are not relevant to extract:
-        ignore_list = ["documentclass", "usepackage", "begin", "end", "maketitle", "act", "scene"]
+        ignore_list = ["documentclass", "usepackage", "begin", "end", "maketitle", "act", "scene", "#"]
 
         with open(fname, mode='r', encoding=encoding) as f:
             lines = f.readlines()
@@ -159,7 +159,8 @@ class TeX:
                     # If it is a strange line, extract the first part (everything until the
                     # first non-alphanumeric character that isn't '\':
                     try:
-                        first_part = re.findall(r"\w+", line)[0]
+                        # Hashtags are ignored also
+                        first_part = re.findall(r"[#\w]+", line)[0]
                     except IndexError:
                         # couldn't find a command, just ignore it
                         pass
@@ -179,7 +180,7 @@ class TeX:
                         elif first_part not in ignore_list:
                             # Find also the second part, i.e. whatever follows the first part (including
                             # the non-alphanumeric character):
-                            end_part = re.findall(r"^.\w+(.*)", line)[0]
+                            end_part = re.findall(r"^.[#\w]+(.*)", line)[0]
                             
                             # Store the info:
                             self.info[first_part] = end_part
@@ -559,7 +560,7 @@ class TeX:
 
         # Find longest title for pretty printing:
         pad = max(len(m.title) for act in self.revue.acts for m in act.materials)
-        pad += 2
+        pad += 2 # Whitespace before and after
 
         self.tex += r"\actors{"
         for i in range(len(self.revue.actors)):
