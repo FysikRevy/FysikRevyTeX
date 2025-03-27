@@ -71,7 +71,7 @@ class Material:
         self.title = info_dict_get_or_empty_string( "title" )
         try:
             self.shorttitle = info_dict["shorttitle"]
-        except IndexError:
+        except KeyError:
             #keep using the setter below
             pass
 
@@ -151,10 +151,10 @@ class Material:
             return self._shorttitle
         except AttributeError:
             return self.title
-    @shorttitle.set
+    @shorttitle.setter
     def shorttitle( self, shorttitle ):
         self._shorttitle = shorttitle
-    @shorttitle.del
+    @shorttitle.deleter
     def shorttitle( self ):
         del self._shorttitle
 

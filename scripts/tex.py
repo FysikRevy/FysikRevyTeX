@@ -259,10 +259,10 @@ class TeX:
                                )
                             self.info["appearing_roles"].update( abbreviations )
                         else:
-                           if command == "title":
+                            if command == "title":
                               try:
                                  self.info["shorttitle"] = \
-                                    re_opt.findall( line )[0]
+                                    opt_re.findall( line )[0]
                               except IndexError:
                                  # no optional argument to \title
                                  pass
