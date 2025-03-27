@@ -69,6 +69,12 @@ class Material:
         path, self.file_name = os.path.split(self.path)
 
         self.title = info_dict_get_or_empty_string( "title" )
+        try:
+            self.shorttitle = info_dict["shorttitle"]
+        except IndexError:
+            #keep using the setter below
+            pass
+
         self.status = info_dict_get_or_empty_string( "status" )
         if not self.status:
             print("No status on '{}' is set.".format(self.title))
@@ -138,6 +144,19 @@ class Material:
         info_dict = tex.info
         info_dict["path"] = filename
         return cls(info_dict)
+
+    @property
+    def shorttitle( self ):
+        try:
+            return self._shorttitle
+        except AttributeError:
+            return self.title
+    @shorttitle.set
+    def shorttitle( self, shorttitle ):
+        self._shorttitle = shorttitle
+    @shorttitle.del
+    def shorttitle( self ):
+        del self._shorttitle
 
     @property
     def roles( self ):
