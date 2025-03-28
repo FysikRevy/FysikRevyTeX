@@ -205,10 +205,7 @@ class Act:
         self.materials.append(material)
 
     def is_empty(self):
-        if len(self.materials) == 0:
-            return True
-        else:
-            return False
+        return len(self.materials) == 0
 
     def get_length(self):
         t = 0
