@@ -270,16 +270,10 @@ class Revue:
                             act = Act()
                             act.add_name(line)
                     else:
-                        try:
-                            m = Material.fromfile(line)
-                            for role in m.roles:
-                                role.add_material(m)
-                            act.add_material(m)
-                        except NameError as err:
-                            print("You need a name for the act before any TeX file is listed.")
-                            print("Problematic file: {}".format(filename))
-                            print("Error raised: {}".format(err))
-                            raise err
+                        m = Material.fromfile(line)
+                        for role in m.roles:
+                            role.add_material(m)
+                        act.add_material(m)
 
             # Store the very last act:
             acts.append(act)
