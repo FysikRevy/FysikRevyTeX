@@ -155,7 +155,11 @@ class TeX:
         self.info["instructors"] = []
 
         # List of keywords/commands to ignore, i.e. that are not relevant to extract:
-        ignore_list = ["documentclass", "usepackage", "begin", "end", "maketitle", "act", "scene", "#"]
+        ignore_list = ["documentclass", "usepackage", "maketitle", "act", "scene", "#"]
+        # some fool (it's me...) has given \role different meanings in
+        # the roles environment and the setch/song environments. thus,
+        # we have to keep track of what environment we're in now.
+        environment_stack = []
 
         # Store the file content:
         self.info['tex'] = lines
@@ -233,6 +237,18 @@ class TeX:
                             self.info["props"].append(Prop(prop, responsible, description))
 
                         elif command == "role":
+                            # are we in a roles environment?
+                            # we should never be in a song or sketch environment
+                            # *inside* a roles environment, but we'll check to
+                            # be sure
+                            try:
+                               role_level = environment_stack.index( "roles" )
+                            except ValueError:
+                               continue
+                            if "song" in environment_stack[ :role_level ]\
+                                or "sketch" in environment_stack[ :role_level ]:
+                               continue
+
                             abbreviation = keyword
                             try:
                                 name = opt_re.findall(line)[0]
@@ -276,6 +292,12 @@ class TeX:
                                 if not abbr.strip().lower() == "alle"
                                )
                             self.info["appearing_roles"].update( abbreviations )
+
+                        elif command == "begin":
+                           environment_stack.insert( 0, keyword )
+                        elif command == "end":
+                           environment_stack.remove( keyword )
+
                         else:
                             if command == "title":
                               try:
