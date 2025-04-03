@@ -319,8 +319,9 @@ class Revue:
     def fromfile(cls, filename, encoding='utf-8'):
         "Takes a plan file and extracts the information for each material."
 
+        filename = Path( filename )
         # Hust modifikations-tid for aktoversigten
-        modification_time = os.stat( filename ).st_mtime
+        modification_time = filename.stat().st_mtime
 
         re_tex_cmd = re.compile( r"\\\w+[[{]" )
         acts = []
@@ -333,11 +334,11 @@ class Revue:
                     continue
                 s = None
                 if line[-4:] == '.tex':
-                    s = Material.fromfile( line )
+                    s = Material.fromfile( filename.parent / line )
                 elif re_tex_cmd.search( line ):
                     # stub scene
                     s = Scene.fromstring( line,
-                                          Path( filename ).name,
+                                          filename.name,
                                           modification_time
                                          )
                 if s:
@@ -361,6 +362,7 @@ class Revue:
 
         r = cls(acts)
         r.modification_time = modification_time
+        r.planfile = filename
         return r
 
     def __repr__(self):

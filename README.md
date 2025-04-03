@@ -152,6 +152,9 @@ The possible arguments are described below, and more than one argument can be sp
 * **`python create.py`** or **`python create.py manus`**<br />
 Creates the whole manuscript. Look for `manuskript.pdf` in the `pdf/` directory.
 
+> * **`python cretate.py `_‹planfil›_**  
+> Det er muligt, at angive en anden planfil end `aktoversigt.plan` som et af argumenterne. Det skal være en fil, som allerede eksisterer.
+
 * **`python create.py aktoversigt`**<br />
 Creates the act outline (a "table of contents") for the revue. Look for `aktoversigt.pdf` in the `pdf/` directory.
 

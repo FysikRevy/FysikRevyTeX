@@ -561,6 +561,14 @@ class TeX:
                                                 self.revue.modification_time
                                                )
 
+        try:
+           template = template.replace(
+              "<+COMMA-PLANFILE+>",
+              ",planfile={}".format( self.revue.planfile)
+           )
+        except AttributeError:
+           pass
+
         template = template.replace("<+VERSION+>",
                                     self.conf["Frontpage"]["version"]\
                                     .split(",")[-1]\

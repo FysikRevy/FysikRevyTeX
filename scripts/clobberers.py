@@ -227,6 +227,8 @@ class UniformYear( ClobberInstructions ):
     doc = "Skriv revyåret (fra revyconf.tex) ind i .tex-filerne"
     clobber = valueReplace( "revyyear", "revue year" )
 
+# --- Hjælpefunktioner til klasse-valgmuligheder:
+
 def find_documentclass( tex_info_tex ):
     return next(
         ( (i,line) for i,line in enumerate( tex_info_tex )
@@ -330,10 +332,13 @@ Se også enforce-class.
 
     def clobber( tex, revue ):
         tex = enable_classopts( "thumbindex", tex )
-        planpath = os.path.relpath(
-            os.path.abspath( "aktoversigt.plan" ),
-            start = os.path.dirname( tex.fullpath )
-        ).replace( "\\", "/" )
+        try:
+            planpath = Path( revue.planfile ).resolve()
+        except AttributeError:
+            planpath = Path( "aktoversigt.plan" ).resolve()
+        planpath = planpath\
+            .relative_to( Path( tex.fullpath ).parent )\
+            .as_posix()
         try:
             i,line = find_documentclass( tex.info['tex'] )
         except StopIteration:
@@ -366,7 +371,7 @@ class OverleafCompat( ClobberInstructions ):
     doc = "Strukturér, så registermærkninger også virker på Overleaf."
     warn = """
 Husk, at køre med overleaf-compat igen, hvis du skriver om
-i atkoversigt.plan.
+i din planfil.
 """
 
     def clobber( tex, revue ):
@@ -393,7 +398,7 @@ i atkoversigt.plan.
         for first in dir_firsts:
             if os.path.samefile( first, tex.fullpath ):
               out = []
-              with open("aktoversigt.plan", "r", encoding="utf-8") as plan:
+              with open(revue.planfile, "r", encoding="utf-8") as plan:
                     for line in plan.readlines():
                         if line.endswith( ".tex\n" ):
                             out += ( os.path.relpath(

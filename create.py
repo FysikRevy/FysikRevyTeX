@@ -194,13 +194,13 @@ def google_forms_signup():
     from google_forms_signup import create_new_form
     create_new_form( revue )
 
-def plan_file():
+def plan_file( planfile = "aktoversigt.plan" ):
     try:
-        sf.create_plan_file( "aktoversigt.plan" )
+        sf.create_plan_file( planfile )
     except FileExistsError:
         pass
     else:
-        print("Plan file 'aktoversigt.plan' created successfully."),
+        print("Plan file '{}' created successfully.".format( planfile )),
         print("You probably want to rearrange its contents "\
               "before continuing.\n"),
         raise ExitOnStopArgument( plan )
@@ -240,7 +240,7 @@ def write_help(*args):
     for toggle in toggles:
         print("[{}] ".format(toggle.cmd), end="")
     print( "[--<tilvalg>=<ny indstilling>] ", end="" )
-    print("[ <kommandoer> ]")
+    print("[ <kommandoer> ] [ <planfil> ]")
     print("""
 Som standard, hvis der ikke gives nogen kommandoer, lader scriptet som om
 det har fået kommandoerne
@@ -251,6 +251,8 @@ det har fået kommandoerne
 Kommandoen "manus" er det samme som at give kommandoerne
    """, end="")
     print( " ".join( manus_commands ), end="" )
+    print( "\nHvis ingen planfil angives, går scriptet ud fra, at den hedder")
+    print( "\n  aktoversigt.plan" )
     print( """
 
 Hele listen med kommandoer er:
@@ -496,6 +498,7 @@ manus_commands = (tuple() if conf.getboolean("TeXing","skip thumbindex")
             
 def create( *arguments ):
 
+    planfile = Path( "aktoversigt.plan" )
     known_flags = [ cmd.flag for cmd in all_possible_args if cmd.flag ]
     wrong_args, wrong_flags = [], []
     for arg in arguments:
@@ -505,6 +508,15 @@ def create( *arguments ):
              list( clobber_steps ) + [ a.cmd for a in all_possible_args ]:
             wrong_args += [ arg ]
     if wrong_args:
+        for wrong in wrong_args:
+            if Path( wrong ).exists():
+                planfile = Path( wrong )
+        try:
+            wrong_args.remove( str( planfile ) )
+        except ValueError:
+            # der var ikke nogen
+            pass
+    if wrong_args:        # still...
         print( "These arguments were not recognized, and will be ignored:" )
         print( "    ", end="" )
         for wrong in wrong_args:
@@ -552,9 +564,9 @@ def create( *arguments ):
 
     global revue                # TODO: EVIL! :hiss:
     try:
-        revue = cr.Revue.fromfile("aktoversigt.plan")
+        revue = cr.Revue.fromfile( planfile )
     except FileNotFoundError:
-        plan_file()
+        plan_file( planfile )
     path = revue.conf["Paths"]
     conv = cv.Converter()
 
