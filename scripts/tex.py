@@ -259,6 +259,13 @@ class TeX:
                                )
                             self.info["appearing_roles"].update( abbreviations )
                         else:
+                            if command == "title":
+                              try:
+                                 self.info["shorttitle"] = \
+                                    opt_re.findall( line )[0]
+                              except IndexError:
+                                 # no optional argument to \title
+                                 pass
                             # Store information:
                             self.info[command] = keyword
         return self
@@ -559,7 +566,9 @@ class TeX:
         template[0] = template[0].replace("<+EXPS+>", "\n\n".join(expls) + "\n")
 
         # Find longest title for pretty printing:
-        pad = max(len(m.title) for act in self.revue.acts for m in act.materials)
+        pad = max(len(m.shorttitle) for act in self.revue.acts \
+                  for m in act.materials
+                  )
         pad += 2 # Whitespace before and after
 
         self.tex += r"\actors{"
@@ -577,7 +586,7 @@ class TeX:
             self.tex += "\n\\hline\n"
 
             for m, mat in enumerate(act.materials):
-                self.tex += "\n{:2d} & {:<{width}}".format(m+1, mat.title, width=pad)
+                self.tex += "\n{:2d} & {:<{width}}".format(m+1, mat.shorttitle, width=pad)
                 for actor in self.revue.actors:
                     for role in actor.roles:
                         if role.material.title == mat.title:

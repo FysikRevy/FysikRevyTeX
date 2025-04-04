@@ -145,6 +145,8 @@ Creates the act outline (a "table of contents") for the revue. Look for `aktover
 
 * **`python create.py roles`**<br />
 Creates the role/sketch matrix. Look for `rolleliste.pdf` in the `pdf/` directory.
+> Rollelisten bruger den korte titel, hvis angivet for et nummer, som er tilgængelig fra [ucph-revy][] version 1.2.0 og frem.
+
 > Instruktører (oplistet i `instructors`-miljøet) markeres med det første bogstav i deres instruktørrolle (eller _i_) som minuskel og kursiv, hvis de ikke har andre roller.
 
 * **`python create.py contacts`**<br />
