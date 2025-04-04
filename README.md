@@ -115,7 +115,9 @@ An example of a plan file could be:
 #### 3. Edit configuration (optional)
 FysikRevyTeX can be configured by editing the file `revytex.conf`. This is also where properties of the front page can be changed.
 
-> Listen over tidligere versioner på forsiden er en ny idé, og valgfri. I `.conf`-filen kan værdien `version` enten være en kommasepareret liste over versionsnavne, hvoraf den sidste bliver brugt som den nuværende version, eller kun den nuværende version, hvor listen over tidligere versioner så slet ikke bliver sat på forsiden.
+> Scriptet kan finde på at brokke sig, hvis du har en `revytex.conf`–fil til en gammel version. Der ligger en skabelon, med alle de påkrævede indstillinger, under `templates`.
+
+> I `.conf`-filen kan værdien `version` enten være en kommasepareret liste over versionsnavne, hvoraf den sidste bliver brugt som den nuværende version, eller kun den nuværende version, hvor listen over tidligere versioner så slet ikke bliver sat på forsiden.
 
 #### 4. Rejoice!
 You should have a fully working FysikRevyTeX system! See **Day-to-day usage** for instructions on how to use FysikRevyTeX.
@@ -127,7 +129,7 @@ You should have a fully working FysikRevyTeX system! See **Day-to-day usage** fo
 
     $ python create.py -h
 
->#### 5. Installer PdfSizeOpt
+>#### 5. Installer PdfSizeOpt (valgfri)
 > [PdfSizeOpt][] er et (python 2) program, som kan optimere størrelsen på en PDF--fil. En manuskript--fil, som er limet sammen af mange, mindre, PDF--filer kan ofte reduceres i størrelse med en faktor 10.
 >
 > For gøre det, start med at installere PdfSizeOpt, som instueret på deres GitHub--side. Læg så den fulde sti til PdfSizeOpts eksekverbare fil (`.exe`--filen under Windows) i en miljøvariabel i `create.py`s miljø, som hedder `PDFSIZEOPT`.
