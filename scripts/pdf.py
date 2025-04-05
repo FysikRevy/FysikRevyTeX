@@ -71,6 +71,9 @@ på en verso-side i dobbeltsidet layout.
                         verso
                     ),)
 
+                if type( f ).__name__ == "Scene":
+                    return tuple()
+
                 if type( f ).__name__ == "Revue":
                     return (
                         gen_arg_list(( m, bookmark, verso ))[0]

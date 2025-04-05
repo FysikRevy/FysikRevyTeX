@@ -13,7 +13,6 @@ class Role:
         self.actor = name.strip()
         self.role = role.strip()
         self.material = None
-        self.material_path = ""
 
     def __repr__(self):
         return "{} ({}): {}".format(self.role, self.abbreviation, self.actor)
@@ -21,10 +20,6 @@ class Role:
     def add_material(self, material):
         "Add the Material of the sketch/song the role appears in."
         self.material = material
-
-    def add_material_path(self, path):
-        "Add the path of the sketch/song the role appears in."
-        self.material_path = path
 
 class Actor:
     def __init__(self, name):

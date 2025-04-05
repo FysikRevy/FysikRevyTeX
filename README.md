@@ -80,6 +80,7 @@ An example of a plan file could be:
 
     Akt 1
     sketches/intro.tex
+    # langt sceneskift...
     sange/kondoeffekt.tex
 
     Akt 2
@@ -92,6 +93,24 @@ An example of a plan file could be:
     Ekstranumre
     sange/oppenheimerstyle.tex
 
+> Linjer, som starter med `#` bliver ignoreret som kommentarer (virker med registerindekset siden [ucph-revy][] version 1.2.0).
+
+> Det er også muligt at lave stub-punkter i aktoversigten, som ikke hører til en `.tex`–fil, ved at skrive metadata–tex–kommandoer direkte i `.plan`–filen. De kommer så med i aktoversigten og rollelisten, måske, afhængigt af indstillingerne i `revytex.comf`, og i tidsdiagrammet. Kommandoerne skal stå på en enkelt linje!
+>
+> Man kunne for eksempel tilføje til *Akt 2* i eksemplet:
+
+    Akt 2
+    sange/kvanter_i_maaneskin.tex
+    \title{Tag mig med til Brorfelde}\eta{3:48}\melody{Kim Larsen: ``Tag mig med''}\status{Knasende}\revyname{Matematikrevyen}\revyyear{2008}\category{Fisk}
+    sketches/find_holger.tex
+
+> Læg mærke til, at `\category` ikke er en af [ucph-revy][]'s kommandoer. Det her script kategoriserer materiale efter navnet på den mappe, de ligger i. Når der ikke er nogen fil, at lægge i en mappe, måtte vi finde på et alternativ.
+>
+> Husk også, at det ikke er påkrævet, at medtage alle kommandoerne.
+>
+> Det kræver igen minimum [ucph-revy][] version 1.2.0 for at virke med registerindekset.
+>
+> En sidebemærkning: [ucph-revy][] er ikke forberedt på, at der kan optræde andre kommandoer, end dem i eksemplet, i planfilen. Det er kun relevant, hvis `thumbindex` er slået til, og [ucph-revy][] kan forberedes på, at der forekommer andre kommandoer, med kommandoen `\planfileAllowMacros`. Det burde i pincippet være muligt, at lægge et rolleafsnit ind i en stub i planfilen, så længe det gøres uden linjeskift. Men det er ikke testet!
 
 #### 3. Edit configuration (optional)
 FysikRevyTeX can be configured by editing the file `revytex.conf`. This is also where properties of the front page can be changed.
@@ -136,6 +155,8 @@ Creates the whole manuscript. Look for `manuskript.pdf` in the `pdf/` directory.
 * **`python create.py aktoversigt`**<br />
 Creates the act outline (a "table of contents") for the revue. Look for `aktoversigt.pdf` in the `pdf/` directory.
 
+> Der er indstillinger i `revytex.conf` til hvorvidt stubbe i planfilen skal medtages, og for hvilke kategorier, numre skal oplistes med nummer i stedet for navnet på deres kategori.
+
 > * **`python create.py thumbindex`**<br />
 > Bygger indekssiden til registermærkningerne. Husk, at hvis manuskripsider skal have registermærkninger, så skal dokumentklassen kaldes med argumenterne `thumbindex` og `planfile=`_[stil til planfilen]_. Fx:
 
@@ -148,6 +169,8 @@ Creates the role/sketch matrix. Look for `rolleliste.pdf` in the `pdf/` director
 > Rollelisten bruger den korte titel, hvis angivet for et nummer, som er tilgængelig fra [ucph-revy][] version 1.2.0 og frem.
 
 > Instruktører (oplistet i `instructors`-miljøet) markeres med det første bogstav i deres instruktørrolle (eller _i_) som minuskel og kursiv, hvis de ikke har andre roller.
+
+> Der findes indstillinger i `revytex.conf` til at fjerne numre, som ikke har nogen roller defineret, eller filtrere på kategorier.
 
 * **`python create.py contacts`**<br />
 Creates the contacts list. Look for `kontaktliste.pdf` in the `pdf/` directory.

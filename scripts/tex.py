@@ -3,6 +3,7 @@ import os
 import re
 import sys
 import locale
+import re
 from time import localtime, strftime
 from pathlib import Path
 from functools import cmp_to_key
@@ -136,6 +137,17 @@ class TeX:
         self.fullpath = os.path.abspath( fname )
         self.info['modification_time'] = os.stat(fname).st_mtime
 
+        with open(fname, mode='r', encoding=encoding) as f:
+            lines = f.readlines()
+
+        return self.parse_lines( lines )
+
+    def parse_lines( self, lines ):
+        "Parse a list of lines of TeX, and extract the info_dict"
+
+        if isinstance( lines, str ):
+           raise TypeError("TeX.parse_lines only accepts an iterable of strings, not a single string.")
+
         # Create lists for other stuff:
         self.info["props"] = []
         self.info["roles"] = []
@@ -145,11 +157,17 @@ class TeX:
         # List of keywords/commands to ignore, i.e. that are not relevant to extract:
         ignore_list = ["documentclass", "usepackage", "begin", "end", "maketitle", "act", "scene", "#"]
 
-        with open(fname, mode='r', encoding=encoding) as f:
-            lines = f.readlines()
-
         # Store the file content:
         self.info['tex'] = lines
+        # TODO: so, should the class TeX hold complete, TeX-able
+        # documents, or just collections of TeX code? There's no way
+        # of composing them into TeX-able documents if the latter. But
+        # there's no way of validating TeX-ability if the
+        # former. We'll either throw away valid documents, or hold
+        # invalid ones.
+        # Clearly, this represents a failure of the class system abstraction.
+        # Who wants do do a major refactoring to fix that?
+        # Anyone?
 
         for n,line in enumerate(lines):
             line = line.strip() # Remove leading and trailing whitespaces
@@ -462,11 +480,22 @@ class TeX:
         for act in self.revue.acts:
             self.tex += ("\\section*{{{act_title} \\small{{\\textbf{{"
                         "\\emph{{(Tidsestimat: {act_length} minutter)}}"
-                        "}}}}}}\n".format(act_title=act.name, act_length=act.get_length()))
+                        "}}}}}}\n".format(act_title=act.name, act_length=act.get_length(conf["TeXing"].getboolean("stubs in outline"))))
             self.tex += "\\begin{enumerate}\n"
 
-            for m in act.materials:
-                self.tex += "\t\\item \\textbf{{{title}}} ".format(title = m.title)
+            ms = act.scenes \
+               if conf["TeXing"].getboolean("stubs in outline") \
+               else act.materials
+            for m in ms:
+                self.tex += "\t\\item"
+
+                numcat = re.split( r"\s*,\s*",
+                                   conf["TeXing"]["numbered categories"]
+                                  )
+                if numcat != [""] and not m.category in numcat:
+                   self.tex += "[\\textsc{{{}}}]".format( m.category.lower() )
+
+                self.tex += " \\textbf{{{title}}} ".format(title = m.title)
 
                 if m.melody:
                     self.tex += "({melody}) ".format(melody=m.melody)
@@ -474,10 +503,13 @@ class TeX:
                 self.tex += """\\emph{{{revue_name} {revue_year}}}\\\\
         \t\t\\small{{Status: {status}, \\emph{{Tidsestimat: {length} minutter}}}}\n""".format(revue_name=m.revue, revue_year=m.year, status=m.status, length=m.length)
 
-                self.info[ "modification_time" ] = max(
-                    self.info[ "modification_time" ],
-                    m.modification_time
-                )
+                try:
+                   self.info[ "modification_time" ] = max(
+                      self.info[ "modification_time" ],
+                      m.modification_time
+                   )
+                except AttributeError:
+                   pass
 
             self.tex += "\\end{enumerate}\n\n"
 
@@ -532,8 +564,34 @@ class TeX:
                                         "role_overview_template.tex")
         self.tex = ""
 
+        include = re.split( r"\s*,\s*",
+                            conf["Role overview"]["include categories"]
+                           )
+        exclude = re.split( r"\s*,\s*",
+                            conf["Role overview"]["exclude categories"]
+                           )
+
+        def include_scene( scene ):
+           if scene.category in exclude:
+              return False
+           if not scene.roles \
+                 and not scene.category in include \
+                 and conf.getboolean("Role overview",
+                                     "skip scenes with no roles"):
+              print( "Role overview: skipped scene with no roles: {}"\
+                     .format( scene.title ) )
+              return False
+           return True
+
+        roles_acts = [
+           { "name": a.name,
+             "scenes": [ s for s in a.scenes if include_scene( s ) ]
+            } for a in self.revue.acts
+        ]
+        roles_scenes = [ s for a in roles_acts for s in a["scenes"] ]
+
         insts = {}
-        for mat in self.revue.materials:
+        for mat in roles_scenes:
             for inst in mat.instructors:
                 try:
                     if inst.role.lower() not in (
@@ -547,7 +605,7 @@ class TeX:
         expls = [ r"\textit{{{}}} = {}".format( k, "/".join( insts[k] ) )
                   for k in insts
                  ]
-        if { mat.responsible for mat in self.revue.materials } \
+        if { mat.responsible for mat in roles_scenes } \
            & { a.name for a in self.revue.actors }:
             expls += [ r"\resp{X} = \TeX ansvarlig" + "\n" ]
 
@@ -580,12 +638,12 @@ class TeX:
             self.tex += "@{}".format(self.revue.actors[i])
         self.tex += r"}\\" + "\n\\hline\n"
 
-        for act in self.revue.acts:
+        for act in roles_acts:
             self.tex += r"\multicolumn{{{width}}}{{|l|}}{{\textbf{{{title}}}}}\\".format(
-                    width=len(self.revue.actors)+2, title=act.name)
+                    width=len(self.revue.actors)+2, title=act["name"])
             self.tex += "\n\\hline\n"
 
-            for m, mat in enumerate(act.materials):
+            for m, mat in enumerate( act["scenes"] ):
                 self.tex += "\n{:2d} & {:<{width}}".format(m+1, mat.shorttitle, width=pad)
                 for actor in self.revue.actors:
                     for role in actor.roles:
@@ -636,7 +694,9 @@ class TeX:
                   for actor in self.revue.actors
                  ]
             ))\
-            .replace( "<+MNTHEIGHT+>", self.conf["TeXing"]["timesheet scale"] )\
+            .replace( "<+MNTHEIGHT+>",
+                      self.conf["Timesheet"]["timesheet scale"]
+                     )\
             .split( "<+NUMBERS+>" )
         self.info["tex"] = [ front ]
 
@@ -645,28 +705,27 @@ class TeX:
                 "\\hline&&{{\\bfseries {}}}\\\\\\hline".format( act.name ),
                 "\\timescale[y]{{{}}}"\
                 .format(
-                    # int( len( act.materials ) * 1.5 ),
-                    ( sum( (m.duration for m in act.materials), timedelta() )
-                      + timedelta( seconds=10 ) * ( len( act.materials ) - 1 )
+                    ( sum( (m.duration for m in act.scenes), timedelta() )
+                      + timedelta( seconds=10 ) * ( len( act.scenes ) - 1 )
                      ) // timedelta( minutes=1 )
 
                 ),
                 "&\\tikz{\\draw ",
                 " +(0,0) ".join([
                     "[numbertime={{{}:{:0>2}}}{{{}}}{{{}}}]".format(
-                        material.duration // timedelta( minutes=1 ),
-                        material.duration.seconds % 60,
-                        material.duration / timedelta( minutes=1 ),
-                        material.scenechange / timedelta( minutes=1 ) or \
+                        scene.duration // timedelta( minutes=1 ),
+                        scene.duration.seconds % 60,
+                        scene.duration / timedelta( minutes=1 ),
+                        scene.scenechange / timedelta( minutes=1 ) or \
                           conf["TeXing"]["default scene change"]
-                    ) for material in act.materials ]),
+                    ) for scene in act.scenes ]),
                 ";}& \\tikz[remember picture]{ \\draw ",
                 " +(0,0) ".join([ "[numbertitle={{{}}}{{{}}}{{{}}}]".format(
-                    material.title,
-                    material.duration / timedelta( minutes=1 ),
-                    material.scenechange / timedelta( minutes=1 ) or \
+                    scene.title,
+                    scene.duration / timedelta( minutes=1 ),
+                    scene.scenechange / timedelta( minutes=1 ) or \
                       conf["TeXing"]["default scene change"]
-                ) for material in act.materials ]),
+                ) for scene in act.scenes ]),
                 ";}"
             ]
             for actor in self.revue.actors:
@@ -674,32 +733,21 @@ class TeX:
                     "&\\tikz{ \\draw (0,0) ",
                     " +(0,0) ".join([
                         "[" + ( "onstage" if actor.name in
-                                ( m_r.actor for m_r in material.stage_roles )
+                                ( m_r.actor for m_r in scene.stage_roles )
                                 else "offstage" )\
                         + "={{{}}}{{{}}}]"\
                             .format(
-                                material.duration / timedelta( minutes=1 ),
-                                material.scenechange / timedelta( minutes=1 ) \
-                                  or conf["TeXing"]["default scene change"]
+                                scene.duration / timedelta( minutes=1 ),
+                                scene.scenechange / timedelta( minutes=1 ) \
+                                  or conf["Timesheet"]["default scene change"]
                             )
-                        for material in act.materials
+                        for scene in act.scenes
                     ]),
                     ";}"
                 ]
             self.info["tex"] += [ "\\\\" ]
 
         self.info["tex"] += [ back ]
-
-        # self.info["tex"] = [ front ]\
-        #     + [ line for act in self.revue.acts
-        #         for line in
-        #         [ "\\hline&{{\\bfseries {}}}\\\\\\hline".format( act.name ) ]\
-        #         + [ #"\\\\[.1666em]
-        #             "".join(
-        #                 [ hoik( material ) for material in act.materials ]
-        #         ) ]
-        #        ]\
-        #     + [ back ]
 
         return self
 
