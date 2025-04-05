@@ -293,7 +293,7 @@ Skriv roller ind i alle TeX-filer. Rollefordelingsfiler kan have flere forskelli
 Giv valgmuligheden `twoside` til `\documentclass` i alle `.tex`-filer. Bør bruges sammen med valgmuligheden i `revytex.conf`, som indsætter blanke bagsider, men den er sat til som standard. Den her indstilling er god i samspil med registermærkerne, se `enable-thumbtabs` længere nede.
 
 * **`python create.py enforce-class`**  
-Sætter `\documentclass{ucph-revy}` i alle `.tex`-filer. Fjerner samtidig `\usepackage{revy}`. `ucph-revy` burde være tilægnelig i en opdateret LaTeX-distribution. Ellers er den på [CTAN][ucph-revy], og der er også inkluderet en kopi af `.cls`-filen i `templates`-mappen.
+Sætter `\documentclass{ucph-revy}` i alle `.tex`-filer. Fjerner samtidig `\usepackage{revy}`. `ucph-revy` burde være tilægnelig i en opdateret LaTeX-distribution. Ellers er den på [CTAN][ucph-revy].
 
 * **`python create.py enable-thumbtabs`**  
 Sætter indstillingerne, som får registermærkerne sat i de individuelle materialefiler. Det indebærer, at give valgmulighederne `thumbindex` og `planfile=../aktoversigt.plan` (eller hvad den rigtige relative sti nu er) til dokumentklassen i hver `.tex`-fil. Det gør kun noget, hvis dokumentklassen er `ucph-revy`, se `enforce-class` herover.
