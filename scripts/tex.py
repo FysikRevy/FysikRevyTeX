@@ -296,7 +296,11 @@ class TeX:
                         elif command == "begin":
                            environment_stack.insert( 0, keyword )
                         elif command == "end":
-                           environment_stack.remove( keyword )
+                           try:
+                              environment_stack.remove( keyword )
+                           except ValueError:
+                              # the tex is pobably wrong. someone else's problem
+                              pass
 
                         else:
                             if command == "title":
@@ -512,7 +516,7 @@ class TeX:
                 self.tex += "\t\\item"
 
                 numcat = re.split( r"\s*,\s*",
-                                   conf["TeXing"]["numbered categories"]
+                                   conf["Outline"]["numbered categories"]
                                   )
                 if numcat != [""] and not m.category in numcat:
                    self.tex += "[\\textsc{{{}}}]".format( m.category.lower() )
