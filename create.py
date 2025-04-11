@@ -563,10 +563,9 @@ def create( *arguments ):
             flag.action()
 
     global revue                # TODO: EVIL! :hiss:
-    try:
-        revue = cr.Revue.fromfile( planfile )
-    except FileNotFoundError:
+    if not planfile.exists():
         plan_file( planfile )
+    revue = cr.Revue.fromfile( planfile )
     path = revue.conf["Paths"]
     conv = cv.Converter()
 
