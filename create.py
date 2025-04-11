@@ -509,7 +509,8 @@ def create( *arguments ):
             wrong_args += [ arg ]
     if wrong_args:
         for wrong in wrong_args:
-            if Path( wrong ).exists():
+            prop_path = Path( wrong )
+            if prop_path.exists() or prop_path.suffix == ".plan":
                 planfile = Path( wrong )
         try:
             wrong_args.remove( str( planfile ) )
