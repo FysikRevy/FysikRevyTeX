@@ -263,9 +263,7 @@ Flag:""")
     print("\nTilvalg:")
     for toggle in toggles + set_toggles:
         print("  {:<18} {}".format(toggle.cmd, toggle.doc))
-    print("\nKommandoer:", end="")
-    print("""
-  manus              TeX'er kun det overordnede manus (se ovenfor)""")
+    print("\nKommandoer:")
     for action in actions:
         print("  {:<18} {}".format(action.cmd, action.doc))
     print("\nKommandoer, der skriver om i TeX-filerne:")
@@ -299,6 +297,11 @@ plan = Argument( "plan",
                 )
 
 actions = [ plan ] + [
+    Argument( "manus",
+              "TeX'er kun det overordnede manus (se ovenfor)",
+              lambda: None      # handled specially in create()
+             ),
+    
     Argument( "aktoversigt",
               "TeX en ny aktoversigt",
               lambda: tex_queue.append(( TeX( revue ).create_act_outline(),
