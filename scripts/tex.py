@@ -32,6 +32,50 @@ eol_re = re.compile(r"^.*\](.*).*$")
 # RegEx til at splitte tekst-lister, fx ( a, b + c og d ):
 text_list_re = re.compile(r'\W*(?:\+|\\&|[oO]g|,)\W*')
 
+class NinjaParser:
+   n_args = 3
+   re_to_open = re.compile(r"^[^{]*")
+   def __init__(self):
+      self.parsing = False
+      self.hardness = ""
+      self.name = ""
+      self.args = []
+      self.inBracket = False
+      self.ninjasBracket = 0
+
+   def parseline(self, line, into):
+      if not self.parsing and not "\\ninjaer" in line:
+         return
+
+      self.parsing = True
+      if not self.inBracket:
+         line = re_to_open.sub( "", line )
+         if line[0] == "{":
+            line = line[1:]
+            self.args += [""]
+            self.inBracket = True
+         else:
+            return
+
+      bracketDepth = i = 0
+      while bracketDepth >= 0 and i < len( line ):
+         match line[i]:
+            case "{":
+               bracketDepth += 1
+            case "}":
+               bracketDepth -= 1
+         i += 1
+      self.args[-1] += line[:i]
+      if not i == len( line ):
+         self.inBracket = False
+         if len( self.args ) >= self.n_args:
+            return self.write_args( into )
+         
+      return self.parse( line[i:], into )
+
+   def write_args( self, into ):
+      parsedMove
+
 def sublist(lst1, lst2):
    ls1 = [element for element in lst1 if element in lst2]
    ls2 = [element for element in lst2 if element in lst1]
