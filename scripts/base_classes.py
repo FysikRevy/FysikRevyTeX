@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 class Prop:
     def __init__(self, prop, responsible, description):
         self.prop = prop
@@ -35,3 +37,10 @@ class Actor:
 
     def add_instructorship( self, instructorship ):
         self.instructorships.append( instructorship )
+
+@dataclass
+class NinjaProp:
+    hardness: str
+    name: str
+    drawing: str
+    moves: list[ str ]

@@ -10,7 +10,7 @@ from functools import cmp_to_key
 from datetime import timedelta
 from ordered_set import OrderedSet
 
-from base_classes import Prop, Role
+from base_classes import Prop, Role, NinjaProp
 import converters as cv
 from helpers import rows_from_csv_etc
 # from google_sheets import dump_everything, with_compare
@@ -33,48 +33,99 @@ eol_re = re.compile(r"^.*\](.*).*$")
 text_list_re = re.compile(r'\W*(?:\+|\\&|[oO]g|,)\W*')
 
 class NinjaParser:
-   n_args = 3
+   n_args = 4
    re_to_open = re.compile(r"^[^{]*")
    def __init__(self):
       self.parsing = False
+      self.parsingProp = False
       self.hardness = ""
       self.name = ""
       self.args = []
-      self.inBracket = False
-      self.ninjasBracket = 0
+      self.bracketDepth = 0
 
    def parseline(self, line, into):
-      if not self.parsing and not "\\ninjaer" in line:
+      print( line )
+      if not self.parsing:
+         if not "\\ninjas" in line:
+            return
+
+         self.parsing = True
+         line = re.sub( r"^.*?\\ninjas\s*{", "", line)
+
+      if not self.parsingProp:
+         if not "\\prop" in line:
+            self.parsing = not re.match( r"^\s*}", line )
+            return
+         line = re.sub( r"^.*?\\prop\s*{", "", line )
+         self.parsingProp = True
+         self.args += [""]
+         self.bracketDepth = 1
+         
+      if re.match( r"\s*$", line ):
          return
 
-      self.parsing = True
-      if not self.inBracket:
-         line = re_to_open.sub( "", line )
+      if self.bracketDepth <= 0:
+         line = self.re_to_open.sub( "", line )
          if line[0] == "{":
             line = line[1:]
-            self.args += [""]
-            self.inBracket = True
+            self.bracketDepth = 1
          else:
             return
 
-      bracketDepth = i = 0
-      while bracketDepth >= 0 and i < len( line ):
+      i = 0
+      while self.bracketDepth > 0 and i < len( line ):
          match line[i]:
             case "{":
-               bracketDepth += 1
+               self.bracketDepth += 1
             case "}":
-               bracketDepth -= 1
+               self.bracketDepth -= 1
          i += 1
-      self.args[-1] += line[:i]
-      if not i == len( line ):
-         self.inBracket = False
+      self.args[-1] += line[: i-1 ]
+      print( self.bracketDepth, i, self.args )
+      if not i == len( line ) or line != "" and line[i-1] == "}":
+         self.args[-1] = self.args[-1].replace("\n", "")
          if len( self.args ) >= self.n_args:
-            return self.write_args( into )
+            self.write_args( into )
+            self.parsingProp = False
+            self.args = []
+         else:
+            self.args += ['']
          
-      return self.parse( line[i:], into )
+      return self.parseline( line[i:], into )
+
+   def parseMove( self, move ):
+      parsedMoves = []
+      while "\\move" in move:
+         parsedMove = []
+         move = re.sub( r"^.*?\\move", "", move )
+         while len( parsedMove ) < 3:
+            move = re.sub( r"^.*?{", "", move )
+            bracketDepth = i = 0
+            while bracketDepth >= 0 and i < len( move ):
+               match move[i]:
+                  case "{":
+                     bracketDepth += 1
+                  case "}":
+                     bracketDepth -= 1
+               i += 1
+            parsedMove += [ move[:i-1] ]
+            move = move[i:]
+         parsedMoves += [ parsedMove ]
+
+      for parsedMove in parsedMoves:
+         print( parsedMove[2] )
+         parsedMove[2] = re.findall( r"\\ninja{([^}]*)}", parsedMove[2] )
+
+      return parsedMoves
 
    def write_args( self, into ):
-      parsedMove
+      ninjaProp = NinjaProp(
+         hardness = self.args[0],
+         name = self.args[1],
+         drawing = self.args[2],
+         moves = self.parseMove( self.args[3] )
+      )
+      into["ninjaprops"] += [ ninjaProp ]
 
 def sublist(lst1, lst2):
    ls1 = [element for element in lst1 if element in lst2]
@@ -191,12 +242,14 @@ class TeX:
 
         if isinstance( lines, str ):
            raise TypeError("TeX.parse_lines only accepts an iterable of strings, not a single string.")
+        ninjaParser = NinjaParser()
 
         # Create lists for other stuff:
         self.info["props"] = []
         self.info["roles"] = []
         self.info["appearing_roles"] = set() # How many people/abbreviations that occur in the actual sketch/song.
         self.info["instructors"] = []
+        self.info["ninjaprops"] = []
 
         # List of keywords/commands to ignore, i.e. that are not relevant to extract:
         ignore_list = ["documentclass", "usepackage", "maketitle", "act", "scene", "#"]
@@ -219,7 +272,9 @@ class TeX:
 
         for n,line in enumerate(lines):
             line = line.strip() # Remove leading and trailing whitespaces
-            if len(line) > 0 and line[0] == '\\': # only look for a command
+            if ninjaParser.parsing:
+               ninjaParser.parseline( line, self.info )
+            elif len(line) > 0 and line[0] == '\\': # only look for a command
 
                 if "{" not in line:
                     # If it is a strange line, extract the first part (everything until the
@@ -260,6 +315,9 @@ class TeX:
                         command = ""
 
                     if command not in ignore_list:
+                        if command == "ninjas":
+                           ninjaParser.parseline( line, self.info )
+                           continue
 
                         try:
                             keyword = kw_re.findall(line)[0].strip() # Extract (the first) keyword using regex
