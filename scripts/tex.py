@@ -80,10 +80,11 @@ class NinjaParser:
             case "}":
                self.bracketDepth -= 1
          i += 1
-      self.args[-1] += line[: i-1 ]
+      self.args[-1] += line[: i ]
       print( self.bracketDepth, i, self.args )
-      if not i == len( line ) or line != "" and line[i-1] == "}":
-         self.args[-1] = self.args[-1].replace("\n", "")
+      if self.bracketDepth <= 0:
+         # remove newlines and the closing bracket
+         self.args[-1] = self.args[-1].replace("\n", "")[:-1]
          if len( self.args ) >= self.n_args:
             self.write_args( into )
             self.parsingProp = False
