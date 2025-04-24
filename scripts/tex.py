@@ -1117,3 +1117,61 @@ class TeX:
         )
 
         return self
+
+    def create_ninja_plan(self, templatefile='templates/ninja_plan_template.tex', encoding='utf-8'):
+
+       self.tex = ""
+
+       dsts = { move.destination
+                for prop in self.revue.ninjaprops
+                for move in prop
+               }
+       base_times = { "Før", "Under", "Efter" }
+       with open(templatefile, 'r', encoding=encoding) as f:
+          template = ( f
+                       .read()
+                       .replace( "<+VERSION+>",
+                                 self.conf["Frontpage"]["version"].
+                                 split(",")[-1].strip()
+                                )
+                       .replace( "<+REVUENAME+>",
+                                 self.conf["Revue info"]["revue name"]
+                                )
+                       .replace( "<+REVUEYEAR+>",
+                                 self.conf["Revue info"]["revue year"]
+                                )
+                       .replace( "<+NACTORS+>", len( self.revue.actors ) )
+                       .replace( "<+NDSTS+>", len( dsts ))
+                       .split( "<+TABLE+>" )
+                      )
+       self.info[ "modification_time" ] = os.stat( templatefile ).st_mtime
+       self.tex += template[0] \
+          + "&&&&" \
+          + "&".join( "\\actor{{{}}}".format( dst ) for dst in dsts ) \
+          + "&" \
+          + "&".join( "\\actor{{{}}}".format( actor.name )
+                      for actor in self.revue.actors
+                     ) \
+          + "\\\\\\toprule\n"
+       for an, act in enumerate( revue.acts ):
+          for mn, mat in enumerate( act.materials ):
+             self.tex += \
+                "\\multicolumn{{{}}}{{l}}{{({}:{}) {{\\bfseries {}.{} {}}}}}"
+                 .format( 4 + len( dsts ) + len( self.revue.actors ),
+                          mat.duration // timedelta( minutes=1 ),
+                          mat.duration % timedelta( minutes=1 ),
+                          an,
+                          mn,
+                          mat.title
+                         )\
+                + "\\\\"
+             for time in basetimes | { move.time
+                                       for prop in mat.ninjaprops
+                                       for move in prop.moves
+                                      }:
+                self.tex += "&&\\sffamily " + time + "&" \
+                   + "\\\\&&&".join([
+                      move.name + "&"\
+                      +         # something about dsts
+                      
+                      
