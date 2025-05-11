@@ -158,19 +158,6 @@ class Scene:
         del self._shorttitle
 
     @property
-    def shorttitle( self ):
-        try:
-            return self._shorttitle
-        except AttributeError:
-            return self.title
-    @shorttitle.setter
-    def shorttitle( self, shorttitle ):
-        self._shorttitle = shorttitle
-    @shorttitle.deleter
-    def shorttitle( self ):
-        del self._shorttitle
-
-    @property
     def roles( self ):
         return self.stage_roles + self.instructors
 
