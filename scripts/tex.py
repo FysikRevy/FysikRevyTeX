@@ -8,6 +8,9 @@ from time import localtime, strftime
 from pathlib import Path
 from functools import cmp_to_key
 from datetime import timedelta
+from copy import copy
+from itertools import cycle
+
 from ordered_set import OrderedSet
 
 from base_classes import Prop, Role, NinjaProp
@@ -44,7 +47,6 @@ class NinjaParser:
       self.bracketDepth = 0
 
    def parseline(self, line, into):
-      print( line )
       if not self.parsing:
          if not "\\ninjas" in line:
             return
@@ -81,7 +83,6 @@ class NinjaParser:
                self.bracketDepth -= 1
          i += 1
       self.args[-1] += line[: i ]
-      print( self.bracketDepth, i, self.args )
       if self.bracketDepth <= 0:
          # remove newlines and the closing bracket
          self.args[-1] = self.args[-1].replace("\n", "")[:-1]
@@ -114,7 +115,7 @@ class NinjaParser:
          parsedMoves += [ parsedMove ]
 
       for parsedMove in parsedMoves:
-         print( parsedMove[2] )
+         # print( parsedMove[2] )
          parsedMove[2] = re.findall( r"\\ninja{([^}]*)}", parsedMove[2] )
 
       return parsedMoves
@@ -243,7 +244,7 @@ class TeX:
 
         if isinstance( lines, str ):
            raise TypeError("TeX.parse_lines only accepts an iterable of strings, not a single string.")
-        ninjaParser = NinjaParser()
+        ninja_parser = NinjaParser()
 
         # Create lists for other stuff:
         self.info["props"] = []
@@ -273,8 +274,8 @@ class TeX:
 
         for n,line in enumerate(lines):
             line = line.strip() # Remove leading and trailing whitespaces
-            if ninjaParser.parsing:
-               ninjaParser.parseline( line, self.info )
+            if ninja_parser.parsing:
+               ninja_parser.parseline( line, self.info )
             elif len(line) > 0 and line[0] == '\\': # only look for a command
 
                 if "{" not in line:
@@ -317,7 +318,7 @@ class TeX:
 
                     if command not in ignore_list:
                         if command == "ninjas":
-                           ninjaParser.parseline( line, self.info )
+                           ninja_parser.parseline( line, self.info )
                            continue
 
                         try:
@@ -1123,10 +1124,13 @@ class TeX:
        self.tex = ""
 
        dsts = { move.destination
-                for prop in self.revue.ninjaprops
-                for move in prop
+                for scene in self.revue.scenes
+                for prop in scene.ninjaprops
+                for move in prop.moves
                }
-       base_times = { "Før", "Under", "Efter" }
+       colors = [ "Thistle", "Goldenrod", "YellowGreen", "Cyan",
+                  "VioletRed", "YellowOrange", "SeaGreen", "Orchid" ]
+       basetimes = OrderedSet([ "Før", "Under", "Efter" ])
        with open(templatefile, 'r', encoding=encoding) as f:
           template = ( f
                        .read()
@@ -1140,8 +1144,8 @@ class TeX:
                        .replace( "<+REVUEYEAR+>",
                                  self.conf["Revue info"]["revue year"]
                                 )
-                       .replace( "<+NACTORS+>", len( self.revue.actors ) )
-                       .replace( "<+NDSTS+>", len( dsts ))
+                       .replace( "<+NACTORS+>", str( len( self.revue.actors )))
+                       .replace( "<+NDSTS+>", str( len( dsts )) )
                        .split( "<+TABLE+>" )
                       )
        self.info[ "modification_time" ] = os.stat( templatefile ).st_mtime
@@ -1153,25 +1157,66 @@ class TeX:
                       for actor in self.revue.actors
                      ) \
           + "\\\\\\toprule\n"
-       for an, act in enumerate( revue.acts ):
+       for an, act in enumerate( self.revue.acts ):
           for mn, mat in enumerate( act.materials ):
              self.tex += \
-                "\\multicolumn{{{}}}{{l}}{{({}:{}) {{\\bfseries {}.{} {}}}}}"
+                "\\multicolumn{{{}}}{{l}}{{({}:{:0>2}) {{\\bfseries {}.{} {}}}}}"\
                  .format( 4 + len( dsts ) + len( self.revue.actors ),
                           mat.duration // timedelta( minutes=1 ),
-                          mat.duration % timedelta( minutes=1 ),
-                          an,
-                          mn,
+                          mat.duration % timedelta( minutes=1 ) \
+                                      // timedelta( seconds=1 ),
+                          an + 1,
+                          mn + 1,
                           mat.title
                          )\
                 + "\\\\"
-             for time in basetimes | { move.time
-                                       for prop in mat.ninjaprops
-                                       for move in prop.moves
-                                      }:
-                self.tex += "&&\\sffamily " + time + "&" \
-                   + "\\\\&&&".join([
-                      move.name + "&"\
-                      +         # something about dsts
-                      
-                      
+
+             movetimes = OrderedSet([ move.time for prop in mat.ninjaprops
+                                      for move in prop.moves
+                                     ])
+             markedprops = [ copy( prop ) for prop in mat.ninjaprops ]
+             for prop, col in zip( markedprops, cycle( colors ) ):
+                prop.colour = col
+             for dst in dsts:
+                for n, prop in enumerate(
+                      prop for prop in markedprops
+                           if dst in [ move.destination for move in prop.moves ]
+                ):
+                   setattr( prop, dst, n )
+
+             for time in basetimes & movetimes | movetimes:
+                timeprops = [
+                   [  '&&', prop.name ]
+                   + [ '\\hspace{{{}ex}}'.format( getattr( prop, dst ) )
+                       + '\\tikz[remember picture] \\fill['
+                       + prop.colour
+                       + '] (0,0) rectangle (1ex, 1em)'# coordinate[pos=.5] ('
+                       # + somenumbering ')'
+                       + ';'
+                       if move.destination == dst else ''
+                       for dst in dsts ]
+                   + [ ( '\\anactor{'
+                         if mat in ( rl.material for rl in actor.roles
+                                     if rl not in actor.instructorships )
+                         else '\\nonactor{'
+                        )
+                       + ( prop.colour if actor.name in move.ninjanames else '')
+                       + '}'
+                       for actor in self.revue.actors ]
+                   for prop in markedprops
+                   for move in prop.moves
+                   if move.time == time
+                ]
+                timeprops[0][0] = "&&\\sffamily " + time
+                for i in range( 2 + len( dsts ), len( timeprops[0] ) ):
+                   if len( timeprops ) == 1:
+                      timeprops[0][i] += "\\tpbt"
+                   else:
+                      timeprops[0][i] += "\\top"
+                      timeprops[-1][i] += "\\btm"
+                      for tp in timeprops[1:-1]:
+                         tp[i] += "{}"
+                self.tex += \
+                   "\n".join([ "&".join( tp ) + '\\\\' for tp in timeprops ])
+             self.tex += "\\midrule\n"
+       self.tex += template[1]

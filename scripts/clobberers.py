@@ -414,6 +414,55 @@ i din planfil.
                                 
         return tex
 
+class InsertNinjas( ClobberInstructions ):
+    cmd = "insert-ninjas"
+    doc = "Overfør ninjaplan fra yaml-fil til tex-filerne."
+
+    def init( revue ):
+        from ruamel.yaml import YAML
+        yaml=YAML()
+        with open( revue.conf["Files"]["ninja yaml"], "r", encoding="utf-8" )\
+             as f:
+            ninja_info = yaml.load( f )
+        mat_paths = {
+            str( Path.cwd() / mat.path ): mat
+            for mat in revue.materials
+        }
+        changed_ninjas = [
+            info for info in ninja_info
+            if info['rekvisitter'] != \
+              [ prop.to_serializable()
+                for prop in \
+                mat_paths[ str( Path.cwd() / info['fil'] ) ].ninjaprops
+               ]
+        ]
+
+        if not changed_ninjas:
+            print( "" )
+            print( "No changes detected in {}. The step `insert-ninjas` "
+                   "will be skipped." )
+            clobber_steps[ "insert-ninjas" ] = ClobberInstructions
+            return
+
+        if any( info['rekvisitter'] for info in ninja_info ):
+            print( "" )
+            print("These materials will have ninja information "
+                  "added or changed:")
+            print("-----------------------------------------------\n")
+            for info in changed_ninjas:
+                if info['rekvisitter']:
+                    print( "  " + info['fil'] )
+
+        if any( not info['rekvisitter'] for info in ninja_info ):
+            print( "" )
+            print("These materials will have their ninja information removed:")
+            print("-----------------------------------------------\n")
+            for info in changed_info:
+                if not info['rekvisitter']:
+                    print( "  " + info['fil'] )
+
+        return changed_ninjas
+
 clobber_steps = {
     # måske de er en bedre måde at strukturere det her på, efter cmd
     # og doc blev indført...?
