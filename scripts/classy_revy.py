@@ -289,14 +289,18 @@ class Revue:
                 if role in scene.instructors:
                     actor.add_instructorship( role )
                 actors[ actorname ] = actor
-            for prop in scene.ninjaprops:
-                for move in prop.moves:
-                    for name in move.ninjanames:
-                        name = name.strip()
-                        actor = actors[ name ] if name in actors \
-                                else bc.Actor( name )
-                        actor.add_ninjamove( move )
-                        actors[ name ] = actor
+            try:
+                for prop in scene.ninjaprops:
+                    for move in prop.moves:
+                        for name in move.ninjanames:
+                            name = name.strip()
+                            actor = actors[ name ] if name in actors \
+                                    else bc.Actor( name )
+                            actor.add_ninjamove( move )
+                            actors[ name ] = actor
+            except TypeError:
+                # ninjaprops was None, probably
+                pass
 
         self.actors, self.ninjas = reduce(
             lambda a,n: ( a[0] + [ actors[n] ], a[1] )
@@ -336,9 +340,12 @@ class Revue:
                 if s:
                     for role in s.roles:
                         role.add_material(s)
-                    for prop in s.ninjaprops:
-                        for move in prop.moves:
-                            move.scene = s
+                    try:
+                        for prop in s.ninjaprops:
+                            for move in prop.moves:
+                                move.scene = s
+                    except TypeError:
+                        pass
                     act.add_scene(s)
                     continue
                     

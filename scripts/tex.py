@@ -32,6 +32,9 @@ opt_re = re.compile(r"^[^\[]*\[([^\]]*)\].*$")
 # Regular expression that extracts everything ] and to the end of the line:
 eol_re = re.compile(r"^.*\](.*).*$")
 
+# comments
+cmt_re = re.compile( r"%.*" )
+
 # RegEx til at splitte tekst-lister, fx ( a, b + c og d ):
 text_list_re = re.compile(r'\W*(?:\+|\\&|[oO]g|,)\W*')
 
@@ -47,6 +50,7 @@ class NinjaParser:
       self.bracketDepth = 0
 
    def parseline(self, line, into):
+      line = cmt_re.sub( "", line )
       if not self.parsing:
          if not "\\ninjas" in line:
             return
@@ -251,7 +255,7 @@ class TeX:
         self.info["roles"] = []
         self.info["appearing_roles"] = set() # How many people/abbreviations that occur in the actual sketch/song.
         self.info["instructors"] = []
-        self.info["ninjaprops"] = []
+        self.info["ninjaprops"] = None
 
         # List of keywords/commands to ignore, i.e. that are not relevant to extract:
         ignore_list = ["documentclass", "usepackage", "maketitle", "act", "scene", "#"]
@@ -318,6 +322,7 @@ class TeX:
 
                     if command not in ignore_list:
                         if command == "ninjas":
+                           self.info[ "ninjaprops" ] = []
                            ninja_parser.parseline( line, self.info )
                            continue
 

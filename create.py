@@ -474,20 +474,26 @@ role_settings = [
              ) for form in roles_reader.formats
 ]
 
-roles_sheet_filename = Argument(
-    "--roles-sheet-fn",
-    "Filnavn til output af rolle-oversigts-regneark fra roles-sheet.",
-    lambda fn: conf.conf.set( "Files", "roles sheet output", str( Path( fn ) ) )
-)
-
-latex_command = Argument(
-    "--latex-command",
-    "Brug en anden latex-kommando (end pdflatex).",
-    lambda fn: conf.conf.set( "TeXing", "latex command", fn.strip() )
-)
-
-settings = role_settings + [ roles_sheet_filename, latex_command ]
-
+settings = role_settings + [
+    Argument(
+        "--roles-sheet-fn",
+        "Filnavn til output af rolle-oversigts-regneark fra roles-sheet.",
+        lambda fn: conf.conf.set( "Files", "roles sheet output",
+                                  str( Path( fn ) )
+                                 )
+    ),
+    Argument(
+        "--latex-command",
+        "Brug en anden latex-kommando (end pdflatex).",
+        lambda fn: conf.conf.set( "TeXing", "latex command", fn.strip() )
+    ),
+    Argument(
+        "--ninja-yaml",
+        "Filnavn til ninja-yaml-filen.",
+        lambda fn: conf.conf.set( "Files", "ninja yaml", str( Path( fn ) ) )
+    )
+]
+ 
 all_possible_args = actions + toggles + flags + settings
 
 default_commands = (tuple() if conf.getboolean("TeXing","skip thumbindex")

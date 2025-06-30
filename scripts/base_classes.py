@@ -78,7 +78,10 @@ class NinjaPropData:
 class NinjaProp( NinjaPropData ):
     def __init__( self, hardness, name, drawing, moves ):
         NinjaPropData.__init__( self, hardness, name, drawing )
-        self.moves = [ NinjaMove( *move ) for move in moves ]
+        self.moves = [ move if isinstance( move, NinjaMove )
+                       else NinjaMove( *move )
+                       for move in moves
+                      ]
 
     def to_serializable( self ):
         ser = { 'navn': self.name,
