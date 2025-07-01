@@ -426,19 +426,25 @@ def clobber_my_tex( revue, args ):
     initresults = { cmd: clobber_steps[ cmd ].init( revue )
                     for cmd in clobber_steps if cmd in args
     }
+
+    active_steps = { arg: clobber_steps[ arg ] for arg in clobber_steps
+                     if arg in args \
+                     and clobber_steps[ arg ] != ClobberInstructions
+                    }
+    if not active_steps:
+        return
+    
     cont = "y" if revue.conf.conf.getboolean( "Behaviour", "always say yes",
                                               fallback = False ) \
         else input(
                 stoptext.format(
                     "\n".join(
-                        "  " + arg for arg in clobber_steps if arg in args
+                        "  " + arg for arg in active_steps
                     ),
                     "\n".join([
-                        clobber_steps[ arg ].warn for arg in clobber_steps if (
-                            arg in args
+                        active_steps[ arg ].warn for arg in active_steps if \
+                            active_steps[ arg ].warn 
                             # ingen linjeskift for tomme strenge
-                            and clobber_steps[ arg ].warn 
-                        )
                     ]) + "\n" )
         )
     
@@ -448,11 +454,10 @@ def clobber_my_tex( revue, args ):
                           for material in act.materials ]:
             fname = material.path
             tex.parse( fname )
-            for cmd in clobber_steps:
-                if cmd in args:
-                    tex = clobber_steps[ cmd ].clobber(
-                        tex, initresults[ cmd ]
-                    )
+            for cmd in active_steps:
+                tex = active_steps[ cmd ].clobber(
+                    tex, initresults[ cmd ]
+                )
             tex.write( fname )
             material.modification_time = tex.info[ "modification_time" ]
 
