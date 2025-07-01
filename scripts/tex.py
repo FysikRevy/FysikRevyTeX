@@ -56,13 +56,13 @@ class NinjaParser:
             return
 
          self.parsing = True
-         line = re.sub( r"^.*?\\ninjas\s*{", "", line)
+         line = re.sub( r"^.*?\\ninjas\s*{", "", line, count=1)
 
       if not self.parsingProp:
          if not "\\prop" in line:
             self.parsing = not re.match( r"^\s*}", line )
             return
-         line = re.sub( r"^.*?\\prop\s*{", "", line )
+         line = re.sub( r"^.*?\\prop\s*{", "", line, count=1 )
          self.parsingProp = True
          self.args += [""]
          self.bracketDepth = 1
@@ -71,7 +71,7 @@ class NinjaParser:
          return
 
       if self.bracketDepth <= 0:
-         line = self.re_to_open.sub( "", line )
+         line = self.re_to_open.sub( "", line, count=1 )
          if line[0] == "{":
             line = line[1:]
             self.bracketDepth = 1
@@ -103,9 +103,9 @@ class NinjaParser:
       parsedMoves = []
       while "\\move" in move:
          parsedMove = []
-         move = re.sub( r"^.*?\\move", "", move )
+         move = re.sub( r"^.*?\\move", "", move, count=1 )
          while len( parsedMove ) < 3:
-            move = re.sub( r"^.*?{", "", move )
+            move = self.re_to_open.sub( "", move, count=1 )
             bracketDepth = i = 0
             while bracketDepth >= 0 and i < len( move ):
                match move[i]:
