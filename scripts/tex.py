@@ -140,7 +140,11 @@ class TeX:
         with open(fname, mode='r', encoding=encoding) as f:
             lines = f.readlines()
 
-        return self.parse_lines( lines )
+        try:
+           return self.parse_lines( lines )
+        except Exception as e:
+           e.add_note( "Was parsing {}".format( fname ) )
+           raise e
 
     def parse_lines( self, lines ):
         "Parse a list of lines of TeX, and extract the info_dict"
