@@ -202,10 +202,12 @@ class TeX:
                         elif first_part not in ignore_list:
                             # Find also the second part, i.e. whatever follows the first part (including
                             # the non-alphanumeric character):
-                            end_part = re.findall(r"^.[#\w]+(.*)", line)[0]
+                            end_part = re.findall(r"^.[#\w]+(.*)", line)
                             
                             # Store the info:
-                            self.info[first_part] = end_part
+                            if end_part:
+                               self.info[first_part] = end_part[0]
+                               # otherwise ignore it
 
                 else:
                     try:
