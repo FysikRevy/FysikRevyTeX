@@ -45,6 +45,9 @@ controls = { mat: [ foci[ mat ] ] \
              + [ Label( formatted_control( t ) ) for t in ( "↑", "↓" ) ]
              for mat in r.materials
             }
+numbers = { mat: [ ( c, "class:number" ) for c in str( n ) ]
+            for n, mat in enumerate( r.materials )
+           }
 
 def filter_for_control( idx ):
    if idx < 0:
@@ -93,39 +96,45 @@ all_windows = [ t for a in r.acts for t in
                      ("ansibrightblack", "{:>2}".format(
                         iterdex( m, r.materials ) + 1
                      )),
-                     ("", "] " + m.title ),
-                     ("[SetCursorPosition]","")
+                     ("", "] " + m.title )
                     )), m ) for m in a.materials
                    ]
                ]
 
 kb = KeyBindings()
+def wrapped_add( *keys, filter = True ): # nevermind about the rest
+   def decorator( func ):
+      @kb.add( *keys, filter = filter )
+      def wrapped_handler( event ):
+         event.app.number = ""
+         func( event )
+      return func
+   return decorator
+kb.wadd = wrapped_add
 
-@kb.add('q')
-@kb.add('escape')
-@kb.add('c-c')
+@kb.wadd('<any>')
+def default_( event ):
+   pass
+
+@kb.wadd('q')
+@kb.wadd('escape')
+@kb.wadd('c-c')
 def exit_(event):
    event.app.exit()
 
-@kb.add('down')
+@kb.wadd('down')
 def down_(event):
    adjacent_mats = neighbour_mats( event.app.layout.current_window )
    if adjacent_mats[2]:
       event.app.layout.focus( foci[ adjacent_mats[2] ] )
-   # global controls
-   # controls = controls[1:] + controls[:1]
-   # event.app.layout.focus( controls[0][0] )
 
-@kb.add('up')
+@kb.wadd('up')
 def up_(event):
    adjacent_mats = neighbour_mats( event.app.layout.current_window )
    if adjacent_mats[0]:
       event.app.layout.focus( foci[ adjacent_mats[0] ] )
-   # global controls
-   # controls = controls[-1:] + controls[:-1]
-   # event.app.layout.focus( controls[0][0] )
 
-@kb.add('pagedown')
+@kb.wadd('pagedown')
 def pgdn_(event):
    *_, pageend = filter(
       lambda x: isinstance( x, Scene ),
@@ -137,18 +146,12 @@ def pgdn_(event):
               chain((a,), ( m for m in a.materials ))
              )
          ),
-         os.get_terminal_size().lines - 1
+         os.get_terminal_size().lines - 1 # interface-lines
       )
    )
-   # pprint( [ x for x in pageend ] )
    event.app.layout.focus( foci[ pageend ] )
-#    global controls
-#    event.app.layout.focus( controls[27][0] )
-#    event.app.invalidate()
-#    controls = controls[27:] + controls[:27]
-   # event.app.layout.focus( controls[0][0] )
 
-@kb.add('pageup')
+@kb.wadd('pageup')
 def pgup_(event):
    event.app.layout.focus( foci[
       next(
@@ -157,6 +160,7 @@ def pgup_(event):
                ( e for a in r.acts
                  for e in chain( (a,), ( m for m in a.materials )) ),
                offsets = range( -os.get_terminal_size().lines + 2, 1 )
+               #                           interface-lines + 1  ^
             )
             if isinstance( g[-1], Scene) \
                and foci[ g[-1] ].window == event.app.layout.current_window
@@ -164,31 +168,43 @@ def pgup_(event):
       )
    ])
 
-@kb.add('end')
+@kb.wadd('end')
 def end_(event):
    *_, final = r.materials
    event.app.layout.focus( foci[ final ] )
 
-@kb.add('home')
+@kb.wadd('home')
 def home_(event):
    event.app.layout.focus( foci[ next( r.materials ) ] )
 
-def start_focusser( app ):
-   global start_focusser
+@kb.add('9')
+def one_(event):
    try:
-      if start_focusser.flag:
-         return
+      event.app.number += str( 9 )
    except AttributeError:
-      start_focusser.flag = True
-      app.layout.focus( foci[ next( r.materials ) ] )
+      event.app.number = str( 9 )
+   for _ in range(2):
+      try:
+         event.app.layout.focus( foci[
+            next( mat for i,mat in enumerate( r.materials )
+                  if str( i + 1 ).startswith( event.app.number )
+                 )
+         ])
+         return
+      except StopIteration:
+         event.app.number = str( 9 )
 
 s = ScrollablePane( HSplit( all_windows ),
                     scroll_offsets = ScrollOffsets( top = 1, bottom = 1 )
                    )
 
 @kb.add('d')
-def lc_(event):
-   pprint( event.app.layout.get_visible_focusable_windows() )
+def dt_(event):
+   print("ping")
+
+# @kb.add('d')
+# def lc_(event):
+#    pprint( event.app.layout.get_visible_focusable_windows() )
 
 a = Application(
    key_bindings = kb,
