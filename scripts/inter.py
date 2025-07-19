@@ -16,6 +16,7 @@ from prompt_toolkit.layout.layout import Layout
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.widgets import Label, Button
 from prompt_toolkit.filters import has_focus, Never, Always
+from prompt_toolkit.styles import Style
 
 sys.path.append( os.getcwd() )
 os.chdir( "E:/thebe/Git/revymanus2025/" )
@@ -45,7 +46,7 @@ controls = { mat: [ foci[ mat ] ] \
              + [ Label( formatted_control( t ) ) for t in ( "↑", "↓" ) ]
              for mat in r.materials
             }
-numbers = { mat: [ ( c, "class:number" ) for c in str( n ) ]
+numbers = { mat: [ ( "class:number", c ) for c in str( n + 1 ) ]
             for n, mat in enumerate( r.materials )
            }
 
@@ -64,10 +65,13 @@ def neighbour_mats( mat ):
       or isinstance( mat, Window ) and mat == foci[ g[1] ].window
    )]
 
-def active_line( text, mat ):
+def active_line( mat ):
    adjacent_mats = neighbour_mats( mat )
    return VSplit([ Label( text=t, dont_extend_width=True )
-                   for t in [ text, " " ] ]\
+                   for t in [ "  [" + " " * ( 2 - len( numbers[ mat ] )) ] \
+                             # + [ FormattedText(n) for n in numbers[ mat ] ]\
+                             + [ "] " + mat.title ]
+                  ]\
                  + [ ConditionalContainer( controls, filter )
                      for controls, filter in zip(
                            controls[ mat ],
@@ -88,23 +92,15 @@ all_windows = [ t for a in r.acts for t in
                 [ Label( FormattedText( (("ansibrightblue bold",
                                           a.name + ":"
                                           ),)
-                                       )
-                         , dont_extend_width=True )
+                                       ))
                  ] \
-                + [ active_line( FormattedText((
-                     ("", "  ["),
-                     ("ansibrightblack", "{:>2}".format(
-                        iterdex( m, r.materials ) + 1
-                     )),
-                     ("", "] " + m.title )
-                    )), m ) for m in a.materials
-                   ]
+                + [ active_line( m ) for m in a.materials ]
                ]
 
 kb = KeyBindings()
-def wrapped_add( *keys, filter = True ): # nevermind about the rest
+def wrapped_add( *keys, **kwargs ):
    def decorator( func ):
-      @kb.add( *keys, filter = filter )
+      @kb.add( *keys, **kwargs )
       def wrapped_handler( event ):
          event.app.number = ""
          func( event )
@@ -200,7 +196,7 @@ s = ScrollablePane( HSplit( all_windows ),
 
 @kb.add('d')
 def dt_(event):
-   print("ping")
+   pprint( [[ FormattedText(n) for n in numbers[ mat ] ] for mat in r.materials ] )
 
 # @kb.add('d')
 # def lc_(event):
@@ -215,7 +211,7 @@ a = Application(
                    ),
    # before_render = start_focusser,
    mouse_support = True,
-   enable_page_navigation_bindings = True
+   style = Style([('number', 'ansibrightblack')])   
 )
 
 a.run()
