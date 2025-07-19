@@ -46,7 +46,8 @@ controls = { mat: [ foci[ mat ] ] \
              + [ Label( formatted_control( t ) ) for t in ( "↑", "↓" ) ]
              for mat in r.materials
             }
-numbers = { mat: [ ( "class:number", c ) for c in str( n + 1 ) ]
+numbers = { mat: [ FormattedText([( "class:number", c )])
+                   for c in str( n + 1 ) ]
             for n, mat in enumerate( r.materials )
            }
 
@@ -69,7 +70,7 @@ def active_line( mat ):
    adjacent_mats = neighbour_mats( mat )
    return VSplit([ Label( text=t, dont_extend_width=True )
                    for t in [ "  [" + " " * ( 2 - len( numbers[ mat ] )) ] \
-                             # + [ FormattedText(n) for n in numbers[ mat ] ]\
+                             + numbers[ mat ]\
                              + [ "] " + mat.title ]
                   ]\
                  + [ ConditionalContainer( controls, filter )
@@ -189,6 +190,7 @@ def one_(event):
          return
       except StopIteration:
          event.app.number = str( 9 )
+   numbers[next(islice(r.materials, 9, 9))][0][0] = ""
 
 s = ScrollablePane( HSplit( all_windows ),
                     scroll_offsets = ScrollOffsets( top = 1, bottom = 1 )
