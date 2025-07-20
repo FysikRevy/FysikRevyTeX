@@ -16,7 +16,7 @@ from prompt_toolkit.layout.layout import Layout
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.widgets import Label, Button
 from prompt_toolkit.filters import has_focus, Never, Always
-from prompt_toolkit.styles import Style
+from prompt_toolkit.styles import Style, DynamicStyle
 
 sys.path.append( os.getcwd() )
 os.chdir( "E:/thebe/Git/revymanus2025/" )
@@ -38,6 +38,19 @@ items = [ m.title for m in r.materials ]
 
 # items = ["one","two","three"]
 # controls = [ control("w/r/n") for _ in items ]
+number_style = Style.from_dict({"number": "ansibrightblack" })
+def highlightable_number( index, of_number ):
+   def style_number():
+      try:
+         n = get_app().number
+      except (AttributeError, NameError):
+         return number_style
+      if index > len( n )\
+            or len( str( of_number )) < len( n )\
+            or str( of_number )[ : index + 1 ] != n[ : index + 1 ]:
+         return number_style
+      return None
+   return DynamicStyle( style_number )
 
 foci = { mat: FocusableLabel( formatted_control( "w/r/n" ) )
          for mat in r.materials
@@ -46,8 +59,10 @@ controls = { mat: [ foci[ mat ] ] \
              + [ Label( formatted_control( t ) ) for t in ( "↑", "↓" ) ]
              for mat in r.materials
             }
-numbers = { mat: [ FormattedText([( "class:number", c )])
-                   for c in str( n + 1 ) ]
+numbers = { mat: [ Label( FormattedText( [( "number", c)] )
+                          , style = highlightable_number( i, n )
+                         )
+                   for i,c in enumerate( str( n + 1 )) ]
             for n, mat in enumerate( r.materials )
            }
 
@@ -68,10 +83,9 @@ def neighbour_mats( mat ):
 
 def active_line( mat ):
    adjacent_mats = neighbour_mats( mat )
-   return VSplit([ Label( text=t, dont_extend_width=True )
-                   for t in [ "  [" + " " * ( 2 - len( numbers[ mat ] )) ] \
-                             + numbers[ mat ]\
-                             + [ "] " + mat.title ]
+   return VSplit([ Label( "  [" + " " * ( 2 - len( numbers[ mat ] )) ),
+                   *numbers[ mat ],
+                   Label( "] " + mat.title )
                   ]\
                  + [ ConditionalContainer( controls, filter )
                      for controls, filter in zip(
@@ -187,10 +201,12 @@ def one_(event):
                   if str( i + 1 ).startswith( event.app.number )
                  )
          ])
-         return
+         break
       except StopIteration:
          event.app.number = str( 9 )
-   numbers[next(islice(r.materials, 9, 9))][0][0] = ""
+   global numbers
+   numbers[next(islice(r.materials, 9, 10))][0] = [("","9")]
+   print( numbers[next(islice(r.materials, 9, 10))][0] )
 
 s = ScrollablePane( HSplit( all_windows ),
                     scroll_offsets = ScrollOffsets( top = 1, bottom = 1 )
@@ -198,7 +214,7 @@ s = ScrollablePane( HSplit( all_windows ),
 
 @kb.add('d')
 def dt_(event):
-   pprint( [[ FormattedText(n) for n in numbers[ mat ] ] for mat in r.materials ] )
+   pprint( numbers )
 
 # @kb.add('d')
 # def lc_(event):
