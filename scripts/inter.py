@@ -56,11 +56,19 @@ foci = { mat: FocusableLabel( formatted_control( "w/r/n" ) )
          for mat in r.materials
         }
 controls = { mat: [ foci[ mat ] ] \
-             + [ Label( formatted_control( t ) ) for t in ( "↑", "↓" ) ]
+             + [ Label( formatted_control( t ), dont_extend_width=True )
+                 for t in ( "↑", "↓" )
+                ]
              for mat in r.materials
             }
-numbers = { mat: [ Label( FormattedText( [( "number", c)] )
-                          , style = highlightable_number( i, n )
+
+numbers = { mat: [ Label( FormattedText( [
+   ( "class:number class:" \
+     + ".".join( str( n + 1 )[ : j ]
+                 for j in range( i + 1, len( str( n + 1)) + 1 ))
+     , c
+    )]
+                                        ), dont_extend_width=True
                          )
                    for i,c in enumerate( str( n + 1 )) ]
             for n, mat in enumerate( r.materials )
@@ -83,9 +91,11 @@ def neighbour_mats( mat ):
 
 def active_line( mat ):
    adjacent_mats = neighbour_mats( mat )
-   return VSplit([ Label( "  [" + " " * ( 2 - len( numbers[ mat ] )) ),
+   return VSplit([ Label( "  [" + " " * ( 2 - len( numbers[ mat ] ))
+                          ,dont_extend_width=True
+                         ),
                    *numbers[ mat ],
-                   Label( "] " + mat.title )
+                   Label( "] " + mat.title, dont_extend_width=True )
                   ]\
                  + [ ConditionalContainer( controls, filter )
                      for controls, filter in zip(
@@ -188,25 +198,23 @@ def end_(event):
 def home_(event):
    event.app.layout.focus( foci[ next( r.materials ) ] )
 
-@kb.add('9')
-def one_(event):
-   try:
-      event.app.number += str( 9 )
-   except AttributeError:
-      event.app.number = str( 9 )
-   for _ in range(2):
+for n in range(10):
+   @kb.add(str(n))
+   def number_key_(event):
       try:
-         event.app.layout.focus( foci[
-            next( mat for i,mat in enumerate( r.materials )
-                  if str( i + 1 ).startswith( event.app.number )
-                 )
-         ])
-         break
-      except StopIteration:
-         event.app.number = str( 9 )
-   global numbers
-   numbers[next(islice(r.materials, 9, 10))][0] = [("","9")]
-   print( numbers[next(islice(r.materials, 9, 10))][0] )
+         event.app.number += str( n )
+      except AttributeError:
+         event.app.number = str( n )
+      for _ in range(2):
+         try:
+            event.app.layout.focus( foci[
+               next( mat for i,mat in enumerate( r.materials )
+                     if str( i + 1 ).startswith( event.app.number )
+                    )
+            ])
+            break
+         except StopIteration:
+            event.app.number = str( n )
 
 s = ScrollablePane( HSplit( all_windows ),
                     scroll_offsets = ScrollOffsets( top = 1, bottom = 1 )
@@ -220,6 +228,13 @@ def dt_(event):
 # def lc_(event):
 #    pprint( event.app.layout.get_visible_focusable_windows() )
 
+def highlight_number():
+   try:
+      n = get_app().number
+   except:
+      return None
+   return Style.from_dict({ n: "ansiwhite underline" }) if n else None
+
 a = Application(
    key_bindings = kb,
    layout = Layout( HSplit([ s,
@@ -229,7 +244,7 @@ a = Application(
                    ),
    # before_render = start_focusser,
    mouse_support = True,
-   style = Style([('number', 'ansibrightblack')])   
+   style = DynamicStyle( highlight_number )   
 )
 
 a.run()
