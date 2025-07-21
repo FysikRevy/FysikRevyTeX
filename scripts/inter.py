@@ -228,6 +228,13 @@ for n in range(10):
                                 number_func_for( n )
                                ))
 
+@kb.add('backspace')
+def bs_(event):
+   try:
+      event.app.number = event.app.number[:-1]
+   except:
+      pass
+
 s = ScrollablePane( HSplit( all_windows ),
                     scroll_offsets = ScrollOffsets( top = 1, bottom = 1 )
                    )
