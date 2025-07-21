@@ -14,6 +14,7 @@ from prompt_toolkit.layout.scrollable_pane import ScrollablePane
 from prompt_toolkit.layout.controls import BufferControl, FormattedTextControl
 from prompt_toolkit.layout.layout import Layout
 from prompt_toolkit.key_binding import KeyBindings
+from prompt_toolkit.key_binding.key_bindings import Binding
 from prompt_toolkit.widgets import Label, Button
 from prompt_toolkit.filters import has_focus, Never, Always
 from prompt_toolkit.styles import Style, DynamicStyle
@@ -198,13 +199,15 @@ def end_(event):
 def home_(event):
    event.app.layout.focus( foci[ next( r.materials ) ] )
 
-for n in range(10):
-   @kb.add(str(n))
+# for n in range(10):
+#    @kb.add(str(n))
+def number_func_for( n ):
+   ns = str( n )
    def number_key_(event):
       try:
-         event.app.number += str( n )
+         event.app.number += ns
       except AttributeError:
-         event.app.number = str( n )
+         event.app.number = ns
       for _ in range(2):
          try:
             event.app.layout.focus( foci[
@@ -214,7 +217,13 @@ for n in range(10):
             ])
             break
          except StopIteration:
-            event.app.number = str( n )
+            event.app.number = ns
+   return number_key_
+
+for n in range(10):
+   kb.bindings.append( Binding( str( n ),
+                                number_func_for( n )
+                               ))
 
 s = ScrollablePane( HSplit( all_windows ),
                     scroll_offsets = ScrollOffsets( top = 1, bottom = 1 )
@@ -228,12 +237,18 @@ def dt_(event):
 # def lc_(event):
 #    pprint( event.app.layout.get_visible_focusable_windows() )
 
+
+
 def highlight_number():
    try:
       n = get_app().number
    except:
       return None
-   return Style.from_dict({ n: "ansiwhite underline" }) if n else None
+   return Style.from_dict({
+      ".".join( n[ : j + 1 ] for j in range( i, len( n ))
+               ): "ansiwhite underline"
+      for i in range(len(n))
+   }) if n else None
 
 a = Application(
    key_bindings = kb,
