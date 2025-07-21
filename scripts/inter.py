@@ -64,6 +64,9 @@ controls = { mat: [ foci[ mat ] ] \
             }
 
 numbers = { mat: [ Label( FormattedText( [
+   # for the first digit in eg. 192, the class should be 1.19.192
+   # this makes the class selectable when typing, say, 1 or 1-9, but not
+   # when typing 1-8
    ( "class:number class:" \
      + ".".join( str( n + 1 )[ : j ]
                  for j in range( i + 1, len( str( n + 1)) + 1 ))
@@ -245,6 +248,7 @@ def highlight_number():
    except:
       return None
    return Style.from_dict({
+      # if n is eg. 192, should proeduce styles for 192, 19.192 and 1.19.192
       ".".join( n[ : j + 1 ] for j in range( i, len( n ))
                ): "ansiwhite underline"
       for i in range(len(n))
