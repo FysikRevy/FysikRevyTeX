@@ -72,11 +72,10 @@ class NinjaParser:
 
       if self.bracketDepth <= 0:
          line = self.re_to_open.sub( "", line, count=1 )
-         if line[0] == "{":
-            line = line[1:]
-            self.bracketDepth = 1
-         else:
+         if not line or line[0] != "{":
             return
+         line = line[1:]
+         self.bracketDepth = 1
 
       i = 0
       while self.bracketDepth > 0 and i < len( line ):
@@ -114,7 +113,7 @@ class NinjaParser:
                   case "}":
                      bracketDepth -= 1
                i += 1
-            parsedMove += [ move[:i-1] ]
+            parsedMove += [ move[:i-1].strip() ]
             move = move[i:]
          parsedMoves += [ parsedMove ]
 
@@ -126,9 +125,9 @@ class NinjaParser:
 
    def write_args( self, into ):
       ninjaProp = NinjaProp(
-         hardness = self.args[0],
-         name = self.args[1],
-         drawing = self.args[2],
+         hardness = self.args[0].strip(),
+         name = self.args[1].strip(),
+         drawing = self.args[2].strip(),
          moves = self.parseMove( self.args[3] )
       )
       into["ninjaprops"] += [ ninjaProp ]
