@@ -3,7 +3,7 @@ import os,sys
 from pprint import pprint
 from itertools import chain, dropwhile, islice
 
-from more_itertools import stagger
+from more_itertools import stagger, intersperse
 
 from prompt_toolkit import Application, ANSI
 from prompt_toolkit.application import get_app
@@ -17,7 +17,7 @@ from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.key_binding.key_bindings import Binding
 from prompt_toolkit.widgets import Label, Button
 from prompt_toolkit.filters import has_focus, Never, Always
-from prompt_toolkit.styles import Style, DynamicStyle
+from prompt_toolkit.styles import Style, DynamicStyle, merge_styles
 
 sys.path.append( os.getcwd() )
 os.chdir( "E:/thebe/Git/revymanus2025/" )
@@ -31,7 +31,7 @@ class FocusableLabel( Label ):
 
 def formatted_control( text ):
    return FormattedText(
-      (("ansibrightblack italic", " [{}]".format(text) ),)
+      (("italic", " [{}]".format(text) ),)
    )
 
 r = Revue.fromfile("aktoversigt.plan")
@@ -63,20 +63,17 @@ controls = { mat: [ foci[ mat ] ] \
              for mat in r.materials
             }
 
-numbers = { mat: [ Label( FormattedText( [
+numbers = { mat: FormattedText(
    # for the first digit in eg. 192, the class should be 1.19.192
    # this makes the class selectable when typing, say, 1 or 1-9, but not
    # when typing 1-8
-   ( "class:number class:" \
-     + ".".join( str( n + 1 )[ : j ]
-                 for j in range( i + 1, len( str( n + 1)) + 1 ))
-     , c
-    )]
-                                        ), dont_extend_width=True
-                         )
-                   for i,c in enumerate( str( n + 1 )) ]
-            for n, mat in enumerate( r.materials )
-           }
+   [( "class:number class:" \
+      + ".".join( str( n + 1 )[ : j ]
+                  for j in range( i + 1, len( str( n + 1)) + 1 ))
+      , c
+     )
+    for i,c in enumerate( str( n + 1 ))
+    ]) for n, mat in enumerate( r.materials ) }
 
 def filter_for_control( idx ):
    if idx < 0:
@@ -95,20 +92,53 @@ def neighbour_mats( mat ):
 
 def active_line( mat ):
    adjacent_mats = neighbour_mats( mat )
-   return VSplit([ Label( "  [" + " " * ( 2 - len( numbers[ mat ] ))
-                          ,dont_extend_width=True
-                         ),
-                   *numbers[ mat ],
-                   Label( "] " + mat.title, dont_extend_width=True )
-                  ]\
-                 + [ ConditionalContainer( controls, filter )
-                     for controls, filter in zip(
-                           controls[ mat ],
-                           ( has_focus( foci[m] ) if m else Never()
-                             for m in [ adjacent_mats[i] for i in ( 1,2,0 ) ]
-                            )
-                     )
-                    ]
+   return VSplit([
+      Label( FormattedText([("",
+                             ("  [" + " " * ( 2 - len( numbers[ mat ] )))
+                             )])\
+             + numbers[ mat ]\
+             + FormattedText((
+                ("", "] {} ".format( mat.title )),
+                ("ansibrightblack", "(") ))\
+             + FormattedText((
+                ("ansibrightcyan", "{}:".format( len( mat.ninjaprops ) )),
+                *intersperse( ("ansibrightblack", ","),
+                              (( "ansibrightblack" if n == 0 \
+                                 else "ansibrightgreen"
+                                 , str( n )
+                                ) for n in (
+                                   sum( 1 for p in mat.ninjaprops
+                                        if p.hardness == str(i)
+                                       )
+                                   for i in range( 1, 6 )
+                                ))
+                               ),
+                *((("ansiyellow", " ({})".format(
+                   sum( 1 for p in mat.ninjaprops
+                        if p.hardness not in [ str(i) for i in range( 1,6 ) ]
+                       ))),) if any( p.hardness not in
+                                     [ str(i) for i in range( 1,6 ) ]
+                                     for p in mat.ninjaprops
+                                    ) \
+                             else []
+                  )) if mat.ninjaprops != None else (
+                     ("ansibrightblack", " --- "),
+                  )
+                             )\
+             + FormattedText((
+                ("ansibrightblack", ")"),
+                ("", " ")
+             )),
+             dont_extend_width = True
+            )
+   ] + [ ConditionalContainer( controls, filter )
+         for controls, filter in zip(
+               controls[ mat ],
+               ( has_focus( foci[m] ) if m else Never()
+                 for m in [ adjacent_mats[i] for i in ( 1,2,0 ) ]
+                )
+         )
+        ]
                  )
 
 def iterdex( element, iterator ):
@@ -270,7 +300,9 @@ a = Application(
                    ),
    # before_render = start_focusser,
    mouse_support = True,
-   style = DynamicStyle( highlight_number )   
+   style = merge_styles([ Style.from_dict({"number": "ansibrightblack"})
+                          , DynamicStyle( highlight_number )
+                         ])
 )
 
 a.run()
