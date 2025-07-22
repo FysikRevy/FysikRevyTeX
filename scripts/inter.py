@@ -23,6 +23,8 @@ sys.path.append( os.getcwd() )
 os.chdir( "E:/thebe/Git/revymanus2025/" )
 
 from classy_revy import Revue, Scene
+from tex import TeX
+from clobberers import replace_ninjas
 
 class FocusableLabel( Label ):
    def __init__( self, text = "", *args, **kwargs ):
@@ -265,19 +267,39 @@ def bs_(event):
    except:
       pass
 
+@kb.wadd('delete')
+@kb.wadd('x')
+def delete_( event ):
+   mat = next( mat for mat in foci
+               if foci[ mat ].window == event.app.layout.current_window
+              )
+   tex = TeX()
+   tex.parse( mat.path )
+   tex = replace_ninjas( tex, [""] )
+   tex.write( mat.path )
+   tex.parse( mat.path )
+   tex.info["path"] = mat.path
+   mat.__init__( tex.info )
+   all_windows[ next( i for i,line in enumerate( all_windows )
+                      if event.app.layout.has_focus( line )
+                     )
+               ] = active_line( mat )
+
 s = ScrollablePane( HSplit( all_windows ),
                     scroll_offsets = ScrollOffsets( top = 1, bottom = 1 )
                    )
 
 @kb.add('d')
 def dt_(event):
-   pprint( numbers )
+   pprint( [ x for x in all_windows if event.app.layout.has_focus( x ) ] )
 
 # @kb.add('d')
 # def lc_(event):
 #    pprint( event.app.layout.get_visible_focusable_windows() )
 
-
+@kb.add('i')
+def invalidate_( event ):
+   event.app.invalidate()
 
 def highlight_number():
    try:
