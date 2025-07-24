@@ -68,7 +68,9 @@ class Scene:
                         )
         return cls( tex.info, source_file, source_mtime )
 
-    def __init__(self, info_dict, source_file = None, source_mtime = None ):
+    def __init__(self, info_dict, source_file = None, source_mtime = None,
+                 print = print
+                 ):
         "Extract data from dictionary returned by parsetexfile()."
 
         def info_dict_get_or_empty_string( entry ):
@@ -180,12 +182,12 @@ class Material( Scene ):
         info_dict["path"] = filename
         return cls(info_dict)
 
-    def __init__( self, info_dict ):
+    def __init__( self, info_dict, print = print ):
         
         self.path = os.path.abspath(info_dict["path"])
         path, self.file_name = os.path.split(self.path)
 
-        super().__init__( info_dict )
+        super().__init__( info_dict, print = print )
 
         # Meta data
         self.modification_time = info_dict['modification_time']

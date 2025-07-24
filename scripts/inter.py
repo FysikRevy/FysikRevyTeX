@@ -267,23 +267,30 @@ def bs_(event):
    except:
       pass
 
-@kb.wadd('delete')
-@kb.wadd('x')
-def delete_( event ):
+def update_ninjas( event, new_ninjas ):
    mat = next( mat for mat in foci
                if foci[ mat ].window == event.app.layout.current_window
               )
    tex = TeX()
    tex.parse( mat.path )
-   tex = replace_ninjas( tex, [""] )
+   tex = replace_ninjas( tex, new_ninjas )
    tex.write( mat.path )
    tex.parse( mat.path )
    tex.info["path"] = mat.path
-   mat.__init__( tex.info )
-   all_windows[ next( i for i,line in enumerate( all_windows )
-                      if event.app.layout.has_focus( line )
-                     )
-               ] = active_line( mat )
+   mat.__init__( tex.info, print = lambda *args, **kwargs: None )
+   s.content.children[ next( i for i,line in enumerate( s.content.children )
+                             if event.app.layout.has_focus( line )
+                            )
+                      ] = active_line( mat )
+
+@kb.wadd('delete')
+@kb.wadd('x')
+def delete_( event ):
+   update_ninjas( event, [""] )
+
+@kb.wadd('n')
+def new_( event ):
+   update_ninjas( event, ["\\ninjas{}"] )
 
 s = ScrollablePane( HSplit( all_windows ),
                     scroll_offsets = ScrollOffsets( top = 1, bottom = 1 )
@@ -328,5 +335,4 @@ a = Application(
 )
 
 a.run()
-
 
