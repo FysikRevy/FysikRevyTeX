@@ -5,7 +5,7 @@ from itertools import chain, dropwhile, islice
 
 from more_itertools import stagger, intersperse
 
-from prompt_toolkit import Application, ANSI
+from prompt_toolkit import Application, ANSI, PromptSession
 from prompt_toolkit.application import get_app
 from prompt_toolkit.formatted_text import to_formatted_text, FormattedText
 from prompt_toolkit.buffer import Buffer
@@ -158,6 +158,22 @@ all_windows = [ t for a in r.acts for t in
                 + [ active_line( m ) for m in a.materials ]
                ]
 
+def prompt_windows( ninjaprops ):
+   return [ "\\ninjas{" ]\
+      + [ l for a in (
+          ( f"  \\prop{{{prop.hardness}}}{{{prop.name}}}{{",
+            "    " + prop.drawing,
+            "  }{"
+           )\
+          + ( (f"    \\move{{{move.destination}}}{{{move.time}}}{{",
+               "      " + " ".join( "\\ninja{{{}}}".format( name )
+                                    for name in move.ninjanames
+                                   )
+               )) for prop in ninjaprops for move in prop.moves
+          ) for l in a
+         ]
+
+
 kb = KeyBindings()
 def wrapped_add( *keys, **kwargs ):
    def decorator( func ):
@@ -278,10 +294,11 @@ def update_ninjas( event, new_ninjas ):
    tex.parse( mat.path )
    tex.info["path"] = mat.path
    mat.__init__( tex.info, print = lambda *args, **kwargs: None )
-   s.content.children[ next( i for i,line in enumerate( s.content.children )
-                             if event.app.layout.has_focus( line )
-                            )
-                      ] = active_line( mat )
+   menu_lines = event.app.layout.container.children[0].content.children
+   menu_lines[ next( i for i,line in enumerate( menu_lines )
+                     if event.app.layout.has_focus( line )
+                    )
+              ] = active_line( mat )
 
 @kb.wadd('delete')
 @kb.wadd('x')
@@ -292,13 +309,20 @@ def delete_( event ):
 def new_( event ):
    update_ninjas( event, ["\\ninjas{}"] )
 
-s = ScrollablePane( HSplit( all_windows ),
-                    scroll_offsets = ScrollOffsets( top = 1, bottom = 1 )
-                   )
+menu_layout = Layout(
+   HSplit([
+      ScrollablePane(
+         HSplit( all_windows ),
+         scroll_offsets = ScrollOffsets( top = 1, bottom = 1 )
+      ),
+      Button( "quit", lambda: get_app().exit() )
+   ])
+   , focused_element = foci[ next( r.materials ) ]
+)
 
 @kb.add('d')
 def dt_(event):
-   pprint( [ x for x in all_windows if event.app.layout.has_focus( x ) ] )
+   pprint( prompt_windows( next( r.materials ).ninjaprops ) )
 
 # @kb.add('d')
 # def lc_(event):
@@ -322,11 +346,7 @@ def highlight_number():
 
 a = Application(
    key_bindings = kb,
-   layout = Layout( HSplit([ s,
-                             Button( "quit", lambda: get_app().exit() )
-                            ])
-                    , focused_element = foci[ next( r.materials ) ]
-                   ),
+   layout = menu_layout,
    # before_render = start_focusser,
    mouse_support = True,
    style = merge_styles([ Style.from_dict({"number": "ansibrightblack"})
