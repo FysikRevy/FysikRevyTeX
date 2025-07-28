@@ -105,16 +105,16 @@ class NinjaParser:
          move = re.sub( r"^.*?\\move", "", move, count=1 )
          while len( parsedMove ) < 3:
             move = self.re_to_open.sub( "", move, count=1 )
-            bracketDepth = i = 0
-            while bracketDepth >= 0 and i < len( move ):
+            bracketDepth = i = 1
+            while bracketDepth > 0 and i < len( move ):
                match move[i]:
                   case "{":
                      bracketDepth += 1
                   case "}":
                      bracketDepth -= 1
                i += 1
-            parsedMove += [ move[:i-1].strip() ]
-            move = move[i:]
+            parsedMove += [ move[1:i-1].strip() ]
+            move = self.re_to_open.sub( "", move[i:], count=1 )
          parsedMoves += [ parsedMove ]
 
       for parsedMove in parsedMoves:
