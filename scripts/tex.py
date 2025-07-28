@@ -114,7 +114,7 @@ class NinjaParser:
                      bracketDepth -= 1
                i += 1
             parsedMove += [ move[1:i-1].strip() ]
-            move = self.re_to_open.sub( "", move[i:], count=1 )
+            move = move[i:]
          parsedMoves += [ parsedMove ]
 
       for parsedMove in parsedMoves:
