@@ -159,19 +159,22 @@ all_windows = [ t for a in r.acts for t in
                ]
 
 def prompt_windows( ninjaprops ):
-   return [ "\\ninjas{" ]\
-      + [ l for a in (
-          ( f"  \\prop{{{prop.hardness}}}{{{prop.name}}}{{",
-            "    " + prop.drawing,
+   return [ Label( "\\ninjas{" ) ]\
+      + [ Label( l ) for a in (
+          ((( f"  \\prop{{{prop.hardness}}}{{{prop.name}}}{{",
+              "    " + prop.drawing,
             "  }{"
-           )\
-          + ( (f"    \\move{{{move.destination}}}{{{move.time}}}{{",
+             ),)\
+          + tuple(( (f"    \\move{{{move.destination}}}{{{move.time}}}{{",
                "      " + " ".join( "\\ninja{{{}}}".format( name )
                                     for name in move.ninjanames
-                                   )
-               )) for prop in ninjaprops for move in prop.moves
-          ) for l in a
-         ]
+                                   ),
+               "    }"
+               )) for move in prop.moves
+                  )\
+           + tuple((( "  }",),),)) for prop in ninjaprops 
+          ) for b in a for l in b
+         ] + [ Label( "}" ) ]
 
 
 kb = KeyBindings()
@@ -322,7 +325,9 @@ menu_layout = Layout(
 
 @kb.add('d')
 def dt_(event):
-   pprint( prompt_windows( next( r.materials ).ninjaprops ) )
+   event.app.layout = Layout( ScrollablePane(
+      HSplit( prompt_windows( next( r.materials ).ninjaprops
+   ) ) ) )
 
 # @kb.add('d')
 # def lc_(event):
