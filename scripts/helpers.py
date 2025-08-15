@@ -17,9 +17,9 @@ def split_outside_quotes( seperator, line ):
 def rows_from_csv_etc( fname, encoding = "utf-8" ):
     """assume the seperator is the most common char in a file out of
     comma, semocolon and tab. return an array with an entry for each
-    line (excepting lines without the seperator), each split along the
-    seperator, using split_outside_quotes() above to ignore seperators
-    inside quotes.
+    line (excepting whitespace lines), each split along the seperator,
+    using split_outside_quotes() above to ignore seperators inside
+    quotes.
     Throws any and all exeptions from IO right back to the caller."""
     with open( fname, "r", encoding = encoding ) as f:
         lines = f.readlines()
@@ -37,6 +37,6 @@ def rows_from_csv_etc( fname, encoding = "utf-8" ):
             seperator = cand_sep 
         
     return [ split_outside_quotes( seperator, line )
-             for line in lines if seperator in line
+             for line in lines if line.strip()
             ]
 
