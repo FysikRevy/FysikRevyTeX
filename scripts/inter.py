@@ -2,27 +2,32 @@ import os,sys
 
 from pprint import pprint
 from itertools import chain, dropwhile, islice
+from copy import copy
 
 from more_itertools import stagger, intersperse
 
 from prompt_toolkit import Application, ANSI, PromptSession
+from prompt_toolkit.auto_suggest import AutoSuggest, Suggestion
 from prompt_toolkit.application import get_app
 from prompt_toolkit.formatted_text import to_formatted_text, FormattedText
 from prompt_toolkit.buffer import Buffer
-from prompt_toolkit.layout.containers import HSplit, VSplit, Window, HorizontalAlign, ConditionalContainer, ScrollOffsets
+from prompt_toolkit.layout.containers import HSplit, VSplit, Window, HorizontalAlign, VerticalAlign, ConditionalContainer, ScrollOffsets, FloatContainer, Float
 from prompt_toolkit.layout.scrollable_pane import ScrollablePane
 from prompt_toolkit.layout.controls import BufferControl, FormattedTextControl
 from prompt_toolkit.layout.layout import Layout
-from prompt_toolkit.key_binding import KeyBindings
+from prompt_toolkit.layout.processors import AfterInput
+from prompt_toolkit.key_binding import KeyBindings, merge_key_bindings
+from prompt_toolkit.key_binding.defaults import load_key_bindings
 from prompt_toolkit.key_binding.key_bindings import Binding
-from prompt_toolkit.widgets import Label, Button
-from prompt_toolkit.filters import has_focus, Never, Always
+from prompt_toolkit.widgets import Label, Button, TextArea
+from prompt_toolkit.filters import has_focus, Never, Always, is_true
 from prompt_toolkit.styles import Style, DynamicStyle, merge_styles
 
 sys.path.append( os.getcwd() )
 os.chdir( "E:/thebe/Git/revymanus2025/" )
 
 from classy_revy import Revue, Scene
+from base_classes import NinjaProp
 from tex import TeX
 from clobberers import replace_ninjas
 
@@ -30,6 +35,12 @@ class FocusableLabel( Label ):
    def __init__( self, text = "", *args, **kwargs ):
       Label.__init__( self, text, *args, **kwargs )
       self.formatted_text_control.focusable = Always()
+
+class NarrowLabel( Label ):
+   def __init__( self, *args, **kwargs ):
+      if len(args) >= 4 or "dont_extend_width" in kwargs:
+         return Label.__init__( self, *args, **kwargs )
+      return Label.__init__( self, *args, dont_extend_width=True, **kwargs )
 
 def formatted_control( text ):
    return FormattedText(
@@ -323,19 +334,182 @@ menu_layout = Layout(
    , focused_element = foci[ next( r.materials ) ]
 )
 
+testprops = next( islice( r.materials, 1, None ) ).props
 @kb.add('d')
 def dt_(event):
-   event.app.layout = Layout( ScrollablePane(
-      HSplit( prompt_windows( next( r.materials ).ninjaprops
-   ) ) ) )
-
-# @kb.add('d')
-# def lc_(event):
-#    pprint( event.app.layout.get_visible_focusable_windows() )
+   pprint( [ p.prop for p in testprops ] )
 
 @kb.add('i')
-def invalidate_( event ):
+def inv_(event):
    event.app.invalidate()
+
+nav_kb = KeyBindings()
+@nav_kb.add('up')
+def up_(event):
+   event.app.layout.focus_previous()
+@nav_kb.add('down')
+def down_(event):
+   event.app.layout.focus_next()
+
+class TextAreaWithBindings( TextArea ):
+   def __init__( self, *args, **kwargs ):
+      TextArea.__init__( self, *args, **kwargs )
+      self.control.key_bindings = merge_key_bindings((
+         load_key_bindings(), nav_kb
+      ))
+
+class MoveLines():
+   def __init__( self, move ):
+      self.array = [
+         TextAreaWithBindings(
+            text = t,
+            prompt = "    " + ( "\\move{ " if i == 0 else "}{ " ),
+            dont_extend_height=True,
+            input_processors = [ AfterInput( FormattedText([
+               ( "ansibrightblack", cmt )
+            ]))]
+         ) for i,(t,cmt) in enumerate( zip(
+            ( move.time,  move.destination, str(move.ninjanames) ),
+            [ "  % time", "  % from / to",  "  % ninjas" ]
+         ))
+      ] + [ Label( "    }" ) ]
+
+   @property
+   def __getitem__( self ):
+      return self.array.__getitem__
+   @property
+   def __add__( self, other ):
+      return self.array.__add__
+
+class PropLines():
+   def __init__( self, prop = NinjaProp( "", "", "", [] ) ):
+      hard_focus = FocusableLabel( " ", dont_extend_width = True )
+      hard_field = NarrowLabel( " " + prop.hardness )
+      hard_kb = KeyBindings()
+      @hard_kb.add('backspace')
+      def none_(event):
+         hard_field.text = " "
+      def nt( n ):
+         def set_hard( event ):
+            hard_field.text = " " + str( n )
+         return set_hard
+      for n in range( 1, 6 ):
+         hard_kb.add( str( n ) )( nt( n ) )
+
+      self.array = [
+         VSplit([ NarrowLabel( "  \\prop{" ),
+                  hard_field,
+                  hard_focus,
+                  Label( FormattedText([
+                     ("ansibrightblack", "  % difficulty on a scale of 1 - 5")
+                  ]))
+                 ], key_bindings = hard_kb
+                )
+         ] + [
+            TextAreaWithBindings(
+               text = data,
+               prompt = "  }{ ",
+               dont_extend_height=True,
+               input_processors = [ AfterInput( FormattedText([
+                  ( "ansibrightblack", cmt )
+               ]) )]
+            ) for data,cmt in zip(
+               ( prop.name, prop.drawing ),
+               ( "   % prop name",
+                 "   % drawing (in TikZ format, see manual)"
+                )
+               )
+         ] + [ Label( "  }{" )
+         ] + [ ml for move in prop.moves for ml in MoveLines( move )
+         ] + [ Label( "  }" ) ]
+
+   @property
+   def __getitem__( self ):
+      return self.array.__getitem__
+
+class NinjaLayout( Layout ):
+   def __init__( self, material ):
+      ps = [ PropLines( p ) for p in material.ninjaprops or [] ]
+      point = Window( FormattedTextControl(
+         FormattedText([("ansibrightblack italic", " [↲]: add prop")]),
+         focusable = is_true( not bool( ps ) )
+      ))
+
+      Layout.__init__( self, ScrollablePane( HSplit([
+         VSplit([ Label( "\\ninjas{ ", dont_extend_width=True ),
+                  ConditionalContainer( point, has_focus( point ) )
+                 ])
+      ] + [
+         l for p in ps for l in p
+      ] + [
+         Label( "}" )
+      ], key_bindings = nav_kb )))
+      self.focus( ( ps + [[ point ]] )[0][0] )
+
+
+@kb.add('e')
+def switch_( event ):
+   event.app.layout = NinjaLayout( next( islice( r.materials, 0, None ) ) )
+
+@kb.add('enter')
+def add_prop( event ):
+   f = Label( FormattedText([("[SetCursorPosition]", " ")]),
+              dont_extend_width=True
+             )
+   dif_kb = KeyBindings()
+   @dif_kb.add('backspace')
+   def none_( event ):
+      f.text = " "
+   def nt( n ):
+      def put( event ):
+         f.text = FormattedText([ ("", str( n ) ),
+                                  ("[SetCursorPosition]", " ")
+                                 ])
+         f.formatted_text_control.focusable = True
+         event.app.layout.focus( t )
+      return put
+   for n in range( 1, 6 ):
+      dif_kb.bindings.append( Binding( str( n ), nt( n ) ))
+   f.formatted_text_control.key_bindings = dif_kb
+   @dif_kb.add("down")
+   def d_(event):
+      event.app.layout.focus( l[1] )
+
+   class VaugeSuggest( AutoSuggest ):
+      def get_suggestion( self, _, doc ):
+         return Suggestion( "   " + ", ".join(
+            p.prop[ len(doc.text.strip()) : ] for p in testprops
+            if p.prop.strip().lower().startswith( doc.text.strip().lower() )
+         ) )
+
+   t = TextArea( text = "", auto_suggest = VaugeSuggest() )
+   l = [ VSplit([ NarrowLabel( "  \\prop{ " ),
+                  f,
+                  NarrowLabel( FormattedText([
+                     ("ansibrightblack", "  % difficulty on a scale of 1 - 5")
+                  ]))
+                 ]),
+         VSplit([ NarrowLabel( "  }{ "),
+                  FloatContainer(
+                     t,
+                     [ Float( Label( FormattedText([( "ansibrightblack",
+                                                      "  % prop name"
+                                                     )])),
+                              left = 0,
+                              hide_when_covering_content = True
+                             )]
+                  )
+                  # ,
+                  # NarrowLabel( FormattedText([("ansibrightblack",
+                  #                              "   % prop name"
+                  #                              )]))
+                 ], key_bindings=load_key_bindings() ),
+         Label( "  }" )
+        ]
+   c = event.app.layout.container.children
+   event.app.layout.container = HSplit( c[:-1] + l + c[-1:] )
+   # pprint( event.app.layout.container.children )
+   event.app.layout.focus( f )
 
 def highlight_number():
    try:
