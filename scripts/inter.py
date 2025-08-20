@@ -15,13 +15,14 @@ from prompt_toolkit.layout.containers import HSplit, VSplit, Window, HorizontalA
 from prompt_toolkit.layout.scrollable_pane import ScrollablePane
 from prompt_toolkit.layout.controls import BufferControl, FormattedTextControl
 from prompt_toolkit.layout.layout import Layout
-from prompt_toolkit.layout.processors import AfterInput
+from prompt_toolkit.layout.processors import AfterInput, Processor, explode_text_fragments, Transformation
 from prompt_toolkit.key_binding import KeyBindings, merge_key_bindings
 from prompt_toolkit.key_binding.defaults import load_key_bindings
 from prompt_toolkit.key_binding.key_bindings import Binding
 from prompt_toolkit.widgets import Label, Button, TextArea
-from prompt_toolkit.filters import has_focus, Never, Always, is_true
+from prompt_toolkit.filters import has_focus, Never, Always, is_true, Condition
 from prompt_toolkit.styles import Style, DynamicStyle, merge_styles
+from prompt_toolkit.output import Output
 
 sys.path.append( os.getcwd() )
 os.chdir( "E:/thebe/Git/revymanus2025/" )
@@ -358,21 +359,118 @@ class TextAreaWithBindings( TextArea ):
          load_key_bindings(), nav_kb
       ))
 
+class NinjasLine(TextArea):
+   def __init__( self, ninjas ):
+      self.ninjas = ninjas
+      class ClotheNinjas(Processor):
+         def apply_transformation( self, trans_input ):
+            inter = explode_text_fragments(
+               FormattedText([ ("", " } "),
+                               ("ansicyan", "\\ninja"),
+                               ("", "{ ")
+                              ])
+            )
+            fragments = []
+            separator_positions = [0]
+            for i, fragment in enumerate(
+                  explode_text_fragments( trans_input.fragments )[:-1]
+            ):
+               if fragment[1] == "\x1e":
+                  fragments += inter
+                  separator_positions += [i]
+               else:
+                  fragments += [ fragment ]
+
+            separator_positions += [ len( fragments ) ]
+            fragments += explode_text_fragments( FormattedText((("", " }"),)) )
+
+            active_positions = [
+               j + m * ( len( inter ) - 1 ) for j,m in enumerate(
+                  n
+                  for i in range( len( separator_positions ) - 1 )
+                  for n in [i] * ( separator_positions[i+1]
+                                   - separator_positions[i]
+                                   + 1
+                                  )
+               )
+            ] + [ len( fragments ) ]
+
+            def display_to_source( display_pos ):
+               try:
+                  return active_positions.index( display_pos )
+               except ValueError:
+                  return next( ( i for i,pos in enumerate( active_positions )
+                                 if pos > display_pos
+                                ),
+                               len( fragments ) + 1
+                              )
+
+            return Transformation(
+               fragments,
+               source_to_display = lambda p: active_positions[p],
+               display_to_source = display_to_source
+            )
+
+      TextArea.__init__(
+         self,
+         text = "\x1e".join( ninjas ) + " ",
+         prompt = FormattedText([ ("", "            }{ "),
+                                  ("ansicyan", "\\ninja"),
+                                  ("", "{ ")
+                                 ]),
+         input_processors = [
+            ClotheNinjas(),
+            AfterInput([ ("ansibrightblack", "  % assigned ninjas")
+                        ])
+         ]
+      )
+
+      kb = KeyBindings()
+
+      @kb.add(
+         'backspace',
+         filter = has_focus( self ) \
+           & Condition( lambda: self.document.cursor_position > 0 \
+                          and self.text[ self.document.cursor_position - 1 ] \
+                                == "\x1e"
+                       )
+      )
+      def dont_delete_( event ):
+         event.app.output.bell()
+      kb.add(
+         'delete',
+         filter = has_focus( self )\
+           & Condition(
+              lambda: self.document.cursor_position < len( self.text ) \
+                and self.text[ self.document.cursor_position ] == "\x1e"
+           )
+      )(dont_delete_)
+
+      self.control.key_bindings = merge_key_bindings((
+         load_key_bindings(), nav_kb, kb
+      ))
+      
 class MoveLines():
-   def __init__( self, move ):
+   def __init__( self, move, pre_prompt = "" ):
       self.array = [
          TextAreaWithBindings(
             text = t,
-            prompt = "    " + ( "\\move{ " if i == 0 else "}{ " ),
+            prompt = FormattedText([
+               ("", pre_prompt if i == 0 else " " * len( pre_prompt ) ),
+               (("ansicyan", "\\move") if i == 0 else ("", "    }")),
+               ("", "{ ")
+            ]),
             dont_extend_height=True,
             input_processors = [ AfterInput( FormattedText([
                ( "ansibrightblack", cmt )
             ]))]
          ) for i,(t,cmt) in enumerate( zip(
-            ( move.time,  move.destination, str(move.ninjanames) ),
-            [ "  % time", "  % from / to",  "  % ninjas" ]
+            ( move.time,  move.destination ),
+            [ "  % time", "  % from / to" ]
          ))
-      ] + [ Label( "    }" ) ]
+      ] + [ NinjasLine( move.ninjanames ),
+            Label( " " * len( pre_prompt ) + "}" )
+           ]
 
    @property
    def __getitem__( self ):
@@ -397,7 +495,9 @@ class PropLines():
          hard_kb.add( str( n ) )( nt( n ) )
 
       self.array = [
-         VSplit([ NarrowLabel( "  \\prop{" ),
+         VSplit([ NarrowLabel( FormattedText([ ("ansicyan", "  \\prop"),
+                                               ("", "{")
+                                              ])),
                   hard_field,
                   hard_focus,
                   Label( FormattedText([
@@ -408,7 +508,7 @@ class PropLines():
          ] + [
             TextAreaWithBindings(
                text = data,
-               prompt = "  }{ ",
+               prompt = "      }{ ",
                dont_extend_height=True,
                input_processors = [ AfterInput( FormattedText([
                   ( "ansibrightblack", cmt )
@@ -419,8 +519,8 @@ class PropLines():
                  "   % drawing (in TikZ format, see manual)"
                 )
                )
-         ] + [ Label( "  }{" )
-         ] + [ ml for move in prop.moves for ml in MoveLines( move )
+         ] + [ ml for i,move in enumerate(prop.moves)
+               for ml in MoveLines( move, "      }{" if i == 0 else "        " )
          ] + [ Label( "  }" ) ]
 
    @property
@@ -436,7 +536,11 @@ class NinjaLayout( Layout ):
       ))
 
       Layout.__init__( self, ScrollablePane( HSplit([
-         VSplit([ Label( "\\ninjas{ ", dont_extend_width=True ),
+         VSplit([ Label( FormattedText([ ("ansicyan", "\\ninjas"),
+                                         ("", "{ ")
+                                        ]),
+                         dont_extend_width=True
+                        ),
                   ConditionalContainer( point, has_focus( point ) )
                  ])
       ] + [
