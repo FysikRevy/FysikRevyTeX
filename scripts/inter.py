@@ -9,7 +9,7 @@ from more_itertools import stagger, intersperse
 from prompt_toolkit import Application, ANSI, PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggest, Suggestion
 from prompt_toolkit.application import get_app
-from prompt_toolkit.formatted_text import to_formatted_text, FormattedText
+from prompt_toolkit.formatted_text import to_formatted_text, FormattedText, fragment_list_len
 from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.layout.containers import HSplit, VSplit, Window, HorizontalAlign, VerticalAlign, ConditionalContainer, ScrollOffsets, FloatContainer, Float
 from prompt_toolkit.layout.scrollable_pane import ScrollablePane
@@ -20,7 +20,7 @@ from prompt_toolkit.key_binding import KeyBindings, merge_key_bindings
 from prompt_toolkit.key_binding.defaults import load_key_bindings
 from prompt_toolkit.key_binding.key_bindings import Binding
 from prompt_toolkit.widgets import Label, Button, TextArea
-from prompt_toolkit.filters import has_focus, Never, Always, is_true, Condition
+from prompt_toolkit.filters import has_focus, Never, Always, is_true, Condition, to_filter
 from prompt_toolkit.styles import Style, DynamicStyle, merge_styles
 from prompt_toolkit.output import Output
 
@@ -361,40 +361,67 @@ class TextAreaWithBindings( TextArea ):
 
 class NinjasLine(TextArea):
    def __init__( self, ninjas ):
-      self.ninjas = ninjas
+      try:
+         # the final space is where the command to add a ninja is active.
+         # but if there are no ninjas, the final space is the *only* space.
+         # don't forget that it's there.
+         ninjas = ninjas[:-1] + [ ninjas[-1] + " " ]
+      except IndexError:
+         pass
+      
       class ClotheNinjas(Processor):
          def apply_transformation( self, trans_input ):
-            inter = explode_text_fragments(
-               FormattedText([ ("", " } "),
-                               ("ansicyan", "\\ninja"),
-                               ("", "{ ")
-                              ])
+            if not trans_input.document.text:
+               return Transformation( trans_input.fragments )
+            
+            inter = FormattedText([ ("", " } "),
+                                    ("ansicyan", "\\ninja"),
+                                    ("", "{ ")
+                                   ])
+            trans_fragments = (
+               frag for frag in explode_text_fragments( trans_input.fragments )
             )
-            fragments = []
-            separator_positions = [0]
+            fragments = [
+               frag for frag in islice( trans_fragments,
+                                        trans_input.source_to_display(0) )
+            ]
+            
+            fragments += inter[1:]
+            separator_positions = [ fragment_list_len( fragments ) - 1 ]
             for i, fragment in enumerate(
-                  explode_text_fragments( trans_input.fragments )[:-1]
+                  islice( trans_fragments,
+                          trans_input.source_to_display(
+                             len( trans_input.document.text ) - 1
+                          ) \
+                          - trans_input.source_to_display(0)
+                         ),
+                  start = fragment_list_len( fragments )
             ):
                if fragment[1] == "\x1e":
                   fragments += inter
-                  separator_positions += [i]
+                  separator_positions += [ i ]
                else:
                   fragments += [ fragment ]
-
-            separator_positions += [ len( fragments ) ]
-            fragments += explode_text_fragments( FormattedText((("", " }"),)) )
+            separator_positions += [
+               fragment_list_len( fragments )
+            ]
+            fragments += [ ("", "}") ]
+            fragments += [ frag for frag in trans_fragments ]
 
             active_positions = [
-               j + m * ( len( inter ) - 1 ) for j,m in enumerate(
-                  n
-                  for i in range( len( separator_positions ) - 1 )
-                  for n in [i] * ( separator_positions[i+1]
-                                   - separator_positions[i]
-                                   + 1
-                                  )
+               j + m * ( len( inter ) - 1 )
+               for j,m in enumerate(
+                  ( n
+                    for i in range( len( separator_positions ) - 1 )
+                    for n in (i,) * ( separator_positions[i+1]
+                                      - separator_positions[i]
+                                     )
+                   ),
+                  start = separator_positions[0] + 1 # wrong again!
                )
-            ] + [ len( fragments ) ]
-
+            ]
+            active_positions += [ active_positions[-1] + 2 ]
+            #breakpoint()
             def display_to_source( display_pos ):
                try:
                   return active_positions.index( display_pos )
@@ -405,18 +432,24 @@ class NinjasLine(TextArea):
                                len( fragments ) + 1
                               )
 
+            def apt(p):
+               try:
+                  return active_positions[p]
+               except IndexError:
+                  q = trans_input,fragments
+                  breakpoint()
+               
             return Transformation(
                fragments,
-               source_to_display = lambda p: active_positions[p],
+               source_to_display = apt,#lambda p: active_positions[p],
                display_to_source = display_to_source
             )
 
       TextArea.__init__(
          self,
-         text = "\x1e".join( ninjas ) + " ",
+         text = "\x1e".join( ninjas ),
+         multiline = False,
          prompt = FormattedText([ ("", "            }{ "),
-                                  ("ansicyan", "\\ninja"),
-                                  ("", "{ ")
                                  ]),
          input_processors = [
             ClotheNinjas(),
@@ -432,7 +465,8 @@ class NinjasLine(TextArea):
          filter = has_focus( self ) \
            & Condition( lambda: self.document.cursor_position > 0 \
                           and self.text[ self.document.cursor_position - 1 ] \
-                                == "\x1e"
+                                == "\x1e" \
+                          or self.document.cursor_position == len( self.text )
                        )
       )
       def dont_delete_( event ):
@@ -442,13 +476,18 @@ class NinjasLine(TextArea):
          filter = has_focus( self )\
            & Condition(
               lambda: self.document.cursor_position < len( self.text ) \
-                and self.text[ self.document.cursor_position ] == "\x1e"
+                and self.text[ self.document.cursor_position ] == "\x1e" \
+                or self.document.cursor_position == len( self.text ) - 1
            )
       )(dont_delete_)
 
       self.control.key_bindings = merge_key_bindings((
          load_key_bindings(), nav_kb, kb
       ))
+
+      self.buffer.read_only = Condition(
+         lambda: self.document.cursor_position == len( self.text )
+      )
       
 class MoveLines():
    def __init__( self, move, pre_prompt = "" ):
