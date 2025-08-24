@@ -386,42 +386,53 @@ class NinjasLine(TextArea):
                                         trans_input.source_to_display(0) )
             ]
             
+            separator_positions = [ ( 0,0 ),
+                                    ( fragment_list_len( fragments ) - 1,
+                                      fragment_list_len( inter[1:] )
+                                     )
+                                   ]
             fragments += inter[1:]
-            separator_positions = [ fragment_list_len( fragments ) - 1 ]
             for i, fragment in enumerate(
                   islice( trans_fragments,
                           trans_input.source_to_display(
-                             len( trans_input.document.text ) - 1
+                             len( trans_input.document.text )
                           ) \
                           - trans_input.source_to_display(0)
                          ),
-                  start = fragment_list_len( fragments )
+                  start = trans_input.source_to_display(0) + 1
             ):
                if fragment[1] == "\x1e":
                   fragments += inter
-                  separator_positions += [ i ]
+                  separator_positions += [( i,
+                                            fragment_list_len( inter ) \
+                                            + separator_positions[-1][1] \
+                                            - 1
+                                           )
+                                          ]
                else:
                   fragments += [ fragment ]
             separator_positions += [
-               fragment_list_len( fragments )
-            ]
+               ( trans_input.source_to_display(
+                  len( trans_input.document.text )
+                 ),
+                 separator_positions[-1][1] + 1
+                )]
             fragments += [ ("", "}") ]
             fragments += [ frag for frag in trans_fragments ]
 
             active_positions = [
-               j + m * ( len( inter ) - 1 )
+               j + m
                for j,m in enumerate(
                   ( n
                     for i in range( len( separator_positions ) - 1 )
-                    for n in (i,) * ( separator_positions[i+1]
-                                      - separator_positions[i]
-                                     )
-                   ),
-                  start = separator_positions[0] + 1 # wrong again!
+                    for n in (separator_positions[i][1],) \
+                             * ( separator_positions[i+1][0]
+                                 - separator_positions[i][0]
+                                )
+                   )
                )
             ]
-            active_positions += [ active_positions[-1] + 2 ]
-            #breakpoint()
+            # breakpoint()
             def display_to_source( display_pos ):
                try:
                   return active_positions.index( display_pos )
@@ -437,7 +448,8 @@ class NinjasLine(TextArea):
                   return active_positions[p]
                except IndexError:
                   q = trans_input,fragments
-                  breakpoint()
+                  # breakpoint()
+                  return p + separator_positions[-1][1]
                
             return Transformation(
                fragments,
