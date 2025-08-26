@@ -1,4 +1,4 @@
-import os,sys
+import os,sys,re
 
 from pprint import pprint
 from itertools import chain, dropwhile, islice
@@ -15,7 +15,7 @@ from prompt_toolkit.layout.containers import HSplit, VSplit, Window, HorizontalA
 from prompt_toolkit.layout.scrollable_pane import ScrollablePane
 from prompt_toolkit.layout.controls import BufferControl, FormattedTextControl
 from prompt_toolkit.layout.layout import Layout
-from prompt_toolkit.layout.processors import AfterInput, Processor, explode_text_fragments, Transformation
+from prompt_toolkit.layout.processors import AfterInput, Processor, explode_text_fragments, Transformation, ConditionalProcessor
 from prompt_toolkit.key_binding import KeyBindings, merge_key_bindings
 from prompt_toolkit.key_binding.defaults import load_key_bindings
 from prompt_toolkit.key_binding.key_bindings import Binding
@@ -23,6 +23,8 @@ from prompt_toolkit.widgets import Label, Button, TextArea
 from prompt_toolkit.filters import has_focus, Never, Always, is_true, Condition, to_filter
 from prompt_toolkit.styles import Style, DynamicStyle, merge_styles
 from prompt_toolkit.output import Output
+from prompt_toolkit.document import Document
+from prompt_toolkit.utils import Event
 
 sys.path.append( os.getcwd() )
 os.chdir( "E:/thebe/Git/revymanus2025/" )
@@ -351,6 +353,9 @@ def up_(event):
 @nav_kb.add('down')
 def down_(event):
    event.app.layout.focus_next()
+@nav_kb.add('enter')
+def no_newline_(event):
+   pass
 
 class TextAreaWithBindings( TextArea ):
    def __init__( self, *args, **kwargs ):
@@ -425,7 +430,7 @@ class NinjasLine(TextArea):
                for j,m in enumerate(
                   ( n
                     for i in range( len( separator_positions ) - 1 )
-                    for n in (separator_positions[i][1],) \
+                    for n in ( separator_positions[i][1], ) \
                              * ( separator_positions[i+1][0]
                                  - separator_positions[i][0]
                                 )
@@ -443,32 +448,87 @@ class NinjasLine(TextArea):
                                len( fragments ) + 1
                               )
 
-            def apt(p):
+            def source_to_display( position ):
                try:
-                  return active_positions[p]
+                  return active_positions[ position ]
                except IndexError:
-                  q = trans_input,fragments
+                  # q = trans_input,fragments
                   # breakpoint()
-                  return p + separator_positions[-1][1]
+                  return position + separator_positions[-1][1]
                
             return Transformation(
                fragments,
-               source_to_display = apt,#lambda p: active_positions[p],
+               source_to_display = source_to_display,
                display_to_source = display_to_source
             )
 
       TextArea.__init__(
          self,
          text = "\x1e".join( ninjas ),
-         multiline = False,
          prompt = FormattedText([ ("", "            }{ "),
-                                 ]),
-         input_processors = [
+                                 ])
+      )
+      self.control.input_processors += [
             ClotheNinjas(),
+            ConditionalProcessor( AfterInput([ ("italic", " [+]" ) ]),
+                                  has_focus( self.buffer )
+                                 ),
             AfterInput([ ("ansibrightblack", "  % assigned ninjas")
                         ])
          ]
-      )
+      
+      def on_move( _ = None, ignore_focus = False ):
+         if self.buffer.selection_state \
+               and "\x1e" in self.document.text[
+                  slice( *sorted(( self.buffer.selection_state.original_cursor_position,
+                                   self.document.cursor_position
+                                  )))
+                  ]:
+            self.buffer.selection_state = None
+            
+         cursor_field_index = sum(
+            1 for c in self.document.text[ : self.document.cursor_position ]
+            if c == "\x1e"
+         )
+         fields = self.document.text.split( "\x1e" )
+         pre_fields = fields[ : cursor_field_index ]
+         post_fields = fields[ cursor_field_index + 1 : ]
+         pre_dirty_length = len( "\x1e".join( pre_fields ) )
+         were_post_fields = len( post_fields )
+         if ignore_focus \
+               or self.document.cursor_position == len( self.document.text ) \
+               or not is_true( has_focus( self ) ):
+            pre_dirty_length += len(
+               re.match( " *", fields[ cursor_field_index ] )[0]
+            )
+            were_post_fields = self.document.cursor_position == len( self.document.text )
+            post_fields = [ fields[ cursor_field_index ] ] + post_fields
+            cursor_field = []
+         else:
+            cursor_field = [ fields[ cursor_field_index ] ]
+         pre_fields, post_fields = (
+            [ ff for ff in ( f.strip() for f in x_fields )
+              if ff
+             ] for x_fields in ( pre_fields, post_fields )
+         )
+         pre_shift = len( "\x1e".join( pre_fields ) ) - pre_dirty_length
+         pre_fields += cursor_field
+         try:
+            post_fields[-1] += " "
+         except IndexError:
+            if were_post_fields:
+               try:
+                  pre_fields[-1] += " "
+               except IndexError:
+                  pass
+
+         fields = pre_fields + post_fields
+
+         self.document = Document(
+            "\x1e".join( fields ),
+            self.document.cursor_position + pre_shift
+         )
+      self.buffer.on_cursor_position_changed = Event( self.buffer, on_move )
 
       kb = KeyBindings()
 
@@ -492,6 +552,21 @@ class NinjasLine(TextArea):
                 or self.document.cursor_position == len( self.text ) - 1
            )
       )(dont_delete_)
+      @kb.add('+')
+      def plus_( event ):
+         self.document = \
+            Document( self.document.text[:-1] \
+                        + ("\x1e " if self.document.text else " "),
+                      len( self.document.text )
+                     )
+      @kb.add('up')
+      def up_( event ):
+         on_move( ignore_focus = True )
+         event.app.layout.focus_previous()
+      @kb.add('down')
+      def down_( event ):
+         on_move( ignore_focus = True )
+         event.app.layout.focus_next()
 
       self.control.key_bindings = merge_key_bindings((
          load_key_bindings(), nav_kb, kb
@@ -500,6 +575,12 @@ class NinjasLine(TextArea):
       self.buffer.read_only = Condition(
          lambda: self.document.cursor_position == len( self.text )
       )
+
+   def __getitem__( self, i ):
+      return self.document.text[:-1].split("\x1e")[i]
+
+   def __len__( self ):
+      return sum( 1 for c in self.document.text if c == "\x1e" ) + 1
       
 class MoveLines():
    def __init__( self, move, pre_prompt = "" ):
