@@ -3,8 +3,11 @@ import os,sys,re
 from pprint import pprint
 from itertools import chain, dropwhile, islice
 from copy import copy
+from dataclasses import dataclass
+from locale import strxfrm
 
 from more_itertools import stagger, intersperse
+from ordered_set import OrderedSet
 
 from prompt_toolkit import Application, ANSI, PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggest, Suggestion
@@ -25,6 +28,7 @@ from prompt_toolkit.styles import Style, DynamicStyle, merge_styles
 from prompt_toolkit.output import Output
 from prompt_toolkit.document import Document
 from prompt_toolkit.utils import Event
+from prompt_toolkit.completion import WordCompleter, ConditionalCompleter
 
 sys.path.append( os.getcwd() )
 os.chdir( "E:/thebe/Git/revymanus2025/" )
@@ -33,6 +37,8 @@ from classy_revy import Revue, Scene
 from base_classes import NinjaProp
 from tex import TeX
 from clobberers import replace_ninjas
+
+_NAME_FIELD_RE = re.compile( "([^\x1e]*(?:[^\x1e\\s]|\\s(?!$)))" )
 
 class FocusableLabel( Label ):
    def __init__( self, text = "", *args, **kwargs ):
@@ -365,7 +371,7 @@ class TextAreaWithBindings( TextArea ):
       ))
 
 class NinjasLine(TextArea):
-   def __init__( self, ninjas ):
+   def __init__( self, ninjas, names = lambda: OrderedSet() ):
       try:
          # the final space is where the command to add a ninja is active.
          # but if there are no ninjas, the final space is the *only* space.
@@ -466,7 +472,20 @@ class NinjasLine(TextArea):
          self,
          text = "\x1e".join( ninjas ),
          prompt = FormattedText([ ("", "            }{ "),
-                                 ])
+                                 ]),
+         completer = ConditionalCompleter(
+            WordCompleter(
+               lambda: names() - { n for n in self },
+               ignore_case = True,
+               pattern = _NAME_FIELD_RE
+            ),
+            Condition(
+               lambda: self.document.cursor_position \
+                            == len( self.document.text ) - 1 \
+                       or self.document.text[ self.document.cursor_position ] \
+                            == "\x1e"
+            )
+         )
       )
       self.control.input_processors += [
             ClotheNinjas(),
@@ -583,7 +602,8 @@ class NinjasLine(TextArea):
       return sum( 1 for c in self.document.text if c == "\x1e" ) + 1
       
 class MoveLines():
-   def __init__( self, move, pre_prompt = "" ):
+   def __init__( self, move, names = lambda: OrderedSet(), pre_prompt = "" ):
+      self.ninjas_line = NinjasLine( move.ninjanames, names )
       self.array = [
          TextAreaWithBindings(
             text = t,
@@ -600,7 +620,7 @@ class MoveLines():
             ( move.time,  move.destination ),
             [ "  % time", "  % from / to" ]
          ))
-      ] + [ NinjasLine( move.ninjanames ),
+      ] + [ self.ninjas_line,
             Label( " " * len( pre_prompt ) + "}" )
            ]
 
@@ -612,7 +632,13 @@ class MoveLines():
       return self.array.__add__
 
 class PropLines():
-   def __init__( self, prop = NinjaProp( "", "", "", [] ) ):
+   def __init__( self, prop = NinjaProp( "", "", "", [] ),
+                 names = lambda: OrderedSet()
+                ):
+      self.move_lines = [ MoveLines( move, names,
+                                     "      }{" if i == 0 else "        "
+                                    ) for i,move in enumerate( prop.moves )
+                         ]
       hard_focus = FocusableLabel( " ", dont_extend_width = True )
       hard_field = NarrowLabel( " " + prop.hardness )
       hard_kb = KeyBindings()
@@ -651,20 +677,46 @@ class PropLines():
                  "   % drawing (in TikZ format, see manual)"
                 )
                )
-         ] + [ ml for i,move in enumerate(prop.moves)
-               for ml in MoveLines( move, "      }{" if i == 0 else "        " )
+         ] + [ l for ml in self.move_lines for l in ml
          ] + [ Label( "  }" ) ]
 
    @property
    def __getitem__( self ):
       return self.array.__getitem__
 
+# @dataclass
+# class CompletionLists:
+#    names: OrderedSet[str] = OrderedSet()
+
 class NinjaLayout( Layout ):
    def __init__( self, material ):
-      ps = [ PropLines( p ) for p in material.ninjaprops or [] ]
+      self.material = material
+      self.ps = []
+      self.names = OrderedSet( n.name for n in r.ninjas
+         if material in ( nm.scene for nm in n.ninjamoves )
+      ) \
+      | OrderedSet(
+         a.name for a in r.actors if material in (
+            rl.material for rl in a.roles + a.instructorships
+         )
+      ) \
+      | OrderedSet( n.name for n in r.ninjas ) \
+      | OrderedSet( a.name for a in r.actors )
+      def name_getter():
+         return OrderedSet( sorted( ( n for p in self.ps
+                                      for m in p.move_lines
+                                      for n in m.ninjas_line
+                                     ),
+                                    key = strxfrm
+                                    ) ) \
+                | self.names
+                            
+      self.ps = [ PropLines( p, name_getter )
+                  for p in material.ninjaprops or []
+                 ]
       point = Window( FormattedTextControl(
          FormattedText([("ansibrightblack italic", " [↲]: add prop")]),
-         focusable = is_true( not bool( ps ) )
+         focusable = is_true( not bool( self.ps ) )
       ))
 
       Layout.__init__( self, ScrollablePane( HSplit([
@@ -676,11 +728,11 @@ class NinjaLayout( Layout ):
                   ConditionalContainer( point, has_focus( point ) )
                  ])
       ] + [
-         l for p in ps for l in p
+         l for p in self.ps for l in p
       ] + [
          Label( "}" )
       ], key_bindings = nav_kb )))
-      self.focus( ( ps + [[ point ]] )[0][0] )
+      self.focus( ( self.ps + [[ point ]] )[0][0] )
 
 
 @kb.add('e')
