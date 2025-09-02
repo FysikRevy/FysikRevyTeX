@@ -19,6 +19,7 @@ from prompt_toolkit.layout.scrollable_pane import ScrollablePane
 from prompt_toolkit.layout.controls import BufferControl, FormattedTextControl
 from prompt_toolkit.layout.layout import Layout
 from prompt_toolkit.layout.processors import AfterInput, Processor, explode_text_fragments, Transformation, ConditionalProcessor
+from prompt_toolkit.layout.menus import CompletionsMenuControl
 from prompt_toolkit.key_binding import KeyBindings, merge_key_bindings
 from prompt_toolkit.key_binding.defaults import load_key_bindings
 from prompt_toolkit.key_binding.key_bindings import Binding
@@ -719,19 +720,28 @@ class NinjaLayout( Layout ):
          focusable = is_true( not bool( self.ps ) )
       ))
 
-      Layout.__init__( self, ScrollablePane( HSplit([
-         VSplit([ Label( FormattedText([ ("ansicyan", "\\ninjas"),
-                                         ("", "{ ")
-                                        ]),
-                         dont_extend_width=True
-                        ),
-                  ConditionalContainer( point, has_focus( point ) )
-                 ])
-      ] + [
-         l for p in self.ps for l in p
-      ] + [
-         Label( "}" )
-      ], key_bindings = nav_kb )))
+      Layout.__init__( self, FloatContainer(
+         ScrollablePane( HSplit([
+               VSplit([ Label( FormattedText([ ("ansicyan", "\\ninjas"),
+                                               ("", "{ ")
+                                              ]),
+                               dont_extend_width=True
+                              ),
+                        ConditionalContainer( point, has_focus( point ) )
+                       ])
+            ] + [
+               l for p in self.ps for l in p
+            ] + [
+               Label( "}" )
+            ], key_bindings = nav_kb )
+         ),
+         floats = [
+            Float( content = Window(CompletionsMenuControl()),
+                   xcursor = True,
+                   ycursor = True
+                  )
+         ]
+      ))
       self.focus( ( self.ps + [[ point ]] )[0][0] )
 
 
