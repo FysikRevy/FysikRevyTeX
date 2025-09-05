@@ -5,6 +5,7 @@ from itertools import chain, dropwhile, islice
 from copy import copy
 from dataclasses import dataclass
 from locale import strxfrm
+from collections import defaultdict
 
 from more_itertools import stagger, intersperse
 from ordered_set import OrderedSet
@@ -39,7 +40,7 @@ from base_classes import NinjaProp
 from tex import TeX
 from clobberers import replace_ninjas
 
-_NAME_FIELD_RE = re.compile( "([^\x1e]*(?:[^\x1e\\s]|\\s(?!$)))" )
+_NAME_FIELD_RE = re.compile( "([^\x1e]*(?:[^\x1e\\s]|[^\x1e\\S](?!$))?)" )
 
 class FocusableLabel( Label ):
    def __init__( self, text = "", *args, **kwargs ):
@@ -63,7 +64,7 @@ items = [ m.title for m in r.materials ]
 # items = ["one","two","three"]
 # controls = [ control("w/r/n") for _ in items ]
 number_style = Style.from_dict({"number": "ansibrightblack" })
-def highlightable_number( index, of_number ):
+def highlightable_number( ndex, of_number ):
    def style_number():
       try:
          n = get_app().number
@@ -469,26 +470,54 @@ class NinjasLine(TextArea):
                display_to_source = display_to_source
             )
 
+      class TabHelp( Processor ):
+         def apply_transformation( self, trans_input ):
+            if not trans_input.document.text:
+               return Transformation( trans_input.fragments )
+
+            # breakpoint()
+
+            tab_help = FormattedText([("italic", "  [tab]")])
+            shift = fragment_list_len( tab_help )
+
+            help_spot = trans_input.document.text.find(
+               "\x1e", trans_input.document.cursor_position
+            )
+            if help_spot < 0:
+               help_spot = len( trans_input.document.text ) - 1
+            help_spot = trans_input.source_to_display( help_spot )
+
+            fragments = explode_text_fragments( trans_input.fragments )
+            return Transformation(
+               fragments[:help_spot] + tab_help + fragments[help_spot:],
+               source_to_display = lambda p: p + (
+                  shift if p > help_spot else 0
+               ),
+               display_to_source = \
+                 lambda p: p if p <= help_spot \
+                             else help_spot if p <= help_spot + shift \
+                             else p + shift
+            )
+
       TextArea.__init__(
          self,
          text = "\x1e".join( ninjas ),
+         focus_on_click = True,
          prompt = FormattedText([ ("", "            }{ "),
-                                 ]),
-         completer = ConditionalCompleter(
-            WordCompleter(
-               lambda: names() - { n for n in self },
-               ignore_case = True,
-               pattern = _NAME_FIELD_RE
-            ),
-            Condition(
-               lambda: self.document.cursor_position \
-                            == len( self.document.text ) - 1 \
-                       or self.document.text[ self.document.cursor_position ] \
-                            == "\x1e"
-            )
-         )
+                                 ])
       )
       self.control.input_processors += [
+            ConditionalProcessor(
+               TabHelp(),
+               has_focus( self.buffer ) \
+                 & Condition(
+                    lambda: not self.document.cursor_position \
+                                 == len( self.document.text ) \
+                             and (  self.buffer.complete_state\
+                                   and self.buffer.complete_state.completions
+                                  )
+                 )
+            ),
             ClotheNinjas(),
             ConditionalProcessor( AfterInput([ ("italic", " [+]" ) ]),
                                   has_focus( self.buffer )
@@ -496,14 +525,42 @@ class NinjasLine(TextArea):
             AfterInput([ ("ansibrightblack", "  % assigned ninjas")
                         ])
          ]
+
+      class CompleteSelectionHelp():
+         def get( _, key, fallback = "" ): # don't shadow outer self
+            index = self.buffer.complete_state.complete_index
+            count = len( self.buffer.complete_state.completions )
+            try:
+               prev_index, next_index = ( (index + s) for s in (-1,1) )
+            except TypeError:
+               prev_index, next_index = -1, 0
+
+            breakpoint()
+            return FormattedText((("italic", "[tab]"),)) \
+               if count == next_index \
+               else FormattedText((("italic", "[s-tab]"),)) \
+               if count == prev_index \
+               else fallback
+      self.completer = ConditionalCompleter(
+         WordCompleter(
+            lambda: names() - { n for n in self },
+            ignore_case = True,
+            pattern = _NAME_FIELD_RE,
+            meta_dict = CompleteSelectionHelp()
+         ),
+         Condition(
+            lambda: self.document.cursor_position < len( self.document.text )
+         )
+      )
       
-      def on_move( _ = None, ignore_focus = False ):
+      def on_move( event = None, ignore_focus = False ):
          if self.buffer.selection_state \
                and "\x1e" in self.document.text[
-                  slice( *sorted(( self.buffer.selection_state.original_cursor_position,
-                                   self.document.cursor_position
-                                  )))
-                  ]:
+                  slice( *sorted((
+                     self.buffer.selection_state.original_cursor_position,
+                     self.document.cursor_position
+                  )))
+               ]:
             self.buffer.selection_state = None
             
          cursor_field_index = sum(
@@ -561,9 +618,7 @@ class NinjasLine(TextArea):
                           or self.document.cursor_position == len( self.text )
                        )
       )
-      def dont_delete_( event ):
-         event.app.output.bell()
-      kb.add(
+      @kb.add(
          'delete',
          filter = has_focus( self )\
            & Condition(
@@ -571,7 +626,10 @@ class NinjasLine(TextArea):
                 and self.text[ self.document.cursor_position ] == "\x1e" \
                 or self.document.cursor_position == len( self.text ) - 1
            )
-      )(dont_delete_)
+      )
+      def dont_delete_( event ):
+         event.app.output.bell()
+
       @kb.add('+')
       def plus_( event ):
          self.document = \
@@ -598,6 +656,10 @@ class NinjasLine(TextArea):
 
    def __getitem__( self, i ):
       return self.document.text[:-1].split("\x1e")[i]
+
+   @property
+   def __iter__( self ):
+      return self.document.text[:-1].split("\x1e").__iter__
 
    def __len__( self ):
       return sum( 1 for c in self.document.text if c == "\x1e" ) + 1
@@ -675,7 +737,7 @@ class PropLines():
             ) for data,cmt in zip(
                ( prop.name, prop.drawing ),
                ( "   % prop name",
-                 "   % drawing (in TikZ format, see manual)"
+                 "   % drawing (in TikZ format, see manual. Not required)"
                 )
                )
          ] + [ l for ml in self.move_lines for l in ml
