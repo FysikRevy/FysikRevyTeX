@@ -24,6 +24,7 @@ from prompt_toolkit.layout.menus import CompletionsMenuControl
 from prompt_toolkit.key_binding import KeyBindings, merge_key_bindings
 from prompt_toolkit.key_binding.defaults import load_key_bindings
 from prompt_toolkit.key_binding.key_bindings import Binding
+from prompt_toolkit.key_binding.bindings.named_commands import end_of_line
 from prompt_toolkit.widgets import Label, Button, TextArea
 from prompt_toolkit.filters import has_focus, Never, Always, is_true, Condition, to_filter
 from prompt_toolkit.styles import Style, DynamicStyle, merge_styles
@@ -41,6 +42,8 @@ from tex import TeX
 from clobberers import replace_ninjas
 
 _NAME_FIELD_RE = re.compile( "([^\x1e]*(?:[^\x1e\\s]|[^\x1e\\S](?!$))?)" )
+DEFAULT_TIMES = "\\before", "\\during", "\\after"
+DEFAULT_LOCATIONS = "\\bagT", "\\sideT"
 
 class FocusableLabel( Label ):
    def __init__( self, text = "", *args, **kwargs ):
@@ -477,7 +480,7 @@ class NinjasLine(TextArea):
 
             # breakpoint()
 
-            tab_help = FormattedText([("italic", "  [tab]")])
+            tab_help = FormattedText([("italic", " [tab]")])
             shift = fragment_list_len( tab_help )
 
             help_spot = trans_input.document.text.find(
@@ -513,9 +516,7 @@ class NinjasLine(TextArea):
                  & Condition(
                     lambda: not self.document.cursor_position \
                                  == len( self.document.text ) \
-                             and (  self.buffer.complete_state\
-                                   and self.buffer.complete_state.completions
-                                  )
+                             and not self.buffer.complete_state
                  )
             ),
             ClotheNinjas(),
@@ -545,8 +546,8 @@ class NinjasLine(TextArea):
          WordCompleter(
             lambda: names() - { n for n in self },
             ignore_case = True,
-            pattern = _NAME_FIELD_RE,
-            meta_dict = CompleteSelectionHelp()
+            pattern = _NAME_FIELD_RE# ,
+            # meta_dict = CompleteSelectionHelp()
          ),
          Condition(
             lambda: self.document.cursor_position < len( self.document.text )
@@ -631,6 +632,9 @@ class NinjasLine(TextArea):
          event.app.output.bell()
 
       @kb.add('+')
+      @kb.add('\\', filter = Condition(
+         lambda: self.document.cursor_position == len( self.document.text )
+      ))
       def plus_( event ):
          self.document = \
             Document( self.document.text[:-1] \
@@ -645,6 +649,20 @@ class NinjasLine(TextArea):
       def down_( event ):
          on_move( ignore_focus = True )
          event.app.layout.focus_next()
+      @kb.add('enter')
+      def accept( event ):
+         buffer = event.app.layout.current_buffer
+         if not buffer.complete_state \
+               or buffer.complete_state.complete_index == None:
+            return
+
+         buffer.apply_completion(
+            buffer.complete_state.completions[
+               buffer.complete_state.complete_index
+            ]
+         )
+
+         end_of_line( event )
 
       self.control.key_bindings = merge_key_bindings((
          load_key_bindings(), nav_kb, kb
@@ -657,9 +675,8 @@ class NinjasLine(TextArea):
    def __getitem__( self, i ):
       return self.document.text[:-1].split("\x1e")[i]
 
-   @property
    def __iter__( self ):
-      return self.document.text[:-1].split("\x1e").__iter__
+      return self.document.text[:-1].split("\x1e").__iter__()
 
    def __len__( self ):
       return sum( 1 for c in self.document.text if c == "\x1e" ) + 1
@@ -747,9 +764,45 @@ class PropLines():
    def __getitem__( self ):
       return self.array.__getitem__
 
-# @dataclass
-# class CompletionLists:
-#    names: OrderedSet[str] = OrderedSet()
+# hack in completion navigation help
+CompletionsMenuControl._show_meta = lambda self, completion_state: True
+CompletionsMenuControl.__get_menu_meta_width = \
+   CompletionsMenuControl._get_menu_meta_width
+completion_back_help, completion_fwd_help = \
+   FormattedText((("italic", "[s-tab]"),)), \
+   FormattedText((("italic", "[tab]"),))
+help_width = max( fragment_list_len( help )
+                  for help in (completion_back_help, completion_fwd_help)
+                 )
+CompletionsMenuControl._get_menu_meta_width = \
+   lambda self, max_width, completion_state: \
+    max( self.__get_menu_meta_width( max_width, completion_state ),
+         help_width
+        )
+def hacked_get_menu_item_meta_fragments(
+      self, completion, is_current_completion, width
+):
+   complete_state = get_app().current_buffer.complete_state
+   index = -1 if complete_state.complete_index == None \
+      else complete_state.complete_index
+   help = FormattedText((("",""),))
+   try:
+      completion_index = complete_state.completions.index( completion )
+      if completion_index == index - 1:
+         help = completion_back_help
+      elif completion_index == index + 1:
+         help = completion_fwd_help
+   except ValueError:
+      pass
+      
+   return to_formatted_text(
+      help + [(""," " * (width - fragment_list_len( help )))],
+      style = "class:completion-menu.meta.completion.current"\
+              if is_current_completion \
+              else "class:completion-menu.meta.completion"
+   )
+CompletionsMenuControl._get_menu_item_meta_fragments \
+   = hacked_get_menu_item_meta_fragments
 
 class NinjaLayout( Layout ):
    def __init__( self, material ):
