@@ -42,8 +42,7 @@ from tex import TeX
 from clobberers import replace_ninjas
 
 _NAME_FIELD_RE = re.compile( "([^\x1e]*(?:[^\x1e\\s]|[^\x1e\\S](?!$))?)" )
-DEFAULT_TIMES = "\\before", "\\during", "\\after"
-DEFAULT_LOCATIONS = "\\bagT", "\\sideT"
+_LINE_RE = re.compile( "(.*)" )
 
 class FocusableLabel( Label ):
    def __init__( self, text = "", *args, **kwargs ):
@@ -113,7 +112,7 @@ def filter_for_control( idx ):
 def neighbour_mats( mat ):
    return [ m for m in next(
       g for g in stagger( r.materials, offsets=(-1,0,1), longest=True )
-      if isinstance( mat, Scene) and g[1] == mat\
+      if isinstance( mat, Scene ) and g[1] == mat\
       or isinstance( mat, Window ) and mat == foci[ g[1] ].window
    )]
 
@@ -365,8 +364,18 @@ def up_(event):
 def down_(event):
    event.app.layout.focus_next()
 @nav_kb.add('enter')
-def no_newline_(event):
-   pass
+def accept( event ):
+   buffer = event.app.layout.current_buffer
+   if buffer.complete_state \
+         and buffer.complete_state.complete_index != None:
+
+      buffer.apply_completion(
+         buffer.complete_state.completions[
+            buffer.complete_state.complete_index
+         ]
+      )
+
+   end_of_line( event )
 
 class TextAreaWithBindings( TextArea ):
    def __init__( self, *args, **kwargs ):
@@ -376,7 +385,7 @@ class TextAreaWithBindings( TextArea ):
       ))
 
 class NinjasLine(TextArea):
-   def __init__( self, ninjas, names = lambda: OrderedSet() ):
+   def __init__( self, layout, ninjas ):
       try:
          # the final space is where the command to add a ninja is active.
          # but if there are no ninjas, the final space is the *only* space.
@@ -509,14 +518,19 @@ class NinjasLine(TextArea):
          prompt = FormattedText([ ("", "            }{ "),
                                  ])
       )
+      cursor_at_field_end = Condition(
+         lambda: self.document.cursor_position + 1 == len( self.document.text )\
+                   or self.document.cursor_position < len( self.document.text )\
+                   and self.document.text[ self.document.cursor_position ]\
+                          == "\x1e"
+      )
       self.control.input_processors += [
             ConditionalProcessor(
                TabHelp(),
                has_focus( self.buffer ) \
+                 & cursor_at_field_end \
                  & Condition(
-                    lambda: not self.document.cursor_position \
-                                 == len( self.document.text ) \
-                             and not self.buffer.complete_state
+                    lambda: not self.buffer.complete_state
                  )
             ),
             ClotheNinjas(),
@@ -544,14 +558,12 @@ class NinjasLine(TextArea):
                else fallback
       self.completer = ConditionalCompleter(
          WordCompleter(
-            lambda: names() - { n for n in self },
+            lambda: layout.updated_ninjanames() - { n for n in self },
             ignore_case = True,
             pattern = _NAME_FIELD_RE# ,
             # meta_dict = CompleteSelectionHelp()
          ),
-         Condition(
-            lambda: self.document.cursor_position < len( self.document.text )
-         )
+         cursor_at_field_end
       )
       
       def on_move( event = None, ignore_focus = False ):
@@ -649,20 +661,6 @@ class NinjasLine(TextArea):
       def down_( event ):
          on_move( ignore_focus = True )
          event.app.layout.focus_next()
-      @kb.add('enter')
-      def accept( event ):
-         buffer = event.app.layout.current_buffer
-         if not buffer.complete_state \
-               or buffer.complete_state.complete_index == None:
-            return
-
-         buffer.apply_completion(
-            buffer.complete_state.completions[
-               buffer.complete_state.complete_index
-            ]
-         )
-
-         end_of_line( event )
 
       self.control.key_bindings = merge_key_bindings((
          load_key_bindings(), nav_kb, kb
@@ -682,27 +680,65 @@ class NinjasLine(TextArea):
       return sum( 1 for c in self.document.text if c == "\x1e" ) + 1
       
 class MoveLines():
-   def __init__( self, move, names = lambda: OrderedSet(), pre_prompt = "" ):
-      self.ninjas_line = NinjasLine( move.ninjanames, names )
-      self.array = [
-         TextAreaWithBindings(
-            text = t,
-            prompt = FormattedText([
-               ("", pre_prompt if i == 0 else " " * len( pre_prompt ) ),
-               (("ansicyan", "\\move") if i == 0 else ("", "    }")),
-               ("", "{ ")
-            ]),
-            dont_extend_height=True,
-            input_processors = [ AfterInput( FormattedText([
+   def __init__( self, layout, move, pre_prompt = "" ):
+      def attach_processors( text_area, cmt ):
+         cursor_at_end = Condition(
+            lambda: text_area.document.cursor_position \
+                       == len( text_area.document.text )
+         )
+         
+         text_area.control.input_processors += [
+            AfterInput( " " ),
+            ConditionalProcessor(
+               AfterInput( FormattedText((("italic", "[tab] "),)) ),
+               has_focus( text_area ) & cursor_at_end & Condition(
+                  lambda: not text_area.buffer.complete_state
+               )
+            ),
+            AfterInput( FormattedText([
                ( "ansibrightblack", cmt )
             ]))]
-         ) for i,(t,cmt) in enumerate( zip(
-            ( move.time,  move.destination ),
-            [ "  % time", "  % from / to" ]
+         if text_area.completer:
+            text_area.completer = ConditionalCompleter(
+               text_area.completer, cursor_at_end
+            )
+         return text_area
+      
+      self.ninjas_line = NinjasLine( layout, move.ninjanames )
+      self.array = [
+         attach_processors(
+            TextAreaWithBindings(
+               text = t,
+               prompt = FormattedText([
+                  ("", pre_prompt if i == 0 else " " * len( pre_prompt ) ),
+                  (("ansicyan", "\\move") if i == 0 else ("", "    }")),
+                  ("", "{ ")
+               ]),
+               dont_extend_height=True,
+               completer = WordCompleter( cpl,
+                                          ignore_case = True,
+                                          sentence = True
+                                         )
+            ),
+            cmt
+         ) for i,(t,cmt,cpl) in enumerate( zip(
+            ( move.time,              move.destination ),
+            ( " % time",              " % from / to" ),
+            ( layout.updated_times, layout.updated_destinations )
          ))
       ] + [ self.ninjas_line,
             Label( " " * len( pre_prompt ) + "}" )
            ]
+
+   @property
+   def time( self ):
+      return self.array[0].document.text
+   @property
+   def destination( self ):
+      return self.array[1].document.text
+   @property
+   def ninjanames( self ):
+      return [ n for n in self.ninjas_line ]
 
    @property
    def __getitem__( self ):
@@ -712,53 +748,131 @@ class MoveLines():
       return self.array.__add__
 
 class PropLines():
-   def __init__( self, prop = NinjaProp( "", "", "", [] ),
-                 names = lambda: OrderedSet()
+   def __init__( self, layout, prop = NinjaProp( "", "", "", [] )
                 ):
-      self.move_lines = [ MoveLines( move, names,
+      self.move_lines = [ MoveLines( layout, move,
                                      "      }{" if i == 0 else "        "
                                     ) for i,move in enumerate( prop.moves )
                          ]
+      self.hard_field = NarrowLabel( " " + prop.hardness )
       hard_focus = FocusableLabel( " ", dont_extend_width = True )
-      hard_field = NarrowLabel( " " + prop.hardness )
       hard_kb = KeyBindings()
       @hard_kb.add('backspace')
       def none_(event):
-         hard_field.text = " "
+         self.hard_field.text = " "
       def nt( n ):
          def set_hard( event ):
-            hard_field.text = " " + str( n )
+            self.hard_field.text = " " + str( n )
          return set_hard
       for n in range( 1, 6 ):
          hard_kb.add( str( n ) )( nt( n ) )
+
+      class PropArea( TextAreaWithBindings ):
+         def __init__( self,
+                       focused_help: Processor | None = None,
+                       *args, **kwargs
+                      ):
+            def_args = ({'pos': 16, 'kw': 'dont_extend_height',
+                         'val': True
+                         },
+                        {'pos': 24, 'kw': 'prompt',
+                         'val': "      }{ ",
+                         }
+                        )
+            TextAreaWithBindings.__init__(
+               self,
+               *(args[:5] + args[6:25] + args[26:]),
+               **( { d['kw']: d['val'] for d in def_args
+                     if d['pos'] >= len( args )
+                    } \
+                   | { k: kwargs[k] for k in kwargs
+                       if k not in [ "input_processors", "completer" ]
+                      }
+                  )
+            )
+
+            cursor_at_end = Condition(
+               lambda: self.document.cursor_position == \
+                         len( self.document.text )
+            )            
+            def cond_comp( completer ):
+               return ConditionalCompleter( completer, cursor_at_end )
+            try:
+               self.completer = cond_comp( args[5] )
+            except IndexError:
+               try:
+                  self.completer = cond_comp( kwargs['completer'] )
+               except KeyError:
+                  pass
+
+            try:
+               input_processors = args[25] or []
+            except IndexError:
+               try:
+                  input_processors = kwargs['input_processors'] or []
+               except KeyError:
+                  if not focused_help:
+                     return
+                  input_processors = []
+
+            help_processor = [
+               ConditionalProcessor(
+                  focused_help, has_focus( self.buffer ) & cursor_at_end
+               )
+            ] if focused_help else []
+
+            self.control.input_processors += \
+               [ AfterInput( " " ) ] + help_processor + input_processors
 
       self.array = [
          VSplit([ NarrowLabel( FormattedText([ ("ansicyan", "  \\prop"),
                                                ("", "{")
                                               ])),
-                  hard_field,
+                  self.hard_field,
                   hard_focus,
                   Label( FormattedText([
                      ("ansibrightblack", "  % difficulty on a scale of 1 - 5")
                   ]))
-                 ], key_bindings = hard_kb
-                )
+                 ], key_bindings = hard_kb                )
          ] + [
-            TextAreaWithBindings(
-               text = data,
-               prompt = "      }{ ",
-               dont_extend_height=True,
+            PropArea(
+               ConditionalProcessor(
+                  AfterInput( FormattedText((("italic", "[tab] "),))),
+                  Condition( lambda: not layout.current_buffer.complete_state )
+               ),
+               text = prop.name,
                input_processors = [ AfterInput( FormattedText([
-                  ( "ansibrightblack", cmt )
-               ]) )]
-            ) for data,cmt in zip(
-               ( prop.name, prop.drawing ),
-               ( "   % prop name",
-                 "   % drawing (in TikZ format, see manual. Not required)"
-                )
-               )
+                  ( "ansibrightblack", " % prop nane" )
+               ]) )],
+               completer = WordCompleter( layout.updated_propnames,
+                                          ignore_case = True
+                                         )
+            ),
+            PropArea(
+               text = prop.drawing,
+               input_processors = [ AfterInput(
+                  FormattedText((
+                     ("ansibrightblack",
+                      " % drawing (in TikZ format, see manual. Not required)"
+                      ),
+                     ))
+                  )]
+            )
          ] + [ l for ml in self.move_lines for l in ml
          ] + [ Label( "  }" ) ]
+
+   @property
+   def hardness( self ):
+      return self.hard_field
+   @property
+   def name( self ):
+      return self.array[1].document.text
+   @property
+   def drawing( self ):
+      return self.array[2].document.text
+   @property
+   def moves( self ):
+      return self.move_lines
 
    @property
    def __getitem__( self ):
@@ -805,10 +919,14 @@ CompletionsMenuControl._get_menu_item_meta_fragments \
    = hacked_get_menu_item_meta_fragments
 
 class NinjaLayout( Layout ):
+   # TODO: pull the defaults out of the .tex template?
+   times = OrderedSet(( "\\before", "\\during", "\\after" ))
+   destinations = OrderedSet(( "\\bagT", "\\sideT" ))
+   
    def __init__( self, material ):
       self.material = material
       self.ps = []
-      self.names = OrderedSet( n.name for n in r.ninjas
+      self.ninjanames = OrderedSet( n.name for n in r.ninjas
          if material in ( nm.scene for nm in n.ninjamoves )
       ) \
       | OrderedSet(
@@ -818,16 +936,12 @@ class NinjaLayout( Layout ):
       ) \
       | OrderedSet( n.name for n in r.ninjas ) \
       | OrderedSet( a.name for a in r.actors )
-      def name_getter():
-         return OrderedSet( sorted( ( n for p in self.ps
-                                      for m in p.move_lines
-                                      for n in m.ninjas_line
-                                     ),
-                                    key = strxfrm
-                                    ) ) \
-                | self.names
-                            
-      self.ps = [ PropLines( p, name_getter )
+      self.propnames = OrderedSet( sorted( ( p.name for s in r.scenes
+                                             for p in s.ninjaprops or []
+                                            ),
+                                           key = strxfrm
+                                          ) )
+      self.ps = [ PropLines( self, p )
                   for p in material.ninjaprops or []
                  ]
       point = Window( FormattedTextControl(
@@ -859,6 +973,41 @@ class NinjaLayout( Layout ):
       ))
       self.focus( ( self.ps + [[ point ]] )[0][0] )
 
+   def updated_ninjanames( self ):
+      return OrderedSet( sorted( ( n for p in self.ps
+                                   for m in p.move_lines
+                                   for n in m.ninjas_line
+                                   if n
+                                  ),
+                                 key = strxfrm
+                                ) ) \
+             | self.ninjanames
+   def updated_times( self ):
+      return self.times | OrderedSet(
+         sorted( ( m.time for p in self.ps
+                   for m in p.move_lines
+                   if m.time
+                  ),
+                 key = strxfrm
+                )
+      )
+   def updated_destinations( self ):
+      return self.destinations | OrderedSet(
+         sorted( ( m.destination for p in self.ps
+                   for m in p.move_lines
+                   if m.destination
+                  ),
+                 key = strxfrm
+                )
+      )
+   def updated_propnames( self ):
+      return OrderedSet(
+         sorted( chain( ( p.name for p in self.ps if p.name ),
+                        self.propnames
+                       ),
+                 key = strxfrm
+                )
+      )
 
 @kb.add('e')
 def switch_( event ):
