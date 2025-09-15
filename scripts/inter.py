@@ -536,7 +536,8 @@ class NinjasLine(TextArea):
          text = "\x1e".join( ninjas ),
          focus_on_click = True,
          prompt = FormattedText([ ("", "            }{ "),
-                                 ])
+                                 ]),
+         dont_extend_height = True
       )
       cursor_at_field_end = Condition(
          lambda: self.document.cursor_position + 1 == len( self.document.text )\
@@ -791,12 +792,14 @@ class MoveLines():
       return self.array.__add__
 
 class PropLines():
+   move_prompt = "      }{"
    def __init__( self, layout, prop = NinjaProp( "", "", "", [] )
                 ):
-      self.move_lines = [ MoveLines( layout, self, move,
-                                     "      }{" if i == 0 else "        "
-                                    ) for i,move in enumerate( prop.moves )
-                         ]
+      self.move_lines = [
+         MoveLines( layout, self, move,
+                    self.move_prompt if i == 0 else " " * len(self.move_prompt)
+                   ) for i,move in enumerate( prop.moves )
+      ]
       self.hard_field = NarrowLabel( " " + prop.hardness )
       hard_focus = FocusableLabel( " ", dont_extend_width = True )
       hard_kb = KeyBindings()
@@ -872,7 +875,8 @@ class PropLines():
          index = layout.ps.index( self ) + 1
          new_prop_lines = PropLines(
             layout,
-            NinjaProp( "", "", "", [ NinjaMove( "", "", [] ) ] )
+            NinjaProp( "", "", "", [ # NinjaMove( "", "", [] )
+                                    ] )
          )
          layout.ps = layout.ps[:index] + [ new_prop_lines ] + layout.ps[index:]
          event.app.layout.focus( new_prop_lines[0] )
@@ -912,6 +916,20 @@ class PropLines():
                   )]
             )
       ]
+
+      move_meta_kb = KeyBindings()
+      @move_meta_kb.add('+')
+      def default_plus_move( event ):
+         self.move_lines = [ MoveLines(
+            layout, self, NinjaMove( "", "", [] ), self.move_prompt
+         ) ]
+         event.app.layout.focus( self.move_lines[0][0] )
+      self.default_move = [ VSplit([
+         NarrowLabel( FormattedText((("", self.move_prompt),)) ),
+         HotSpot( "+", move_meta_kb ),
+         NarrowLabel( FormattedText((("ansibrightblack", "  % add move"),)))
+      ]) ]
+
       self.post_array = [ VSplit([
          NarrowLabel( "  } " ),
          HotSpot( '+', meta_kb ),
@@ -923,7 +941,7 @@ class PropLines():
    @property
    def array( self ):
       return self.pre_array \
-         + [ l for ml in self.move_lines for l in ml ] \
+         + ( [ l for ml in self.move_lines for l in ml ] or self.default_move )\
          + self.post_array
    @property
    def hardness( self ):
@@ -1008,10 +1026,16 @@ class NinjaLayout( Layout ):
       self.ps = [ PropLines( self, p )
                   for p in material.ninjaprops or []
                  ]
-      point = Window( FormattedTextControl(
-         FormattedText([("ansibrightblack italic", " [↲]: add prop")]),
-         focusable = is_true( not bool( self.ps ) )
-      ))
+
+      meta_kb = KeyBindings()
+      @meta_kb.add('+')
+      def initial_plus( event ):
+         self.ps = [ PropLines(
+            self, NinjaProp( "", "", "", [ NinjaMove( "", "", [] ) ] )
+         )] + self.ps
+         self.focus( self.ps[0][0] )
+
+      point = HotSpot( '+', meta_kb )
 
       self.content_hsplit = DynamicContainer(
          lambda: HSplit([
@@ -1020,7 +1044,7 @@ class NinjaLayout( Layout ):
                                            ]),
                             dont_extend_width=True
                            ),
-                     ConditionalContainer( point, has_focus( point ) )
+                     point
                     ])
          ] + [
             l for p in self.ps for l in p
@@ -1078,7 +1102,7 @@ class NinjaLayout( Layout ):
 
 @kb.add('e')
 def switch_( event ):
-   event.app.layout = NinjaLayout( next( islice( r.materials, 0, None ) ) )
+   event.app.layout = NinjaLayout( next( islice( r.materials, 1, None ) ) )
 
 @kb.add('enter')
 def add_prop( event ):
