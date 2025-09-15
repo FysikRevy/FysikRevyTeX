@@ -766,7 +766,10 @@ class MoveLines():
       ] + [ self.ninjas_line,
             VSplit([
                NarrowLabel( " " * len( pre_prompt ) + "} " ),
-               HotSpot( "+", meta_kb )
+               HotSpot( "+", meta_kb ),
+               NarrowLabel(
+                  FormattedText((( "ansibrightblack", " % add more moves"),))
+               )
             ])
            ]
 
@@ -863,6 +866,17 @@ class PropLines():
             self.control.input_processors += \
                [ AfterInput( " " ) ] + help_processor + input_processors
 
+      meta_kb = KeyBindings()
+      @meta_kb.add('+')
+      def plus_prop( event ):
+         index = layout.ps.index( self ) + 1
+         new_prop_lines = PropLines(
+            layout,
+            NinjaProp( "", "", "", [ NinjaMove( "", "", [] ) ] )
+         )
+         layout.ps = layout.ps[:index] + [ new_prop_lines ] + layout.ps[index:]
+         event.app.layout.focus( new_prop_lines[0] )
+
       self.pre_array = [
          VSplit([ NarrowLabel( FormattedText([ ("ansicyan", "  \\prop"),
                                                ("", "{")
@@ -898,7 +912,13 @@ class PropLines():
                   )]
             )
       ]
-      self.post_array = [ Label( "  }" ) ]
+      self.post_array = [ VSplit([
+         NarrowLabel( "  } " ),
+         HotSpot( '+', meta_kb ),
+         NarrowLabel(
+            FormattedText((("ansibrightblack", "  % add more props"),))
+         )
+      ]) ]
    
    @property
    def array( self ):
