@@ -15,7 +15,7 @@ from prompt_toolkit.auto_suggest import AutoSuggest, Suggestion
 from prompt_toolkit.application import get_app
 from prompt_toolkit.formatted_text import to_formatted_text, FormattedText, fragment_list_len
 from prompt_toolkit.buffer import Buffer
-from prompt_toolkit.layout.containers import HSplit, VSplit, Window, HorizontalAlign, VerticalAlign, ConditionalContainer, ScrollOffsets, FloatContainer, Float
+from prompt_toolkit.layout.containers import HSplit, VSplit, Window, HorizontalAlign, VerticalAlign, ConditionalContainer, ScrollOffsets, FloatContainer, Float, DynamicContainer
 from prompt_toolkit.layout.scrollable_pane import ScrollablePane
 from prompt_toolkit.layout.controls import BufferControl, FormattedTextControl
 from prompt_toolkit.layout.layout import Layout
@@ -37,23 +37,43 @@ sys.path.append( os.getcwd() )
 os.chdir( "E:/thebe/Git/revymanus2025/" )
 
 from classy_revy import Revue, Scene
-from base_classes import NinjaProp
+from base_classes import NinjaProp, NinjaMove
 from tex import TeX
 from clobberers import replace_ninjas
 
 _NAME_FIELD_RE = re.compile( "([^\x1e]*(?:[^\x1e\\s]|[^\x1e\\S](?!$))?)" )
-_LINE_RE = re.compile( "(.*)" )
-
-class FocusableLabel( Label ):
-   def __init__( self, text = "", *args, **kwargs ):
-      Label.__init__( self, text, *args, **kwargs )
-      self.formatted_text_control.focusable = Always()
 
 class NarrowLabel( Label ):
    def __init__( self, *args, **kwargs ):
       if len(args) >= 4 or "dont_extend_width" in kwargs:
-         return Label.__init__( self, *args, **kwargs )
-      return Label.__init__( self, *args, dont_extend_width=True, **kwargs )
+         return super().__init__( *args, **kwargs )
+      return super().__init__( *args, dont_extend_width=True, **kwargs )
+
+class FocusableLabel( NarrowLabel ):
+   def __init__( self, text = "", *args, **kwargs ):
+      super().__init__( text, *args, **kwargs )
+      self.formatted_text_control.focusable = Always()
+
+class HotSpot( VSplit ):
+   def __init__( self, help_text = None, key_bindings = KeyBindings(),
+               *args_for_label, **kwargs_for_label
+              ):
+      try:
+         text = args_for_label[0]
+      except IndexError:
+         try:
+            text = kwargs_for_label["text"]
+         except KeyError:
+            text = ""
+
+      spot = FocusableLabel( " " )
+      spot.formatted_text_control.key_bindings = key_bindings
+      l = NarrowLabel(
+         to_formatted_text( text ) + formatted_control( help_text ),
+         *args_for_label[1:],
+         **{ k: kwargs_for_label[k] for k in kwargs_for_label if k != "text" }
+      )
+      super().__init__([ spot, ConditionalContainer( l, has_focus( spot )) ])
 
 def formatted_control( text ):
    return FormattedText(
@@ -591,7 +611,8 @@ class NinjasLine(TextArea):
             pre_dirty_length += len(
                re.match( " *", fields[ cursor_field_index ] )[0]
             )
-            were_post_fields = self.document.cursor_position == len( self.document.text )
+            were_post_fields = self.document.cursor_position \
+                                  == len( self.document.text )
             post_fields = [ fields[ cursor_field_index ] ] + post_fields
             cursor_field = []
          else:
@@ -680,7 +701,8 @@ class NinjasLine(TextArea):
       return sum( 1 for c in self.document.text if c == "\x1e" ) + 1
       
 class MoveLines():
-   def __init__( self, layout, move, pre_prompt = "" ):
+   def __init__( self, layout, prop, move, pre_prompt = "" ):
+      self.pre_prompt = pre_prompt
       def attach_processors( text_area, cmt ):
          cursor_at_end = Condition(
             lambda: text_area.document.cursor_position \
@@ -703,6 +725,19 @@ class MoveLines():
                text_area.completer, cursor_at_end
             )
          return text_area
+
+      meta_kb = KeyBindings()
+      @meta_kb.add('+')
+      def plus_move( event ):
+         index = prop.move_lines.index( self ) + 1
+         new_move = MoveLines( layout, prop,
+                               NinjaMove( "", "", [] ),
+                               " " * len( pre_prompt )
+                              )
+         prop.move_lines = prop.move_lines[:index] \
+            + [ new_move ]\
+            + prop.move_lines[index:]
+         event.app.layout.focus( new_move[0] )
       
       self.ninjas_line = NinjasLine( layout, move.ninjanames )
       self.array = [
@@ -710,7 +745,9 @@ class MoveLines():
             TextAreaWithBindings(
                text = t,
                prompt = FormattedText([
-                  ("", pre_prompt if i == 0 else " " * len( pre_prompt ) ),
+                  ("", self.pre_prompt if i == 0
+                          else " " * len( self.pre_prompt )
+                   ),
                   (("ansicyan", "\\move") if i == 0 else ("", "    }")),
                   ("", "{ ")
                ]),
@@ -727,7 +764,10 @@ class MoveLines():
             ( layout.updated_times, layout.updated_destinations )
          ))
       ] + [ self.ninjas_line,
-            Label( " " * len( pre_prompt ) + "}" )
+            VSplit([
+               NarrowLabel( " " * len( pre_prompt ) + "} " ),
+               HotSpot( "+", meta_kb )
+            ])
            ]
 
    @property
@@ -750,7 +790,7 @@ class MoveLines():
 class PropLines():
    def __init__( self, layout, prop = NinjaProp( "", "", "", [] )
                 ):
-      self.move_lines = [ MoveLines( layout, move,
+      self.move_lines = [ MoveLines( layout, self, move,
                                      "      }{" if i == 0 else "        "
                                     ) for i,move in enumerate( prop.moves )
                          ]
@@ -779,8 +819,7 @@ class PropLines():
                          'val': "      }{ ",
                          }
                         )
-            TextAreaWithBindings.__init__(
-               self,
+            super().__init__(
                *(args[:5] + args[6:25] + args[26:]),
                **( { d['kw']: d['val'] for d in def_args
                      if d['pos'] >= len( args )
@@ -824,7 +863,7 @@ class PropLines():
             self.control.input_processors += \
                [ AfterInput( " " ) ] + help_processor + input_processors
 
-      self.array = [
+      self.pre_array = [
          VSplit([ NarrowLabel( FormattedText([ ("ansicyan", "  \\prop"),
                                                ("", "{")
                                               ])),
@@ -833,8 +872,8 @@ class PropLines():
                   Label( FormattedText([
                      ("ansibrightblack", "  % difficulty on a scale of 1 - 5")
                   ]))
-                 ], key_bindings = hard_kb                )
-         ] + [
+                 ], key_bindings = hard_kb
+                ),
             PropArea(
                ConditionalProcessor(
                   AfterInput( FormattedText((("italic", "[tab] "),))),
@@ -858,18 +897,23 @@ class PropLines():
                      ))
                   )]
             )
-         ] + [ l for ml in self.move_lines for l in ml
-         ] + [ Label( "  }" ) ]
-
+      ]
+      self.post_array = [ Label( "  }" ) ]
+   
+   @property
+   def array( self ):
+      return self.pre_array \
+         + [ l for ml in self.move_lines for l in ml ] \
+         + self.post_array
    @property
    def hardness( self ):
       return self.hard_field
    @property
    def name( self ):
-      return self.array[1].document.text
+      return self.pre_array[1].document.text
    @property
    def drawing( self ):
-      return self.array[2].document.text
+      return self.pre_array[2].document.text
    @property
    def moves( self ):
       return self.move_lines
@@ -949,21 +993,24 @@ class NinjaLayout( Layout ):
          focusable = is_true( not bool( self.ps ) )
       ))
 
+      self.content_hsplit = DynamicContainer(
+         lambda: HSplit([
+            VSplit([ Label( FormattedText([ ("ansicyan", "\\ninjas"),
+                                            ("", "{ ")
+                                           ]),
+                            dont_extend_width=True
+                           ),
+                     ConditionalContainer( point, has_focus( point ) )
+                    ])
+         ] + [
+            l for p in self.ps for l in p
+         ] + [
+            Label( "}" )
+         ], key_bindings = nav_kb )
+      )
+
       Layout.__init__( self, FloatContainer(
-         ScrollablePane( HSplit([
-               VSplit([ Label( FormattedText([ ("ansicyan", "\\ninjas"),
-                                               ("", "{ ")
-                                              ]),
-                               dont_extend_width=True
-                              ),
-                        ConditionalContainer( point, has_focus( point ) )
-                       ])
-            ] + [
-               l for p in self.ps for l in p
-            ] + [
-               Label( "}" )
-            ], key_bindings = nav_kb )
-         ),
+         ScrollablePane( self.content_hsplit ),
          floats = [
             Float( content = Window(CompletionsMenuControl()),
                    xcursor = True,
