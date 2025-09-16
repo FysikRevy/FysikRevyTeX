@@ -45,9 +45,23 @@ _NAME_FIELD_RE = re.compile( "([^\x1e]*(?:[^\x1e\\s]|[^\x1e\\S](?!$))?)" )
 
 class NarrowLabel( Label ):
    def __init__( self, *args, **kwargs ):
-      if len(args) >= 4 or "dont_extend_width" in kwargs:
-         return super().__init__( *args, **kwargs )
-      return super().__init__( *args, dont_extend_width=True, **kwargs )
+      if len(args) < 4 and "dont_extend_width" not in kwargs:
+         kwargs["dont_extend_width"] = True
+      try:
+         super().__init__( *args, **kwargs )
+      except TypeError as e:
+         try:
+            style_arg = args[1]
+            args[1] = ""
+         except IndexError:
+            try:
+               style_arg = kwargs["style"]
+               del kwargs["style"]
+            except KeyError:
+               raise e
+         super().__init__( *args, **kwargs )
+         fixed_style = self.window.style
+         self.window.style = lambda: fixed_style + " " + style_arg()
 
 class FocusableLabel( NarrowLabel ):
    def __init__( self, text = "", *args, **kwargs ):
@@ -66,16 +80,24 @@ class HotSpot( VSplit ):
          except KeyError:
             text = ""
 
-      spot = FocusableLabel( " " )
-      spot.formatted_text_control.key_bindings = key_bindings
+      self.spot = FocusableLabel( " " )
+      self.spot.formatted_text_control.key_bindings = key_bindings
       l = NarrowLabel(
          to_formatted_text( text ) + formatted_control( help_text ),
          *args_for_label[1:],
          **{ k: kwargs_for_label[k] for k in kwargs_for_label if k != "text" }
       )
-      super().__init__([ spot, ConditionalContainer( l, has_focus( spot )) ])
+      super().__init__([ self.spot,
+                         ConditionalContainer( l, has_focus( self.spot )) ])
+
+class ColdSpot( HotSpot ):
+   def __init__( self, *args, **kwargs ):
+      super().__init__( *args, **kwargs )
+      self.spot.formatted_text_control.focusable = has_focus( self.spot )
 
 def formatted_control( text ):
+   if not text:
+      return FormattedText((("", ""),))
    return FormattedText(
       (("italic", " [{}]".format(text) ),)
    )
@@ -405,7 +427,7 @@ class TextAreaWithBindings( TextArea ):
       ))
 
 class NinjasLine(TextArea):
-   def __init__( self, layout, ninjas ):
+   def __init__( self, layout, ninjas, style = lambda: "" ):
       try:
          # the final space is where the command to add a ninja is active.
          # but if there are no ninjas, the final space is the *only* space.
@@ -539,6 +561,8 @@ class NinjasLine(TextArea):
                                  ]),
          dont_extend_height = True
       )
+      fixed_style = self.window.style
+      self.window.style = lambda: fixed_style + " " + style()
       cursor_at_field_end = Condition(
          lambda: self.document.cursor_position + 1 == len( self.document.text )\
                    or self.document.cursor_position < len( self.document.text )\
@@ -702,7 +726,10 @@ class NinjasLine(TextArea):
       return sum( 1 for c in self.document.text if c == "\x1e" ) + 1
       
 class MoveLines():
-   def __init__( self, layout, prop, move, pre_prompt = "" ):
+   def __init__( self, layout, prop, move,
+                 pre_prompt = "",
+                 style = lambda: ""
+                ):
       self.pre_prompt = pre_prompt
       def attach_processors( text_area, cmt ):
          cursor_at_end = Condition(
@@ -721,11 +748,39 @@ class MoveLines():
             AfterInput( FormattedText([
                ( "ansibrightblack", cmt )
             ]))]
+         fixed_style = text_area.window.style
+         text_area.window.style = lambda: fixed_style + " " + delete_selection()
          if text_area.completer:
             text_area.completer = ConditionalCompleter(
                text_area.completer, cursor_at_end
             )
          return text_area
+
+      del_kb = KeyBindings()
+      @del_kb.add("-")
+      @del_kb.add("backspace")
+      @del_kb.add("delete")
+      def confirm_minus_move( event ):
+         index = prop.move_lines.index( self )
+         del prop.move_lines[ index ]
+         try:
+            goto = prop.move_lines[ index ][0]
+         except IndexError:
+            try:
+               goto = prop.move_lines[ -1 ][0]
+            except IndexError:
+               goto = prop.default_move[0]
+
+         event.app.layout.focus( goto )
+
+      confirm_delete = ColdSpot( "press again to confirm", del_kb )
+      def delete_selection():
+         return " ".join(
+            t for t in [
+               "class:selected" if layout.has_focus( confirm_delete ) else "",
+               style()
+            ] if t
+         )
 
       meta_kb = KeyBindings()
       @meta_kb.add('+')
@@ -739,8 +794,11 @@ class MoveLines():
             + [ new_move ]\
             + prop.move_lines[index:]
          event.app.layout.focus( new_move[0] )
-      
-      self.ninjas_line = NinjasLine( layout, move.ninjanames )
+      @meta_kb.add("-")
+      def minus_move( event ):
+         event.app.layout.focus( confirm_delete.spot )
+
+      self.ninjas_line = NinjasLine( layout, move.ninjanames, delete_selection )
       self.array = [
          attach_processors(
             TextAreaWithBindings(
@@ -766,10 +824,15 @@ class MoveLines():
          ))
       ] + [ self.ninjas_line,
             VSplit([
-               NarrowLabel( " " * len( pre_prompt ) + "} " ),
-               HotSpot( "+", meta_kb ),
+               NarrowLabel( " " * len( pre_prompt ) + "} ",
+                            style = delete_selection
+                           ),
+               HotSpot( "+/-", meta_kb ),
+               confirm_delete,
                NarrowLabel(
-                  FormattedText((( "ansibrightblack", " % add more moves"),))
+                  FormattedText((( "ansibrightblack", " % add more moves"),)),
+                  style = style,
+                  dont_extend_width = False
                )
             ])
            ]
@@ -795,13 +858,35 @@ class PropLines():
    move_prompt = "      }{"
    def __init__( self, layout, prop = NinjaProp( "", "", "", [] )
                 ):
+      del_kb = KeyBindings()
+      @del_kb.add('-')
+      def vanish( event ):
+         index = layout.ps.index( self )
+         del layout.ps[ index ]
+         try:
+            land = layout.ps[ index ][0]
+         except IndexError:
+            try:
+               land = layout.ps[-1][0]
+            except IndexError:
+               land = layout.container\
+                            .content\
+                            .content\
+                            .get_container()\
+                            .children[0]
+         event.app.layout.focus( land )
+      delete_spot = ColdSpot( "press again to confirm", del_kb )
+      def delete_selected():
+         return "class:selected" if layout.has_focus( delete_spot.spot ) else ""
+      
       self.move_lines = [
          MoveLines( layout, self, move,
-                    self.move_prompt if i == 0 else " " * len(self.move_prompt)
+                    self.move_prompt if i == 0 else " " * len(self.move_prompt),
+                    style = delete_selected
                    ) for i,move in enumerate( prop.moves )
       ]
       self.hard_field = NarrowLabel( " " + prop.hardness )
-      hard_focus = FocusableLabel( " ", dont_extend_width = True )
+      hard_focus = FocusableLabel( " " )
       hard_kb = KeyBindings()
       @hard_kb.add('backspace')
       def none_(event):
@@ -825,16 +910,35 @@ class PropLines():
                          'val': "      }{ ",
                          }
                         )
-            super().__init__(
-               *(args[:5] + args[6:25] + args[26:]),
-               **( { d['kw']: d['val'] for d in def_args
-                     if d['pos'] >= len( args )
-                    } \
-                   | { k: kwargs[k] for k in kwargs
-                       if k not in [ "input_processors", "completer" ]
-                      }
+            while True:
+               try:
+                  super().__init__(
+                     *args,
+                     **( { d['kw']: d['val'] for d in def_args
+                           if d['pos'] >= len( args )
+                          } \
+                         | { k: kwargs[k] for k in kwargs
+                             if k not in [ "input_processors", "completer" ]
+                            }
+                        )
                   )
-            )
+               except TypeError as e:
+                  try:
+                     style_arg = args[1]
+                     args[1] = ""
+                  except IndexError:
+                     try:
+                        style_arg = kwargs["style"]
+                        del kwargs["style"]
+                     except KeyError:
+                        raise e
+               else:
+                  try:
+                     fixed_style = self.window.style
+                     self.window.style = lambda: fixed_style + " " + style_arg()
+                  except NameError:
+                     pass
+                  break
 
             cursor_at_end = Condition(
                lambda: self.document.cursor_position == \
@@ -880,6 +984,9 @@ class PropLines():
          )
          layout.ps = layout.ps[:index] + [ new_prop_lines ] + layout.ps[index:]
          event.app.layout.focus( new_prop_lines[0] )
+      @meta_kb.add('-')
+      def minus_prop( event ):
+         event.app.layout.focus( delete_spot.spot )
 
       self.pre_array = [
          VSplit([ NarrowLabel( FormattedText([ ("ansicyan", "  \\prop"),
@@ -890,7 +997,9 @@ class PropLines():
                   Label( FormattedText([
                      ("ansibrightblack", "  % difficulty on a scale of 1 - 5")
                   ]))
-                 ], key_bindings = hard_kb
+                 ],
+                key_bindings = hard_kb,
+                style = delete_selected
                 ),
             PropArea(
                ConditionalProcessor(
@@ -898,6 +1007,7 @@ class PropLines():
                   Condition( lambda: not layout.current_buffer.complete_state )
                ),
                text = prop.name,
+               style = delete_selected,
                input_processors = [ AfterInput( FormattedText([
                   ( "ansibrightblack", " % prop nane" )
                ]) )],
@@ -907,6 +1017,7 @@ class PropLines():
             ),
             PropArea(
                text = prop.drawing,
+               style = delete_selected,
                input_processors = [ AfterInput(
                   FormattedText((
                      ("ansibrightblack",
@@ -921,7 +1032,8 @@ class PropLines():
       @move_meta_kb.add('+')
       def default_plus_move( event ):
          self.move_lines = [ MoveLines(
-            layout, self, NinjaMove( "", "", [] ), self.move_prompt
+            layout, self, NinjaMove( "", "", [] ), self.move_prompt,
+            style = delete_selected
          ) ]
          event.app.layout.focus( self.move_lines[0][0] )
       self.default_move = [ VSplit([
@@ -931,8 +1043,9 @@ class PropLines():
       ]) ]
 
       self.post_array = [ VSplit([
-         NarrowLabel( "  } " ),
-         HotSpot( '+', meta_kb ),
+         NarrowLabel( "  } ", style = delete_selected ),
+         HotSpot( '+/-', meta_kb ),
+         delete_spot,
          NarrowLabel(
             FormattedText((("ansibrightblack", "  % add more props"),))
          )
@@ -1018,11 +1131,11 @@ class NinjaLayout( Layout ):
       ) \
       | OrderedSet( n.name for n in r.ninjas ) \
       | OrderedSet( a.name for a in r.actors )
-      self.propnames = OrderedSet( sorted( ( p.name for s in r.scenes
-                                             for p in s.ninjaprops or []
-                                            ),
-                                           key = strxfrm
-                                          ) )
+      self.propnames = OrderedSet(
+         sorted( ( p.prop for p in material.props or [] ),
+                 key = strxfrm
+                )
+      )
       self.ps = [ PropLines( self, p )
                   for p in material.ninjaprops or []
                  ]
@@ -1092,17 +1205,11 @@ class NinjaLayout( Layout ):
                 )
       )
    def updated_propnames( self ):
-      return OrderedSet(
-         sorted( chain( ( p.name for p in self.ps if p.name ),
-                        self.propnames
-                       ),
-                 key = strxfrm
-                )
-      )
+      return self.propnames - { p.name for p in self.ps }
 
 @kb.add('e')
 def switch_( event ):
-   event.app.layout = NinjaLayout( next( islice( r.materials, 1, None ) ) )
+   event.app.layout = NinjaLayout( next( islice( r.materials, 0, None ) ) )
 
 @kb.add('enter')
 def add_prop( event ):
