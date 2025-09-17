@@ -418,6 +418,22 @@ def accept( event ):
       )
 
    end_of_line( event )
+@nav_kb.add('c-s')
+def save( event ):
+   tex = TeX()
+   tex.parse( event.app.layout.material.path )
+   updated_tex = replace_ninjas(
+      tex,
+      [ "\\ninjas{" ] \
+      + [ "  " + l for p in event.app.layout.ps for l in p.tex_cmd() ] \
+      + [ "}" ]
+   )
+   updated_tex.write( event.app.layout.material.path )
+   updated_tex.parse( event.app.layout.material.path )
+   updated_tex.info["path"] = event.app.layout.material.path
+   event.app.layout.material.__init__(
+      updated_tex.info, lambda *args, **kwargs: None
+   )
 
 class TextAreaWithBindings( TextArea ):
    def __init__( self, *args, **kwargs ):
@@ -725,7 +741,7 @@ class NinjasLine(TextArea):
       ) + " "
 
    def __iter__( self ):
-      return self.document.text[:-1].split("\x1e").__iter__()
+      return ( n for n in self.document.text[:-1].split("\x1e") if n )
 
    def __len__( self ):
       return sum( 1 for c in self.document.text if c == "\x1e" ) + 1
@@ -860,7 +876,7 @@ class MoveLines(NinjaMove):
       self.array[1].document.text = destination
    @property
    def ninjanames( self ):
-      return ninjas_line
+      return self.ninjas_line
    @ninjanames.setter
    def ninjanames( self, ninjanames ):
       self.ninjas_line = NinjasLine(
@@ -879,7 +895,7 @@ class PropLines( NinjaProp ):
    def move_lines_from_ninjamoves( self, ninjamoves ):
       return [
          self.movelines_from_ninjamove(
-            move, self.move_prompt if i == 0 else " " * len(self.move_prompt)
+            move, self.move_prompt if i == 0 else " " * len( self.move_prompt )
          ) for i,move in enumerate( ninjamoves )
       ]
    def __init__( self, layout, prop = NinjaProp( "", "", "", [] )
@@ -1087,7 +1103,7 @@ class PropLines( NinjaProp ):
          + self.post_array
    @property
    def hardness( self ):
-      return self.hard_field
+      return self.hard_field.text.strip()
    @hardness.setter
    def hardness( self, hardness ):
       self.hard_field = hardness
@@ -1106,10 +1122,12 @@ class PropLines( NinjaProp ):
    @property
    def moves( self ):
       class LineMaker():
-         def __setitem__( self, i, item ):
+         def __setitem__( _, i, item ):
             self.move_lines[ i ] = self.movelines_from_ninjamove( item )
-         def __getattr__( self, attr ):
+         def __getattr__( _, attr ):
             return getattr( self.move_lines, attr )
+         def __iter__( _ ):
+            return self.move_lines.__iter__()
                
       return LineMaker()
    @moves.setter
@@ -1213,7 +1231,7 @@ class NinjaLayout( Layout ):
          ], key_bindings = nav_kb )
       )
 
-      Layout.__init__( self, FloatContainer(
+      super().__init__( FloatContainer(
          ScrollablePane( self.content_hsplit ),
          floats = [
             Float( content = Window(CompletionsMenuControl()),

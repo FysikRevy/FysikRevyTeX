@@ -107,8 +107,8 @@ class NinjaProp( NinjaPropData ):
                    )
 
     def tex_cmd( self ):
-        return [ '\\ninjas{{{}}}{{{}}}{'.format( self.hardness, self.name ) ] \
-            + [ '  ' + self.drawing ] if self.drawing else [] \
+        return [ '\\prop{{{}}}{{{}}}{{'.format( self.hardness, self.name ) ] \
+            + ([ '  ' + self.drawing ] if self.drawing else []) \
             + [ '}{' ] \
             + [ '  ' + move.tex_cmd() for move in self.moves ] \
             + [ '}' ]
