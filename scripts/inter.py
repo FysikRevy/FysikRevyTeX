@@ -718,6 +718,11 @@ class NinjasLine(TextArea):
 
    def __getitem__( self, i ):
       return self.document.text[:-1].split("\x1e")[i]
+   def __setitem__( self, i, item ):
+      self.document.text = "\x1e".join(
+         item if ii == i else n
+         for i,n in enumerate( self.document.text[:-1].split("\x1e" ) )
+      ) + " "
 
    def __iter__( self ):
       return self.document.text[:-1].split("\x1e").__iter__()
@@ -725,12 +730,14 @@ class NinjasLine(TextArea):
    def __len__( self ):
       return sum( 1 for c in self.document.text if c == "\x1e" ) + 1
       
-class MoveLines():
+class MoveLines(NinjaMove):
    def __init__( self, layout, prop, move,
                  pre_prompt = "",
                  style = lambda: ""
                 ):
       self.pre_prompt = pre_prompt
+      self.scene = move.scene
+      self.layout = layout
       def attach_processors( text_area, cmt ):
          cursor_at_end = Condition(
             lambda: text_area.document.cursor_position \
@@ -749,7 +756,7 @@ class MoveLines():
                ( "ansibrightblack", cmt )
             ]))]
          fixed_style = text_area.window.style
-         text_area.window.style = lambda: fixed_style + " " + delete_selection()
+         text_area.window.style = lambda: fixed_style + " " + self._delete_selection()
          if text_area.completer:
             text_area.completer = ConditionalCompleter(
                text_area.completer, cursor_at_end
@@ -781,6 +788,7 @@ class MoveLines():
                style()
             ] if t
          )
+      self._delete_selection = delete_selection
 
       meta_kb = KeyBindings()
       @meta_kb.add('+')
@@ -798,7 +806,8 @@ class MoveLines():
       def minus_move( event ):
          event.app.layout.focus( confirm_delete.spot )
 
-      self.ninjas_line = NinjasLine( layout, move.ninjanames, delete_selection )
+      self.ninjanames = move.ninjanames # sets ninjas_line,
+                                        # requires self._delete_selection
       self.array = [
          attach_processors(
             TextAreaWithBindings(
@@ -825,7 +834,7 @@ class MoveLines():
       ] + [ self.ninjas_line,
             VSplit([
                NarrowLabel( " " * len( pre_prompt ) + "} ",
-                            style = delete_selection
+                            style = self._delete_selection
                            ),
                HotSpot( "+/-", meta_kb ),
                confirm_delete,
@@ -840,12 +849,23 @@ class MoveLines():
    @property
    def time( self ):
       return self.array[0].document.text
+   @time.setter
+   def time( self, time ):
+      self.array[0].document.text = time
    @property
    def destination( self ):
       return self.array[1].document.text
+   @destination.setter
+   def destination( self, destination ):
+      self.array[1].document.text = destination
    @property
    def ninjanames( self ):
-      return [ n for n in self.ninjas_line ]
+      return ninjas_line
+   @ninjanames.setter
+   def ninjanames( self, ninjanames ):
+      self.ninjas_line = NinjasLine(
+         self.layout, ninjanames, self._delete_selection
+      )
 
    @property
    def __getitem__( self ):
@@ -854,12 +874,20 @@ class MoveLines():
    def __add__( self, other ):
       return self.array.__add__
 
-class PropLines():
+class PropLines( NinjaProp ):
    move_prompt = "      }{"
+   def move_lines_from_ninjamoves( self, ninjamoves ):
+      return [
+         self.movelines_from_ninjamove(
+            move, self.move_prompt if i == 0 else " " * len(self.move_prompt)
+         ) for i,move in enumerate( ninjamoves )
+      ]
    def __init__( self, layout, prop = NinjaProp( "", "", "", [] )
                 ):
       del_kb = KeyBindings()
       @del_kb.add('-')
+      @del_kb.add('backspace')
+      @del_kb.add('delete')
       def vanish( event ):
          index = layout.ps.index( self )
          del layout.ps[ index ]
@@ -878,13 +906,14 @@ class PropLines():
       delete_spot = ColdSpot( "press again to confirm", del_kb )
       def delete_selected():
          return "class:selected" if layout.has_focus( delete_spot.spot ) else ""
-      
-      self.move_lines = [
-         MoveLines( layout, self, move,
-                    self.move_prompt if i == 0 else " " * len(self.move_prompt),
-                    style = delete_selected
-                   ) for i,move in enumerate( prop.moves )
-      ]
+
+      self.movelines_from_ninjamove = lambda \
+         ninjamove, move_prompt = " " * len( self.move_prompt ): \
+            MoveLines( layout, self, ninjamove, move_prompt,
+                       style = delete_selected
+                      ) \
+            if not isinstance( ninjamove, MoveLines ) else ninjamove
+      self.move_lines = self.move_lines_from_ninjamoves( prop.moves )
       self.hard_field = NarrowLabel( " " + prop.hardness )
       hard_focus = FocusableLabel( " " )
       hard_kb = KeyBindings()
@@ -1059,15 +1088,33 @@ class PropLines():
    @property
    def hardness( self ):
       return self.hard_field
+   @hardness.setter
+   def hardness( self, hardness ):
+      self.hard_field = hardness
    @property
    def name( self ):
       return self.pre_array[1].document.text
+   @name.setter
+   def name( self, name ):
+      self.pre_array[1].document.text = name
    @property
    def drawing( self ):
       return self.pre_array[2].document.text
+   @drawing.setter
+   def drawing( self, drawing ):
+      self.pre_array[2].document.text = drawing
    @property
    def moves( self ):
-      return self.move_lines
+      class LineMaker():
+         def __setitem__( self, i, item ):
+            self.move_lines[ i ] = self.movelines_from_ninjamove( item )
+         def __getattr__( self, attr ):
+            return getattr( self.move_lines, attr )
+               
+      return LineMaker()
+   @moves.setter
+   def moves( self, moves ):
+      self.move_lines = self.move_lines_from_ninja_moves( moves )
 
    @property
    def __getitem__( self ):
