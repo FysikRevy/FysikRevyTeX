@@ -32,6 +32,7 @@ from prompt_toolkit.output import Output
 from prompt_toolkit.document import Document
 from prompt_toolkit.utils import Event
 from prompt_toolkit.completion import WordCompleter, ConditionalCompleter
+from prompt_toolkit.keys import Keys
 
 sys.path.append( os.getcwd() )
 os.chdir( "E:/thebe/Git/revymanus2025/" )
@@ -242,25 +243,33 @@ def prompt_windows( ninjaprops ):
           ) for b in a for l in b
          ] + [ Label( "}" ) ]
 
-def quit_tool():
+def bar_tips():
+   keys = { k:FormattedText((("",""),)) for k in ( "q", "c-q", "c-s", "+", "-" ) }
    focus = get_app().layout.current_window
    while focus:
-      try:
-         bindings = [
-            b
-            for b in focus.get_key_bindings().get_bindings_for_keys( "+" )
-            if is_true( b.filter )
-         ]
-      except AttributeError:
-         pass
-      else:
-         if bindings:
-            return FormattedText((("", " ["),
-                                  ("bg:ansiblack", "q"),
-                                  ("", "]: quit")
-                                  ))
+      for k in keys:
+         try:
+            bindings = [
+               b
+               for b in focus.get_key_bindings().get_bindings_for_keys( (k,) )
+               if is_true( b.filter )
+            ]
+         except AttributeError:
+            bindings = []
+         else:
+            try:
+               keys[k] = FormattedText(
+                  (("", " ["),
+                   ("bg:ansiblack", k.replace( "c-", "ctrl+" )),
+                    ("", "]: "),
+                    ("", bindings[-1].handler.annotation),
+                    ("", " ")
+                    )
+               )
+            except (TypeError,IndexError,AttributeError):
+               pass
       focus = get_app().layout.get_parent( focus )
-   return ""
+   return FormattedText([ f for k in keys for f in keys[k] ])
 
 kb = KeyBindings()
 def wrapped_add( *keys, **kwargs ):
@@ -403,7 +412,7 @@ menu_layout = Layout(
          HSplit( all_windows ),
          scroll_offsets = ScrollOffsets( top = 1, bottom = 1 )
       ),
-      Label( quit_tool, style = "class:bottom-toolbar" )
+      Label( bar_tips, style = "class:bottom-toolbar" )
       #Button( "quit", lambda: get_app().exit() )
    ])
    , focused_element = foci[ next( r.materials ) ]
@@ -454,12 +463,14 @@ def save( event ):
    event.app.layout.material.__init__(
       updated_tex.info, lambda *args, **kwargs: None
    )
+save.annotation = "save"
 @nav_kb.add('c-q')
 def menu( event ):
    if event.is_repeat \
          or [ p.tex_cmd() for p in event.app.layout.material.ninjaprops ] \
              == [ p.tex_cmd() for p in event.app.layout.ps ]:
       event.app.layout = menu_layout
+menu.annotation = "quit to list"
 
 class TextAreaWithBindings( TextArea ):
    def __init__( self, *args, **kwargs ):
@@ -731,16 +742,19 @@ class NinjasLine(TextArea):
       def dont_delete_( event ):
          event.app.output.bell()
 
-      @kb.add('+')
-      @kb.add('\\', filter = Condition(
+      at_end = Condition(
          lambda: self.document.cursor_position == len( self.document.text )
-      ))
+      )
+      @kb.add('+', filter = at_end )
+      @kb.add('\\', filter = at_end )
       def plus_( event ):
          self.document = \
             Document( self.document.text[:-1] \
                         + ("\x1e " if self.document.text else " "),
                       len( self.document.text )
                      )
+      plus_.annotation = "add ninja"
+      
       @kb.add('up')
       def up_( event ):
          on_move( ignore_focus = True )
@@ -821,6 +835,7 @@ class MoveLines(NinjaMove):
                goto = prop.default_move[0]
 
          event.app.layout.focus( goto )
+      confirm_minus_move.annotation = "press again to confirm"
 
       confirm_delete = ColdSpot( "press again to confirm", del_kb )
       def delete_selection():
@@ -844,9 +859,11 @@ class MoveLines(NinjaMove):
             + [ new_move ]\
             + prop.move_lines[index:]
          event.app.layout.focus( new_move[0] )
+      plus_move.annotation = "add move"
       @meta_kb.add("-")
       def minus_move( event ):
          event.app.layout.focus( confirm_delete.spot )
+      minus_move.annotation = "remove move"
 
       self.ninjanames = move.ninjanames # sets ninjas_line,
                                         # requires self._delete_selection
@@ -1055,9 +1072,11 @@ class PropLines( NinjaProp ):
          )
          layout.ps = layout.ps[:index] + [ new_prop_lines ] + layout.ps[index:]
          event.app.layout.focus( new_prop_lines[0] )
+      plus_prop.annotation = "add prop"
       @meta_kb.add('-')
       def minus_prop( event ):
          event.app.layout.focus( delete_spot.spot )
+      minus_prop.annotation = "remove prop"
 
       self.pre_array = [
          VSplit([ NarrowLabel( FormattedText([ ("ansicyan", "  \\prop"),
@@ -1107,6 +1126,7 @@ class PropLines( NinjaProp ):
             style = delete_selected
          ) ]
          event.app.layout.focus( self.move_lines[0][0] )
+      default_plus_move.annotation = "add move"
       self.default_move = [ VSplit([
          NarrowLabel( FormattedText((("", self.move_prompt),)) ),
          HotSpot( "+", move_meta_kb ),
@@ -1238,6 +1258,7 @@ class NinjaLayout( Layout ):
             self, NinjaProp( "", "", "", [ NinjaMove( "", "", [] ) ] )
          )] + self.ps
          self.focus( self.ps[0][0] )
+      initial_plus.annotaiton = "add prop"
 
       point = HotSpot( '+', meta_kb )
 
@@ -1267,7 +1288,7 @@ class NinjaLayout( Layout ):
                      )
             ]
          ),
-         Label( quit_tool, style = "class:bottom-toolbar" )
+         Label( bar_tips, style = "class:bottom-toolbar" )
       ]))
       self.focus( ( self.ps + [[ point ]] )[0][0] )
 
