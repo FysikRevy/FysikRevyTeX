@@ -242,6 +242,25 @@ def prompt_windows( ninjaprops ):
           ) for b in a for l in b
          ] + [ Label( "}" ) ]
 
+def quit_tool():
+   focus = get_app().layout.current_window
+   while focus:
+      try:
+         bindings = [
+            b
+            for b in focus.get_key_bindings().get_bindings_for_keys( "+" )
+            if is_true( b.filter )
+         ]
+      except AttributeError:
+         pass
+      else:
+         if bindings:
+            return FormattedText((("", " ["),
+                                  ("bg:ansiblack", "q"),
+                                  ("", "]: quit")
+                                  ))
+      focus = get_app().layout.get_parent( focus )
+   return ""
 
 kb = KeyBindings()
 def wrapped_add( *keys, **kwargs ):
@@ -384,7 +403,8 @@ menu_layout = Layout(
          HSplit( all_windows ),
          scroll_offsets = ScrollOffsets( top = 1, bottom = 1 )
       ),
-      Button( "quit", lambda: get_app().exit() )
+      Label( quit_tool, style = "class:bottom-toolbar" )
+      #Button( "quit", lambda: get_app().exit() )
    ])
    , focused_element = foci[ next( r.materials ) ]
 )
@@ -434,6 +454,12 @@ def save( event ):
    event.app.layout.material.__init__(
       updated_tex.info, lambda *args, **kwargs: None
    )
+@nav_kb.add('c-q')
+def menu( event ):
+   if event.is_repeat \
+         or [ p.tex_cmd() for p in event.app.layout.material.ninjaprops ] \
+             == [ p.tex_cmd() for p in event.app.layout.ps ]:
+      event.app.layout = menu_layout
 
 class TextAreaWithBindings( TextArea ):
    def __init__( self, *args, **kwargs ):
@@ -1231,15 +1257,18 @@ class NinjaLayout( Layout ):
          ], key_bindings = nav_kb )
       )
 
-      super().__init__( FloatContainer(
-         ScrollablePane( self.content_hsplit ),
-         floats = [
-            Float( content = Window(CompletionsMenuControl()),
-                   xcursor = True,
-                   ycursor = True
-                  )
-         ]
-      ))
+      super().__init__( HSplit([
+         FloatContainer(
+            ScrollablePane( self.content_hsplit ),
+            floats = [
+               Float( content = Window(CompletionsMenuControl()),
+                      xcursor = True,
+                      ycursor = True
+                     )
+            ]
+         ),
+         Label( quit_tool, style = "class:bottom-toolbar" )
+      ]))
       self.focus( ( self.ps + [[ point ]] )[0][0] )
 
    def updated_ninjanames( self ):
@@ -1275,6 +1304,9 @@ class NinjaLayout( Layout ):
 @kb.add('e')
 def switch_( event ):
    event.app.layout = NinjaLayout( next( islice( r.materials, 0, None ) ) )
+@kb.add('x')
+def panic_( event ):
+   breakpoint()
 
 @kb.add('enter')
 def add_prop( event ):
