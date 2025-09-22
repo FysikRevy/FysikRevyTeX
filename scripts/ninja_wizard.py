@@ -32,12 +32,98 @@ from clobberers import replace_ninjas
 
 _NAME_FIELD_RE = re.compile( "([^\x1e]*(?:[^\x1e\\s]|[^\x1e\\S](?!$))?)" )
 
+# Customize KeyBindings
+# =====================
+
 # no escaping escaping
 KeyBindings.__init = KeyBindings.__init__
 def quinit( self, *args, **kwargs ):
    self.__init( *args, **kwargs )
    self.add('c-c')(lambda event: event.app.exit() )
 KeyBindings.__init__ = quinit
+
+class KeyBindingsAnn( KeyBindings ):
+   def add( self, *args, annotation = None, **kwargs ):
+      handler = super().add
+      def decorator( func ):
+         if annotation:
+            func.annotation = annotation
+         handler( *args, **kwargs )( func )
+         return func
+      return decorator
+
+class KeyBindingsWrapped( KeyBindingsAnn ):
+   def __init__( self, wrap_fn, *args, **kwargs ):
+      self.wrap_fn = wrap_fn
+      super().__init__( *args, **kwargs )
+      self.unwrapped_add = super().add
+   def add( self, *keys, **kwargs ):
+      handler = super().add
+      def decorator( func ):
+         @handler( *keys, **kwargs )
+         def wrapped_handler( event ):
+            self.wrap_fn( event )
+            func( event )
+         return func
+      return decorator
+
+# Custom elements
+# ===============
+
+def highlightable_number( index, of_number ):
+   def style_number():
+      try:
+         n = get_app().number
+      except (AttributeError, NameError):
+         return number_style
+      if index > len( n )\
+            or len( str( of_number )) < len( n )\
+            or str( of_number )[ : index + 1 ] != n[ : index + 1 ]:
+         return number_style
+      return None
+   return DynamicStyle( style_number )
+
+def bar_tips():
+   get_app().layout.update_parents_relations()
+   keys = { k:FormattedText((("",""),)) for k in ( "q", "c-q", "c-s", "c-m", "+", "-", "n", "delete" ) }
+   focus = get_app().layout.current_window
+   while focus:
+      for k in keys:
+         try:
+            bindings = [
+               b
+               for b in focus.get_key_bindings().get_bindings_for_keys( (k,) )
+               if is_true( b.filter )
+            ]
+         except AttributeError:
+            bindings = []
+         else:
+            try:
+               keys[k] = FormattedText(
+                  (("", " ["),
+                   ("bg:ansiblack", k.replace("c-m", "ret")\
+                                     .replace( "c-", "ctrl+" )
+                    ),
+                    ("", "]: "),
+                    ("", bindings[-1].handler.annotation),
+                    ("", " ")
+                    )
+               )
+            except (TypeError,IndexError,AttributeError):
+               pass
+      focus = get_app().layout.get_parent( focus )
+   return FormattedText([ f for k in keys for f in keys[k] ])
+
+def reset_toolbar( event ):
+   event.app.layout.container.children[1].content.text = bar_tips
+   
+number_style = Style.from_dict({"number": "ansibrightblack" })
+def formatted_control( text ):
+   if not text:
+      return FormattedText((("", ""),))
+   return FormattedText(
+      (("italic", " [{}]".format(text) ),)
+   )
 
 class NarrowLabel( Label ):
    def __init__( self, *args, **kwargs ):
@@ -92,87 +178,12 @@ class ColdSpot( HotSpot ):
       super().__init__( *args, **kwargs )
       self.spot.formatted_text_control.focusable = has_focus( self.spot )
 
-def formatted_control( text ):
-   if not text:
-      return FormattedText((("", ""),))
-   return FormattedText(
-      (("italic", " [{}]".format(text) ),)
-   )
+# Editing layout
+# ==============
 
-number_style = Style.from_dict({"number": "ansibrightblack" })
-def highlightable_number( index, of_number ):
-   def style_number():
-      try:
-         n = get_app().number
-      except (AttributeError, NameError):
-         return number_style
-      if index > len( n )\
-            or len( str( of_number )) < len( n )\
-            or str( of_number )[ : index + 1 ] != n[ : index + 1 ]:
-         return number_style
-      return None
-   return DynamicStyle( style_number )
+# Key bindings
+# ------------
 
-def bar_tips():
-   get_app().layout.update_parents_relations()
-   keys = { k:FormattedText((("",""),)) for k in ( "q", "c-q", "c-s", "c-m", "+", "-", "n", "delete" ) }
-   focus = get_app().layout.current_window
-   while focus:
-      for k in keys:
-         try:
-            bindings = [
-               b
-               for b in focus.get_key_bindings().get_bindings_for_keys( (k,) )
-               if is_true( b.filter )
-            ]
-         except AttributeError:
-            bindings = []
-         else:
-            try:
-               keys[k] = FormattedText(
-                  (("", " ["),
-                   ("bg:ansiblack", k.replace("c-m", "ret")\
-                                     .replace( "c-", "ctrl+" )
-                    ),
-                    ("", "]: "),
-                    ("", bindings[-1].handler.annotation),
-                    ("", " ")
-                    )
-               )
-            except (TypeError,IndexError,AttributeError):
-               pass
-      focus = get_app().layout.get_parent( focus )
-   return FormattedText([ f for k in keys for f in keys[k] ])
-
-class KeyBindingsAnn( KeyBindings ):
-   def add( self, *args, annotation = None, **kwargs ):
-      handler = super().add
-      def decorator( func ):
-         if annotation:
-            func.annotation = annotation
-         handler( *args, **kwargs )( func )
-         return func
-      return decorator
-
-class KeyBindingsWrapped( KeyBindingsAnn ):
-   def __init__( self, wrap_fn, *args, **kwargs ):
-      self.wrap_fn = wrap_fn
-      super().__init__( *args, **kwargs )
-      self.unwrapped_add = super().add
-   def add( self, *keys, **kwargs ):
-      handler = super().add
-      def decorator( func ):
-         @handler( *keys, **kwargs )
-         def wrapped_handler( event ):
-            self.wrap_fn( event )
-            func( event )
-         return func
-      return decorator
-
-
-def reset_toolbar( event ):
-   event.app.layout.container.children[1].content.text = bar_tips
-   
 nav_kb = KeyBindingsWrapped( reset_toolbar )
 @nav_kb.add('up')
 def edit_up_(event):
@@ -234,6 +245,9 @@ class TextAreaWithBindings( TextArea ):
       self.control.key_bindings = merge_key_bindings((
          load_key_bindings(), nav_kb
       ))
+
+# Element classes
+# ---------------
 
 class NinjasLine(TextArea):
    def __init__( self, layout, ninjas, style = lambda: "" ):
@@ -568,7 +582,8 @@ class MoveLines(NinjaMove):
                ( "ansibrightblack", cmt )
             ]))]
          fixed_style = text_area.window.style
-         text_area.window.style = lambda: fixed_style + " " + self._delete_selection()
+         text_area.window.style \
+            = lambda: fixed_style + " " + self._delete_selection()
          if text_area.completer:
             text_area.completer = ConditionalCompleter(
                text_area.completer, cursor_at_end
@@ -785,8 +800,8 @@ class PropLines( NinjaProp ):
                   break
 
             cursor_at_end = Condition(
-               lambda: self.document.cursor_position == \
-                         len( self.document.text )
+               lambda: self.document.cursor_position \
+                         == len( self.document.text )
             )            
             def cond_comp( completer ):
                return ConditionalCompleter( completer, cursor_at_end )
@@ -1027,10 +1042,9 @@ class NinjaLayout( Layout ):
 
       self.content_hsplit = DynamicContainer(
          lambda: HSplit([
-            VSplit([ Label( FormattedText([ ("ansicyan", "\\ninjas"),
-                                            ("", "{ ")
-                                           ]),
-                            dont_extend_width=True
+            VSplit([ NarrowLabel( FormattedText([ ("ansicyan", "\\ninjas"),
+                                                  ("", "{ ")
+                                                 ])
                            ),
                      point
                     ])
@@ -1086,7 +1100,15 @@ class NinjaLayout( Layout ):
    def updated_propnames( self ):
       return self.propnames - { p.name for p in self.ps } - {""}
 
+# Main layout function
+# ====================
+
+
 def ninja_wizard( r ):
+
+   # Operative elements
+   # ------------------
+
    foci = { mat: FocusableLabel(
                     ( lambda mat: lambda: formatted_control(
                        "ret/" + ( "del" if mat.ninjaprops is not None else "n" )
@@ -1094,7 +1116,7 @@ def ninja_wizard( r ):
            }
    mats = { foci[ mat ].window: mat for mat in r.materials }
    controls = { mat: [ foci[ mat ] ] \
-                + [ Label( formatted_control( t ), dont_extend_width=True )
+                + [ NarrowLabel( formatted_control( t ) )
                     for t in ( "↑", "↓" )
                    ]
                 for mat in r.materials
@@ -1118,6 +1140,9 @@ def ninja_wizard( r ):
          if isinstance( mat, Scene ) and g[1] == mat\
          or isinstance( mat, Window ) and mat == foci[ g[1] ].window
       )]
+
+   # Setup functions
+   # ---------------
 
    def active_line( mat ):
       adjacent_mats = neighbour_mats( mat )
@@ -1179,6 +1204,9 @@ def ninja_wizard( r ):
                 ] \
                + [ active_line( m ) for m in a.materials ]
               ]
+
+   # Navigation key bindigns
+   # -----------------------
 
    def un_number( event ):
       event.app.number = ""
@@ -1281,6 +1309,21 @@ def ninja_wizard( r ):
       except (AttributeError, IndexError):
          pass
 
+   def highlight_number():
+      try:
+         n = get_app().number
+      except AttributeError:
+         return None
+      return Style.from_dict({
+         # if n is eg. 192, should proeduce styles for 192, 19.192 and 1.19.192
+         ".".join( n[ : j + 1 ] for j in range( i, len( n ))
+                  ): "ansiwhite underline"
+         for i in range(len(n))
+      }) if n else None
+
+   # Update key bindings
+   # -------------------
+
    def update_ninjas( event, new_ninjas ):
       mat = mats[ event.app.layout.current_window ]
       tex = TeX()
@@ -1324,6 +1367,10 @@ def ninja_wizard( r ):
       }
   }
 }"""] )
+
+   # Primary functionality
+   # ---------------------
+
    @kb.add('enter', annotation = "edit" )
    def switch_( event ):
       event.app.layout = NinjaLayout( mats[ event.app.layout.current_window ],
@@ -1342,18 +1389,6 @@ def ninja_wizard( r ):
          ], key_bindings = kb )
          , focused_element = foci[ focus_material or next( r.materials ) ]
       )
-
-   def highlight_number():
-      try:
-         n = get_app().number
-      except AttributeError:
-         return None
-      return Style.from_dict({
-         # if n is eg. 192, should proeduce styles for 192, 19.192 and 1.19.192
-         ".".join( n[ : j + 1 ] for j in range( i, len( n ))
-                  ): "ansiwhite underline"
-         for i in range(len(n))
-      }) if n else None
 
    return Application(
       key_bindings = KeyBindings(), # with c-c hacked in above
