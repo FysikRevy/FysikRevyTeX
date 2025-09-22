@@ -1,23 +1,19 @@
-import os,sys,re
+import os
+import sys
+import re
 
 from pprint import pprint
 from itertools import chain, dropwhile, islice
-from copy import copy
-from dataclasses import dataclass
 from locale import strxfrm
-from collections import defaultdict
 
 from more_itertools import stagger, intersperse
 from ordered_set import OrderedSet
 
-from prompt_toolkit import Application, ANSI, PromptSession
-from prompt_toolkit.auto_suggest import AutoSuggest, Suggestion
+from prompt_toolkit import Application
 from prompt_toolkit.application import get_app
 from prompt_toolkit.formatted_text import to_formatted_text, FormattedText, fragment_list_len
-from prompt_toolkit.buffer import Buffer
-from prompt_toolkit.layout.containers import HSplit, VSplit, Window, HorizontalAlign, VerticalAlign, ConditionalContainer, ScrollOffsets, FloatContainer, Float, DynamicContainer
+from prompt_toolkit.layout.containers import HSplit, VSplit, Window, ConditionalContainer, ScrollOffsets, FloatContainer, Float, DynamicContainer
 from prompt_toolkit.layout.scrollable_pane import ScrollablePane
-from prompt_toolkit.layout.controls import BufferControl, FormattedTextControl
 from prompt_toolkit.layout.layout import Layout
 from prompt_toolkit.layout.processors import AfterInput, Processor, explode_text_fragments, Transformation, ConditionalProcessor
 from prompt_toolkit.layout.menus import CompletionsMenuControl
@@ -25,14 +21,12 @@ from prompt_toolkit.key_binding import KeyBindings, merge_key_bindings
 from prompt_toolkit.key_binding.defaults import load_key_bindings
 from prompt_toolkit.key_binding.key_bindings import Binding
 from prompt_toolkit.key_binding.bindings.named_commands import end_of_line
-from prompt_toolkit.widgets import Label, Button, TextArea
-from prompt_toolkit.filters import has_focus, Never, Always, is_true, Condition, to_filter
+from prompt_toolkit.widgets import Label, TextArea
+from prompt_toolkit.filters import has_focus, Never, Always, is_true, Condition
 from prompt_toolkit.styles import Style, DynamicStyle, merge_styles
-from prompt_toolkit.output import Output
 from prompt_toolkit.document import Document
 from prompt_toolkit.utils import Event
 from prompt_toolkit.completion import WordCompleter, ConditionalCompleter
-from prompt_toolkit.keys import Keys
 
 sys.path.append( os.getcwd() )
 os.chdir( "E:/thebe/Git/revymanus2025/" )
@@ -131,7 +125,7 @@ def highlightable_number( ndex, of_number ):
 
 foci = { mat: FocusableLabel(
                  ( lambda mat: lambda: formatted_control(
-                    "ret/" + ( "del" if mat.ninjaprops != None else "n" )
+                    "ret/" + ( "del" if mat.ninjaprops is not None else "n" )
                  ) )(mat) ) for mat in r.materials
         }
 mats = { foci[ mat ].window: mat for mat in r.materials }
@@ -200,7 +194,7 @@ def active_line( mat ):
                                      for p in mat.ninjaprops
                                     ) \
                              else []
-                  )) if mat.ninjaprops != None else (
+                  )) if mat.ninjaprops is not None else (
                      ("ansibrightblack", " --- "),
                   )
                              )\
@@ -430,7 +424,7 @@ def update_ninjas( event, new_ninjas ):
               ] = active_line( mat )
 
 no_ninjas = Condition(
-   lambda: mats[ get_app().layout.current_window ].ninjaprops == None
+   lambda: mats[ get_app().layout.current_window ].ninjaprops is None
 )
    
 @kb.add('delete',
@@ -481,7 +475,7 @@ def edit_down_(event):
 def accept( event ):
    buffer = event.app.layout.current_buffer
    if buffer.complete_state \
-         and buffer.complete_state.complete_index != None:
+         and buffer.complete_state.complete_index is not None:
 
       buffer.apply_completion(
          buffer.complete_state.completions[
@@ -1263,7 +1257,7 @@ class CompletionsOverlayControl( CompletionsMenuControl ):
                                       width
                                      ):
       complete_state = get_app().current_buffer.complete_state
-      index = -1 if complete_state.complete_index == None \
+      index = -1 if complete_state.complete_index is None \
          else complete_state.complete_index
       help = FormattedText((("",""),))
       try:
