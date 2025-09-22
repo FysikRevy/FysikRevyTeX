@@ -472,10 +472,10 @@ def reset_toolbar( event ):
    
 nav_kb = KeyBindingsWrapped( reset_toolbar )
 @nav_kb.add('up')
-def up_(event):
+def edit_up_(event):
    event.app.layout.focus_previous()
 @nav_kb.add('down')
-def down_(event):
+def edit_down_(event):
    event.app.layout.focus_next()
 @nav_kb.add('enter')
 def accept( event ):
@@ -1236,45 +1236,51 @@ class PropLines( NinjaProp ):
    def __getitem__( self ):
       return self.array.__getitem__
 
-# hack in completion navigation help
-CompletionsMenuControl._show_meta = lambda self, completion_state: True
-CompletionsMenuControl.__get_menu_meta_width = \
-   CompletionsMenuControl._get_menu_meta_width
-completion_back_help, completion_fwd_help = \
-   FormattedText((("italic", "[s-tab]"),)), \
-   FormattedText((("italic", "[tab]"),))
-help_width = max( fragment_list_len( help )
-                  for help in (completion_back_help, completion_fwd_help)
+class CompletionsOverlayControl( CompletionsMenuControl ):
+   completion_back_help, completion_fwd_help = \
+      FormattedText((("italic", "[s-tab]"),)), \
+      FormattedText((("italic", "[tab]"),))
+
+   def __init__( self, *args, **kwargs ):
+      super().__init__( *args, **kwargs )
+      self.help_width = max( fragment_list_len( help )
+                             for help in ( self.completion_back_help,
+                                           self.completion_fwd_help
+                                          )
+                            )
+   
+   def _show_meta( self, completion_state ):
+      return True
+
+   def _get_menu_meta_width( self, max_width, completion_state ):
+      return max( super()._get_menu_meta_width( max_width, completion_state ),
+                  self.help_width
                  )
-CompletionsMenuControl._get_menu_meta_width = \
-   lambda self, max_width, completion_state: \
-    max( self.__get_menu_meta_width( max_width, completion_state ),
-         help_width
-        )
-def hacked_get_menu_item_meta_fragments(
-      self, completion, is_current_completion, width
-):
-   complete_state = get_app().current_buffer.complete_state
-   index = -1 if complete_state.complete_index == None \
-      else complete_state.complete_index
-   help = FormattedText((("",""),))
-   try:
-      completion_index = complete_state.completions.index( completion )
-      if completion_index == index - 1:
-         help = completion_back_help
-      elif completion_index == index + 1:
-         help = completion_fwd_help
-   except ValueError:
-      pass
+
+   def _get_menu_item_meta_fragments( self,
+                                      completion,
+                                      is_current_completion,
+                                      width
+                                     ):
+      complete_state = get_app().current_buffer.complete_state
+      index = -1 if complete_state.complete_index == None \
+         else complete_state.complete_index
+      help = FormattedText((("",""),))
+      try:
+         completion_index = complete_state.completions.index( completion )
+         if completion_index == index - 1:
+            help = self.completion_back_help
+         elif completion_index == index + 1:
+            help = self.completion_fwd_help
+      except ValueError:
+         pass
       
-   return to_formatted_text(
-      help + [(""," " * (width - fragment_list_len( help )))],
-      style = "class:completion-menu.meta.completion.current"\
-              if is_current_completion \
-              else "class:completion-menu.meta.completion"
-   )
-CompletionsMenuControl._get_menu_item_meta_fragments \
-   = hacked_get_menu_item_meta_fragments
+      return to_formatted_text(
+         help + [(""," " * (width - fragment_list_len( help )))],
+         style = "class:completion-menu.meta.completion.current"\
+                   if is_current_completion \
+                   else "class:completion-menu.meta.completion"
+      )
 
 class NinjaLayout( Layout ):
    # TODO: pull the defaults out of the .tex template?
@@ -1334,7 +1340,7 @@ class NinjaLayout( Layout ):
          FloatContainer(
             ScrollablePane( self.content_hsplit ),
             floats = [
-               Float( content = Window(CompletionsMenuControl()),
+               Float( content = Window(CompletionsOverlayControl()),
                       xcursor = True,
                       ycursor = True
                      )
@@ -1352,7 +1358,8 @@ class NinjaLayout( Layout ):
                                   ),
                                  key = strxfrm
                                 ) ) \
-             | self.ninjanames
+             | self.ninjanames \
+             - { "" }
    def updated_times( self ):
       return self.times | OrderedSet(
          sorted( ( m.time for p in self.ps
@@ -1361,7 +1368,7 @@ class NinjaLayout( Layout ):
                   ),
                  key = strxfrm
                 )
-      )
+      ) - {""}
    def updated_destinations( self ):
       return self.destinations | OrderedSet(
          sorted( ( m.destination for p in self.ps
@@ -1370,9 +1377,9 @@ class NinjaLayout( Layout ):
                   ),
                  key = strxfrm
                 )
-      )
+      ) - {""}
    def updated_propnames( self ):
-      return self.propnames - { p.name for p in self.ps }
+      return self.propnames - { p.name for p in self.ps } - {""}
 
 @kb.add('enter', annotation = "edit" )
 def switch_( event ):
@@ -1381,17 +1388,6 @@ def switch_( event ):
             if foci[ mat ].window == event.app.layout.current_window
            )
    )
-   # it seems the layout hasn't figured parents out to the extent that
-   # bar_tips finds anything useful, until after the key handlers have
-   # run.
-   # TODO: figure out how to get the tool bar to update on load
-   # event.app.layout.container.children[1].content.text \
-   #    = FormattedText((("", " ["),
-   #                     ("bg:ansiblack", "ctrl+q"),
-   #                     ("", "]: quit to list  ["),
-   #                     ("bg:ansiblack", "ctrl+s"),
-   #                     ("", "]: save")
-   #                     ))
 @kb.add('x')
 def panic_( event ):
    breakpoint()
@@ -1404,7 +1400,6 @@ def menu_layout( focus_material = None ):
             scroll_offsets = ScrollOffsets( top = 1, bottom = 1 )
          ),
          Label( bar_tips, style = "class:bottom-toolbar" )
-         #Button( "quit", lambda: get_app().exit() )
       ], key_bindings = kb )
       , focused_element = foci[ focus_material or next( r.materials ) ]
    )
@@ -1412,7 +1407,7 @@ def menu_layout( focus_material = None ):
 def highlight_number():
    try:
       n = get_app().number
-   except:
+   except AttributeError:
       return None
    return Style.from_dict({
       # if n is eg. 192, should proeduce styles for 192, 19.192 and 1.19.192
@@ -1422,12 +1417,10 @@ def highlight_number():
    }) if n else None
 
 cc_kb = KeyBindings()
-# cc_kb.add('c-c')(exit_)
 
 a = Application(
    key_bindings = cc_kb,
    layout = menu_layout(),
-   # before_render = start_focusser,
    mouse_support = True,
    style = merge_styles([ Style.from_dict({"number": "ansibrightblack"})
                           , DynamicStyle( highlight_number )
