@@ -44,6 +44,13 @@ from clobberers import replace_ninjas
 
 _NAME_FIELD_RE = re.compile( "([^\x1e]*(?:[^\x1e\\s]|[^\x1e\\S](?!$))?)" )
 
+# no escaping escaping
+KeyBindings.__init = KeyBindings.__init__
+def quinit( self, *args, **kwargs ):
+   self.__init( *args, **kwargs )
+   self.add('c-c')(lambda event: event.app.exit() )
+KeyBindings.__init__ = quinit
+
 class NarrowLabel( Label ):
    def __init__( self, *args, **kwargs ):
       if len(args) < 4 and "dont_extend_width" not in kwargs:
@@ -216,14 +223,15 @@ def iterdex( element, iterator ):
    except StopIteration:
       raise ValueError( "Not found: {}".format( element ) )
 
-all_windows = [ t for a in r.acts for t in
-                [ Label( FormattedText( (("ansibrightblue bold",
-                                          a.name + ":"
-                                          ),)
-                                       ))
-                 ] \
-                + [ active_line( m ) for m in a.materials ]
-               ]
+def all_windows():
+   return [ t for a in r.acts for t in
+            [ Label( FormattedText( (("ansibrightblue bold",
+                                      a.name + ":"
+                                      ),)
+                                   ))
+             ] \
+            + [ active_line( m ) for m in a.materials ]
+           ]
 
 def prompt_windows( ninjaprops ):
    return [ Label( "\\ninjas{" ) ]\
@@ -244,7 +252,8 @@ def prompt_windows( ninjaprops ):
          ] + [ Label( "}" ) ]
 
 def bar_tips():
-   keys = { k:FormattedText((("",""),)) for k in ( "q", "c-q", "c-s", "+", "-" ) }
+   get_app().layout.update_parents_relations()
+   keys = { k:FormattedText((("",""),)) for k in ( "q", "c-q", "c-s", "c-m", "+", "-" ) }
    focus = get_app().layout.current_window
    while focus:
       for k in keys:
@@ -260,7 +269,9 @@ def bar_tips():
             try:
                keys[k] = FormattedText(
                   (("", " ["),
-                   ("bg:ansiblack", k.replace( "c-", "ctrl+" )),
+                   ("bg:ansiblack", k.replace("c-m", "ret")\
+                                     .replace( "c-", "ctrl+" )
+                    ),
                     ("", "]: "),
                     ("", bindings[-1].handler.annotation),
                     ("", " ")
@@ -271,40 +282,58 @@ def bar_tips():
       focus = get_app().layout.get_parent( focus )
    return FormattedText([ f for k in keys for f in keys[k] ])
 
-kb = KeyBindings()
-def wrapped_add( *keys, **kwargs ):
-   def decorator( func ):
-      @kb.add( *keys, **kwargs )
-      def wrapped_handler( event ):
-         event.app.number = ""
-         func( event )
-      return func
-   return decorator
-kb.wadd = wrapped_add
+class KeyBindingsAnn( KeyBindings ):
+   def add( self, *args, annotation = None, **kwargs ):
+      handler = super().add
+      def decorator( func ):
+         if annotation:
+            func.annotation = annotation
+         handler( *args, **kwargs )( func )
+         return func
+      return decorator
 
-@kb.wadd('<any>')
+class KeyBindingsWrapped( KeyBindingsAnn ):
+   def __init__( self, wrap_fn, *args, **kwargs ):
+      self.wrap_fn = wrap_fn
+      super().__init__( *args, **kwargs )
+      self.unwrapped_add = super().add
+   def add( self, *keys, **kwargs ):
+      handler = super().add
+      def decorator( func ):
+         @handler( *keys, **kwargs )
+         def wrapped_handler( event ):
+            self.wrap_fn( event )
+            func( event )
+         return func
+      return decorator
+
+def un_number( event ):
+   event.app.number = ""
+
+kb = KeyBindingsWrapped( un_number )
+
+@kb.add('<any>')
 def default_( event ):
    pass
 
-@kb.wadd('q')
-@kb.wadd('escape')
-@kb.wadd('c-c')
+@kb.add('q', annotation = "quit" )
+@kb.add('escape')
 def exit_(event):
    event.app.exit()
 
-@kb.wadd('down')
+@kb.add('down')
 def down_(event):
    adjacent_mats = neighbour_mats( event.app.layout.current_window )
    if adjacent_mats[2]:
       event.app.layout.focus( foci[ adjacent_mats[2] ] )
 
-@kb.wadd('up')
+@kb.add('up')
 def up_(event):
    adjacent_mats = neighbour_mats( event.app.layout.current_window )
    if adjacent_mats[0]:
       event.app.layout.focus( foci[ adjacent_mats[0] ] )
 
-@kb.wadd('pagedown')
+@kb.add('pagedown')
 def pgdn_(event):
    *_, pageend = filter(
       lambda x: isinstance( x, Scene ),
@@ -321,7 +350,7 @@ def pgdn_(event):
    )
    event.app.layout.focus( foci[ pageend ] )
 
-@kb.wadd('pageup')
+@kb.add('pageup')
 def pgup_(event):
    event.app.layout.focus( foci[
       next(
@@ -338,12 +367,12 @@ def pgup_(event):
       )
    ])
 
-@kb.wadd('end')
+@kb.add('end')
 def end_(event):
    *_, final = r.materials
    event.app.layout.focus( foci[ final ] )
 
-@kb.wadd('home')
+@kb.add('home')
 def home_(event):
    event.app.layout.focus( foci[ next( r.materials ) ] )
 
@@ -373,7 +402,7 @@ for n in range(10):
                                 number_func_for( n )
                                ))
 
-@kb.add('backspace')
+@kb.unwrapped_add('backspace')
 def bs_(event):
    try:
       event.app.number = event.app.number[:-1]
@@ -397,26 +426,15 @@ def update_ninjas( event, new_ninjas ):
                     )
               ] = active_line( mat )
 
-@kb.wadd('delete')
-@kb.wadd('x')
+@kb.add('delete')
+@kb.add('x')
 def delete_( event ):
    update_ninjas( event, [""] )
 
-@kb.wadd('n')
+@kb.add('n')
 def new_( event ):
    update_ninjas( event, ["\\ninjas{}"] )
 
-menu_layout = Layout(
-   HSplit([
-      ScrollablePane(
-         HSplit( all_windows ),
-         scroll_offsets = ScrollOffsets( top = 1, bottom = 1 )
-      ),
-      Label( bar_tips, style = "class:bottom-toolbar" )
-      #Button( "quit", lambda: get_app().exit() )
-   ])
-   , focused_element = foci[ next( r.materials ) ]
-)
 
 testprops = next( islice( r.materials, 1, None ) ).props
 @kb.add('d')
@@ -427,7 +445,10 @@ def dt_(event):
 def inv_(event):
    event.app.invalidate()
 
-nav_kb = KeyBindings()
+def reset_toolbar( event ):
+   event.app.layout.container.children[1].content.text = bar_tips
+   
+nav_kb = KeyBindingsWrapped( reset_toolbar )
 @nav_kb.add('up')
 def up_(event):
    event.app.layout.focus_previous()
@@ -447,7 +468,7 @@ def accept( event ):
       )
 
    end_of_line( event )
-@nav_kb.add('c-s')
+@nav_kb.add('c-s', annotation = "save" )
 def save( event ):
    tex = TeX()
    tex.parse( event.app.layout.material.path )
@@ -463,14 +484,23 @@ def save( event ):
    event.app.layout.material.__init__(
       updated_tex.info, lambda *args, **kwargs: None
    )
-save.annotation = "save"
-@nav_kb.add('c-q')
+   
+@nav_kb.add('c-q', annotation = "quit to list" )
 def menu( event ):
    if event.is_repeat \
-         or [ p.tex_cmd() for p in event.app.layout.material.ninjaprops ] \
+         or [ p.tex_cmd() for p in event.app.layout.material.ninjaprops or []] \
              == [ p.tex_cmd() for p in event.app.layout.ps ]:
-      event.app.layout = menu_layout
-menu.annotation = "quit to list"
+      event.app.layout = menu_layout( event.app.layout.material )
+   else:
+      event.app.layout.container.children[1].content.text \
+         = FormattedText((("red", " ["),
+                          ("red bg:ansiblack", "ctrl+q"),
+                          ("red", "]: press again to quit without saving "),
+                          ("", " ["),
+                          ("bg:ansiblack", "ctrl+s"),
+                          ("", "]: save")
+                        ))
+
 
 class TextAreaWithBindings( TextArea ):
    def __init__( self, *args, **kwargs ):
@@ -957,10 +987,10 @@ class PropLines( NinjaProp ):
                land = layout.ps[-1][0]
             except IndexError:
                land = layout.container\
-                            .content\
-                            .content\
-                            .get_container()\
                             .children[0]
+                            # .content\
+                            # .content\
+                            # .get_container()\
          event.app.layout.focus( land )
       delete_spot = ColdSpot( "press again to confirm", del_kb )
       def delete_selected():
@@ -1258,7 +1288,7 @@ class NinjaLayout( Layout ):
             self, NinjaProp( "", "", "", [ NinjaMove( "", "", [] ) ] )
          )] + self.ps
          self.focus( self.ps[0][0] )
-      initial_plus.annotaiton = "add prop"
+      initial_plus.annotation = "add prop"
 
       point = HotSpot( '+', meta_kb )
 
@@ -1322,72 +1352,40 @@ class NinjaLayout( Layout ):
    def updated_propnames( self ):
       return self.propnames - { p.name for p in self.ps }
 
-@kb.add('e')
+@kb.add('enter', annotation = "edit" )
 def switch_( event ):
-   event.app.layout = NinjaLayout( next( islice( r.materials, 0, None ) ) )
+   event.app.layout = NinjaLayout(
+      next( mat for mat in foci
+            if foci[ mat ].window == event.app.layout.current_window
+           )
+   )
+   # it seems the layout hasn't figured parents out to the extent that
+   # bar_tips finds anything useful, until after the key handlers have
+   # run.
+   # TODO: figure out how to get the tool bar to update on load
+   # event.app.layout.container.children[1].content.text \
+   #    = FormattedText((("", " ["),
+   #                     ("bg:ansiblack", "ctrl+q"),
+   #                     ("", "]: quit to list  ["),
+   #                     ("bg:ansiblack", "ctrl+s"),
+   #                     ("", "]: save")
+   #                     ))
 @kb.add('x')
 def panic_( event ):
    breakpoint()
 
-@kb.add('enter')
-def add_prop( event ):
-   f = Label( FormattedText([("[SetCursorPosition]", " ")]),
-              dont_extend_width=True
-             )
-   dif_kb = KeyBindings()
-   @dif_kb.add('backspace')
-   def none_( event ):
-      f.text = " "
-   def nt( n ):
-      def put( event ):
-         f.text = FormattedText([ ("", str( n ) ),
-                                  ("[SetCursorPosition]", " ")
-                                 ])
-         f.formatted_text_control.focusable = True
-         event.app.layout.focus( t )
-      return put
-   for n in range( 1, 6 ):
-      dif_kb.bindings.append( Binding( str( n ), nt( n ) ))
-   f.formatted_text_control.key_bindings = dif_kb
-   @dif_kb.add("down")
-   def d_(event):
-      event.app.layout.focus( l[1] )
-
-   class VaugeSuggest( AutoSuggest ):
-      def get_suggestion( self, _, doc ):
-         return Suggestion( "   " + ", ".join(
-            p.prop[ len(doc.text.strip()) : ] for p in testprops
-            if p.prop.strip().lower().startswith( doc.text.strip().lower() )
-         ) )
-
-   t = TextArea( text = "", auto_suggest = VaugeSuggest() )
-   l = [ VSplit([ NarrowLabel( "  \\prop{ " ),
-                  f,
-                  NarrowLabel( FormattedText([
-                     ("ansibrightblack", "  % difficulty on a scale of 1 - 5")
-                  ]))
-                 ]),
-         VSplit([ NarrowLabel( "  }{ "),
-                  FloatContainer(
-                     t,
-                     [ Float( Label( FormattedText([( "ansibrightblack",
-                                                      "  % prop name"
-                                                     )])),
-                              left = 0,
-                              hide_when_covering_content = True
-                             )]
-                  )
-                  # ,
-                  # NarrowLabel( FormattedText([("ansibrightblack",
-                  #                              "   % prop name"
-                  #                              )]))
-                 ], key_bindings=load_key_bindings() ),
-         Label( "  }" )
-        ]
-   c = event.app.layout.container.children
-   event.app.layout.container = HSplit( c[:-1] + l + c[-1:] )
-   # pprint( event.app.layout.container.children )
-   event.app.layout.focus( f )
+def menu_layout( focus_material = None ):
+   return Layout(
+      HSplit([
+         ScrollablePane(
+            HSplit( all_windows() ),
+            scroll_offsets = ScrollOffsets( top = 1, bottom = 1 )
+         ),
+         Label( bar_tips, style = "class:bottom-toolbar" )
+         #Button( "quit", lambda: get_app().exit() )
+      ], key_bindings = kb )
+      , focused_element = foci[ focus_material or next( r.materials ) ]
+   )
 
 def highlight_number():
    try:
@@ -1401,9 +1399,12 @@ def highlight_number():
       for i in range(len(n))
    }) if n else None
 
+cc_kb = KeyBindings()
+# cc_kb.add('c-c')(exit_)
+
 a = Application(
-   key_bindings = kb,
-   layout = menu_layout,
+   key_bindings = cc_kb,
+   layout = menu_layout(),
    # before_render = start_focusser,
    mouse_support = True,
    style = merge_styles([ Style.from_dict({"number": "ansibrightblack"})
