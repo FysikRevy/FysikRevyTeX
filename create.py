@@ -25,6 +25,7 @@ import roles_reader
 from pool_output import \
     PoolOutputManager, Output, indices, task_start, \
     text_effect, print_columnized
+from inter import ninja_wizard
 
 from config import configuration as conf
 
@@ -409,7 +410,12 @@ actions = [ plan ] + [
     Argument( "google-forms-signup",
               "Skriv roller og revydage ind i en Google Forms tilmeldingsformular.",
               google_forms_signup
-             )
+             ),
+
+    Argument( "ninja-wizard",
+              "Interaktiv hjælp til at skrive ninjaplaner.",
+              lambda: ninja_wizard( revue )
+             ),
     ]
 
 def execute_commands(revue, args):

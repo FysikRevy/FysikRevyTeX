@@ -1,8 +1,5 @@
-import os
-import sys
+# coding = utf-8
 import re
-
-from pprint import pprint
 from itertools import chain, dropwhile, islice
 from locale import strxfrm
 
@@ -27,9 +24,6 @@ from prompt_toolkit.styles import Style, DynamicStyle, merge_styles
 from prompt_toolkit.document import Document
 from prompt_toolkit.utils import Event
 from prompt_toolkit.completion import WordCompleter, ConditionalCompleter
-
-sys.path.append( os.getcwd() )
-os.chdir( "E:/thebe/Git/revymanus2025/" )
 
 from classy_revy import Revue, Scene
 from base_classes import NinjaProp, NinjaMove
@@ -84,13 +78,14 @@ class HotSpot( VSplit ):
 
       self.spot = FocusableLabel( " " )
       self.spot.formatted_text_control.key_bindings = key_bindings
-      l = NarrowLabel(
+      label = NarrowLabel(
          to_formatted_text( text ) + formatted_control( help_text ),
          *args_for_label[1:],
          **{ k: kwargs_for_label[k] for k in kwargs_for_label if k != "text" }
       )
       super().__init__([ self.spot,
-                         ConditionalContainer( l, has_focus( self.spot )) ])
+                         ConditionalContainer( label, has_focus( self.spot ))
+                        ])
 
 class ColdSpot( HotSpot ):
    def __init__( self, *args, **kwargs ):
@@ -104,13 +99,8 @@ def formatted_control( text ):
       (("italic", " [{}]".format(text) ),)
    )
 
-r = Revue.fromfile("aktoversigt.plan")
-items = [ m.title for m in r.materials ]
-
-# items = ["one","two","three"]
-# controls = [ control("w/r/n") for _ in items ]
 number_style = Style.from_dict({"number": "ansibrightblack" })
-def highlightable_number( ndex, of_number ):
+def highlightable_number( index, of_number ):
    def style_number():
       try:
          n = get_app().number
@@ -122,131 +112,6 @@ def highlightable_number( ndex, of_number ):
          return number_style
       return None
    return DynamicStyle( style_number )
-
-foci = { mat: FocusableLabel(
-                 ( lambda mat: lambda: formatted_control(
-                    "ret/" + ( "del" if mat.ninjaprops is not None else "n" )
-                 ) )(mat) ) for mat in r.materials
-        }
-mats = { foci[ mat ].window: mat for mat in r.materials }
-controls = { mat: [ foci[ mat ] ] \
-             + [ Label( formatted_control( t ), dont_extend_width=True )
-                 for t in ( "↑", "↓" )
-                ]
-             for mat in r.materials
-            }
-
-numbers = { mat: FormattedText(
-   # for the first digit in eg. 192, the class should be 1.19.192
-   # this makes the class selectable when typing, say, 1 or 1-9, but not
-   # when typing 1-8
-   [( "class:number class:" \
-      + ".".join( str( n + 1 )[ : j ]
-                  for j in range( i + 1, len( str( n + 1)) + 1 ))
-      , c
-     )
-    for i,c in enumerate( str( n + 1 ))
-    ]) for n, mat in enumerate( r.materials ) }
-
-def filter_for_control( idx ):
-   if idx < 0:
-      return Never()
-   try:
-      return has_focus( controls[idx][0] )
-   except IndexError:
-      return Never()
-
-def neighbour_mats( mat ):
-   return [ m for m in next(
-      g for g in stagger( r.materials, offsets=(-1,0,1), longest=True )
-      if isinstance( mat, Scene ) and g[1] == mat\
-      or isinstance( mat, Window ) and mat == foci[ g[1] ].window
-   )]
-
-def active_line( mat ):
-   adjacent_mats = neighbour_mats( mat )
-   return VSplit([
-      Label( FormattedText([("",
-                             ("  [" + " " * ( 2 - len( numbers[ mat ] )))
-                             )])\
-             + numbers[ mat ]\
-             + FormattedText((
-                ("", "] {} ".format( mat.title )),
-                ("ansibrightblack", "(") ))\
-             + FormattedText((
-                ("ansibrightcyan", "{}:".format( len( mat.ninjaprops ) )),
-                *intersperse( ("ansibrightblack", ","),
-                              (( "ansibrightblack" if n == 0 \
-                                 else "ansibrightgreen"
-                                 , str( n )
-                                ) for n in (
-                                   sum( 1 for p in mat.ninjaprops
-                                        if p.hardness == str(i)
-                                       )
-                                   for i in range( 1, 6 )
-                                ))
-                               ),
-                *((("ansiyellow", " ({})".format(
-                   sum( 1 for p in mat.ninjaprops
-                        if p.hardness not in [ str(i) for i in range( 1,6 ) ]
-                       ))),) if any( p.hardness not in
-                                     [ str(i) for i in range( 1,6 ) ]
-                                     for p in mat.ninjaprops
-                                    ) \
-                             else []
-                  )) if mat.ninjaprops is not None else (
-                     ("ansibrightblack", " --- "),
-                  )
-                             )\
-             + FormattedText((
-                ("ansibrightblack", ")"),
-                ("", " ")
-             )),
-             dont_extend_width = True
-            )
-   ] + [ ConditionalContainer( controls, filter )
-         for controls, filter in zip(
-               controls[ mat ],
-               ( has_focus( foci[m] ) if m else Never()
-                 for m in [ adjacent_mats[i] for i in ( 1,2,0 ) ]
-                )
-         )
-        ]
-                 )
-
-def iterdex( element, iterator ):
-   try:
-      return next( i for i,e in enumerate( iterator ) if e == element )
-   except StopIteration:
-      raise ValueError( "Not found: {}".format( element ) )
-
-def all_windows():
-   return [ t for a in r.acts for t in
-            [ Label( FormattedText( (("ansibrightblue bold",
-                                      a.name + ":"
-                                      ),)
-                                   ))
-             ] \
-            + [ active_line( m ) for m in a.materials ]
-           ]
-
-def prompt_windows( ninjaprops ):
-   return [ Label( "\\ninjas{" ) ]\
-      + [ Label( l ) for a in (
-          ((( f"  \\prop{{{prop.hardness}}}{{{prop.name}}}{{",
-              "    " + prop.drawing,
-            "  }{"
-             ),)\
-          + tuple(( (f"    \\move{{{move.destination}}}{{{move.time}}}{{",
-               "      " + " ".join( "\\ninja{{{}}}".format( name )
-                                    for name in move.ninjanames
-                                   ),
-               "    }"
-               )) for move in prop.moves
-                  )\
-           + tuple((( "  }",),),)) for prop in ninjaprops 
-          ) for b in a for l in b
-         ] + [ Label( "}" ) ]
 
 def bar_tips():
    get_app().layout.update_parents_relations()
@@ -304,162 +169,6 @@ class KeyBindingsWrapped( KeyBindingsAnn ):
          return func
       return decorator
 
-def un_number( event ):
-   event.app.number = ""
-
-kb = KeyBindingsWrapped( un_number )
-
-@kb.add('<any>')
-def default_( event ):
-   pass
-
-@kb.add('q', annotation = "quit" )
-@kb.add('escape')
-def exit_(event):
-   event.app.exit()
-
-@kb.add('down')
-def down_(event):
-   adjacent_mats = neighbour_mats( event.app.layout.current_window )
-   if adjacent_mats[2]:
-      event.app.layout.focus( foci[ adjacent_mats[2] ] )
-
-@kb.add('up')
-def up_(event):
-   adjacent_mats = neighbour_mats( event.app.layout.current_window )
-   if adjacent_mats[0]:
-      event.app.layout.focus( foci[ adjacent_mats[0] ] )
-
-@kb.add('pagedown')
-def pgdn_(event):
-   *_, pageend = filter(
-      lambda x: isinstance( x, Scene ),
-      islice(
-         dropwhile(
-            lambda x: not isinstance( x, Scene ) \
-                      or foci[x].window != event.app.layout.current_window,
-            ( e for a in r.acts for e in
-              chain((a,), ( m for m in a.materials ))
-             )
-         ),
-         os.get_terminal_size().lines - 1 # interface-lines
-      )
-   )
-   event.app.layout.focus( foci[ pageend ] )
-
-@kb.add('pageup')
-def pgup_(event):
-   event.app.layout.focus( foci[
-      next(
-         m for m in next(
-            g for g in stagger(
-               ( e for a in r.acts
-                 for e in chain( (a,), ( m for m in a.materials )) ),
-               offsets = range( -os.get_terminal_size().lines + 2, 1 )
-               #                           interface-lines + 1  ^
-            )
-            if isinstance( g[-1], Scene) \
-               and foci[ g[-1] ].window == event.app.layout.current_window
-         ) if isinstance( m, Scene )
-      )
-   ])
-
-@kb.add('end')
-def end_(event):
-   *_, final = r.materials
-   event.app.layout.focus( foci[ final ] )
-
-@kb.add('home')
-def home_(event):
-   event.app.layout.focus( foci[ next( r.materials ) ] )
-
-# for n in range(10):
-#    @kb.add(str(n))
-def number_func_for( n ):
-   ns = str( n )
-   def number_key_(event):
-      try:
-         event.app.number += ns
-      except AttributeError:
-         event.app.number = ns
-      for _ in range(2):
-         try:
-            event.app.layout.focus( foci[
-               next( mat for i,mat in enumerate( r.materials )
-                     if str( i + 1 ).startswith( event.app.number )
-                    )
-            ])
-            break
-         except StopIteration:
-            event.app.number = ns
-   return number_key_
-
-for n in range(10):
-   kb.bindings.append( Binding( str( n ),
-                                number_func_for( n )
-                               ))
-
-@kb.unwrapped_add('backspace')
-def bs_(event):
-   try:
-      event.app.number = event.app.number[:-1]
-   except:
-      pass
-
-def update_ninjas( event, new_ninjas ):
-   mat = next( mat for mat in foci
-               if foci[ mat ].window == event.app.layout.current_window
-              )
-   tex = TeX()
-   tex.parse( mat.path )
-   tex = replace_ninjas( tex, new_ninjas )
-   tex.write( mat.path )
-   tex.parse( mat.path )
-   tex.info["path"] = mat.path
-   mat.__init__( tex.info, print = lambda *args, **kwargs: None )
-   menu_lines = event.app.layout.container.children[0].content.children
-   menu_lines[ next( i for i,line in enumerate( menu_lines )
-                     if event.app.layout.has_focus( line )
-                    )
-              ] = active_line( mat )
-
-no_ninjas = Condition(
-   lambda: mats[ get_app().layout.current_window ].ninjaprops is None
-)
-   
-@kb.add('delete',
-        filter = ~no_ninjas,
-        annotation = "delete ninjaprops"
-        )
-def delete_( event ):
-   update_ninjas( event, [""] )
-
-@kb.add('n',
-        filter = no_ninjas,
-        annotation = "write template to file"
-        )
-def new_( event ):
-   # TODO: pull template from TeX template?
-   update_ninjas( event, ["""\\ninjas{
-  \prop{    % difficulty on a scale of 1-5
-      }{    % prop name
-      }{    % drawing (in TikZ format, see manual, not required)
-      }{
-        \move{    % time
-            }{    % from/ro
-            }{ \\ninja{ }  % assigned ninjas (one \\ninja{} per)
-      }
-  }
-}"""] )
-
-testprops = next( islice( r.materials, 1, None ) ).props
-@kb.add('d')
-def dt_(event):
-   pprint( [ p.prop for p in testprops ] )
-
-@kb.add('i')
-def inv_(event):
-   event.app.invalidate()
 
 def reset_toolbar( event ):
    event.app.layout.container.children[1].content.text = bar_tips
@@ -491,7 +200,7 @@ def save( event ):
    updated_tex = replace_ninjas(
       tex,
       [ "\\ninjas{" ] \
-      + [ "  " + l for p in event.app.layout.ps for l in p.tex_cmd() ] \
+      + [ "  " + line for p in event.app.layout.ps for line in p.tex_cmd() ] \
       + [ "}" ]
    )
    updated_tex.write( event.app.layout.material.path )
@@ -506,7 +215,8 @@ def menu( event ):
    if event.is_repeat \
          or [ p.tex_cmd() for p in event.app.layout.material.ninjaprops or []] \
              == [ p.tex_cmd() for p in event.app.layout.ps ]:
-      event.app.layout = menu_layout( event.app.layout.material )
+      event.app.layout \
+         = event.app.layout.menu_layout( event.app.layout.material )
    else:
       event.app.layout.container.children[1].content.text \
          = FormattedText((("red", " ["),
@@ -823,7 +533,7 @@ class NinjasLine(TextArea):
    def __setitem__( self, i, item ):
       self.document.text = "\x1e".join(
          item if ii == i else n
-         for i,n in enumerate( self.document.text[:-1].split("\x1e" ) )
+         for ii,n in enumerate( self.document.text[:-1].split("\x1e" ) )
       ) + " "
 
    def __iter__( self ):
@@ -1281,7 +991,8 @@ class NinjaLayout( Layout ):
    times = OrderedSet(( "\\before", "\\during", "\\after" ))
    destinations = OrderedSet(( "\\bagT", "\\sideT" ))
    
-   def __init__( self, material ):
+   def __init__( self, material, r, menu_layout ):
+      self.menu_layout = menu_layout
       self.material = material
       self.ps = []
       self.ninjanames = OrderedSet( n.name for n in r.ninjas
@@ -1324,7 +1035,7 @@ class NinjaLayout( Layout ):
                      point
                     ])
          ] + [
-            l for p in self.ps for l in p
+            line for p in self.ps for line in p
          ] + [
             Label( "}" )
          ], key_bindings = nav_kb )
@@ -1375,51 +1086,281 @@ class NinjaLayout( Layout ):
    def updated_propnames( self ):
       return self.propnames - { p.name for p in self.ps } - {""}
 
-@kb.add('enter', annotation = "edit" )
-def switch_( event ):
-   event.app.layout = NinjaLayout(
-      next( mat for mat in foci
-            if foci[ mat ].window == event.app.layout.current_window
+def ninja_wizard( r ):
+   foci = { mat: FocusableLabel(
+                    ( lambda mat: lambda: formatted_control(
+                       "ret/" + ( "del" if mat.ninjaprops is not None else "n" )
+                    ) )(mat) ) for mat in r.materials
+           }
+   mats = { foci[ mat ].window: mat for mat in r.materials }
+   controls = { mat: [ foci[ mat ] ] \
+                + [ Label( formatted_control( t ), dont_extend_width=True )
+                    for t in ( "↑", "↓" )
+                   ]
+                for mat in r.materials
+               }
+
+   numbers = { mat: FormattedText(
+      # for the first digit in eg. 192, the class should be 1.19.192
+      # this makes the class selectable when typing, say, 1 or 1-9, but not
+      # when typing 1-8
+      [( "class:number class:" \
+         + ".".join( str( n + 1 )[ : j ]
+                     for j in range( i + 1, len( str( n + 1)) + 1 ))
+         , c
+        )
+       for i,c in enumerate( str( n + 1 ))
+       ]) for n, mat in enumerate( r.materials ) }
+
+   def neighbour_mats( mat ):
+      return [ m for m in next(
+         g for g in stagger( r.materials, offsets=(-1,0,1), longest=True )
+         if isinstance( mat, Scene ) and g[1] == mat\
+         or isinstance( mat, Window ) and mat == foci[ g[1] ].window
+      )]
+
+   def active_line( mat ):
+      adjacent_mats = neighbour_mats( mat )
+      return VSplit([
+         Label( FormattedText([("",
+                                ("  [" + " " * ( 2 - len( numbers[ mat ] )))
+                                )])\
+                + numbers[ mat ]\
+                + FormattedText((
+                   ("", "] {} ".format( mat.title )),
+                   ("ansibrightblack", "(") ))\
+                + FormattedText((
+                   ("ansibrightcyan", "{}:".format( len( mat.ninjaprops ) )),
+                   *intersperse( ("ansibrightblack", ","),
+                                 (( "ansibrightblack" if n == 0 \
+                                    else "ansibrightgreen"
+                                    , str( n )
+                                   ) for n in (
+                                      sum( 1 for p in mat.ninjaprops
+                                           if p.hardness == str(i)
+                                          )
+                                      for i in range( 1, 6 )
+                                   ))
+                                  ),
+                   *((("ansiyellow", " ({})".format(
+                      sum( 1 for p in mat.ninjaprops
+                           if p.hardness not in [ str(i) for i in range( 1,6 ) ]
+                          ))),) if any( p.hardness not in
+                                        [ str(i) for i in range( 1,6 ) ]
+                                        for p in mat.ninjaprops
+                                       ) \
+                                else []
+                     )) if mat.ninjaprops is not None else (
+                        ("ansibrightblack", " --- "),
+                     )
+                                )\
+                + FormattedText((
+                   ("ansibrightblack", ")"),
+                   ("", " ")
+                )),
+                dont_extend_width = True
+               )
+      ] + [ ConditionalContainer( controls, filter )
+            for controls, filter in zip(
+                  controls[ mat ],
+                  ( has_focus( foci[m] ) if m else Never()
+                    for m in [ adjacent_mats[i] for i in ( 1,2,0 ) ]
+                   )
+            )
+           ]
+                    )
+
+   def all_windows():
+      return [ t for a in r.acts for t in
+               [ Label( FormattedText( (("ansibrightblue bold",
+                                         a.name + ":"
+                                         ),)
+                                      ))
+                ] \
+               + [ active_line( m ) for m in a.materials ]
+              ]
+
+   def un_number( event ):
+      event.app.number = ""
+
+   kb = KeyBindingsWrapped( un_number )
+
+   @kb.add('<any>')
+   def default_( event ):
+      pass
+
+   @kb.add('q', annotation = "quit" )
+   @kb.add('escape')
+   @kb.add('c-c')
+   def exit_(event):
+      event.app.exit( r )
+
+   @kb.add('down')
+   def down_(event):
+      adjacent_mats = neighbour_mats( event.app.layout.current_window )
+      if adjacent_mats[2]:
+         event.app.layout.focus( foci[ adjacent_mats[2] ] )
+
+   @kb.add('up')
+   def up_(event):
+      adjacent_mats = neighbour_mats( event.app.layout.current_window )
+      if adjacent_mats[0]:
+         event.app.layout.focus( foci[ adjacent_mats[0] ] )
+
+   @kb.add('pagedown')
+   def pgdn_(event):
+      *_, pageend = filter(
+         lambda x: isinstance( x, Scene ),
+         islice(
+            dropwhile(
+               lambda x: not isinstance( x, Scene ) \
+                         or foci[x].window != event.app.layout.current_window,
+               ( e for a in r.acts for e in
+                 chain((a,), ( m for m in a.materials ))
+                )
+            ),
+            os.get_terminal_size().lines - 1 # interface-lines
+         )
+      )
+      event.app.layout.focus( foci[ pageend ] )
+
+   @kb.add('pageup')
+   def pgup_(event):
+      event.app.layout.focus( foci[
+         next(
+            m for m in next(
+               g for g in stagger(
+                  ( e for a in r.acts
+                    for e in chain( (a,), ( m for m in a.materials )) ),
+                  offsets = range( -os.get_terminal_size().lines + 2, 1 )
+                  #                           interface-lines + 1  ^
+               )
+               if isinstance( g[-1], Scene) \
+                  and foci[ g[-1] ].window == event.app.layout.current_window
+            ) if isinstance( m, Scene )
+         )
+      ])
+
+   @kb.add('end')
+   def end_(event):
+      *_, final = r.materials
+      event.app.layout.focus( foci[ final ] )
+
+   @kb.add('home')
+   def home_(event):
+      event.app.layout.focus( foci[ next( r.materials ) ] )
+
+   def number_func_for( n ):
+      ns = str( n )
+      def number_key_(event):
+         try:
+            event.app.number += ns
+         except AttributeError:
+            event.app.number = ns
+         for _ in range(2):
+            try:
+               event.app.layout.focus( foci[
+                  next( mat for i,mat in enumerate( r.materials )
+                        if str( i + 1 ).startswith( event.app.number )
+                       )
+               ])
+               break
+            except StopIteration:
+               event.app.number = ns
+      return number_key_
+
+   for n in range(10):
+      kb.bindings.append( Binding( str( n ),
+                                   number_func_for( n )
+                                  ))
+
+   @kb.unwrapped_add('backspace')
+   def bs_(event):
+      try:
+         event.app.number = event.app.number[:-1]
+      except (AttributeError, IndexError):
+         pass
+
+   def update_ninjas( event, new_ninjas ):
+      mat = mats[ event.app.layout.current_window ]
+      tex = TeX()
+      tex.parse( mat.path )
+      tex = replace_ninjas( tex, new_ninjas )
+      tex.write( mat.path )
+      tex.parse( mat.path )
+      tex.info["path"] = mat.path
+      mat.__init__( tex.info, print = lambda *args, **kwargs: None )
+      menu_lines = event.app.layout.container.children[0].content.children
+      menu_lines[ next( i for i,line in enumerate( menu_lines )
+                        if event.app.layout.has_focus( line )
+                       )
+                 ] = active_line( mat )
+
+   no_ninjas = Condition(
+      lambda: mats[ get_app().layout.current_window ].ninjaprops is None
+   )
+
+   @kb.add('delete',
+           filter = ~no_ninjas,
+           annotation = "delete ninjaprops"
            )
-   )
-@kb.add('x')
-def panic_( event ):
-   breakpoint()
+   def delete_( event ):
+      update_ninjas( event, [""] )
 
-def menu_layout( focus_material = None ):
-   return Layout(
-      HSplit([
-         ScrollablePane(
-            HSplit( all_windows() ),
-            scroll_offsets = ScrollOffsets( top = 1, bottom = 1 )
-         ),
-         Label( bar_tips, style = "class:bottom-toolbar" )
-      ], key_bindings = kb )
-      , focused_element = foci[ focus_material or next( r.materials ) ]
-   )
+   @kb.add('n',
+           filter = no_ninjas,
+           annotation = "write template to file"
+           )
+   def new_( event ):
+      # TODO: pull template from TeX template?
+      update_ninjas( event, ["""\\ninjas{
+  \prop{    % difficulty on a scale of 1-5
+      }{    % prop name
+      }{    % drawing (in TikZ format, see manual, not required)
+      }{
+        \move{    % time
+            }{    % from/ro
+            }{ \\ninja{ }  % assigned ninjas (one \\ninja{} per)
+      }
+  }
+}"""] )
+   @kb.add('enter', annotation = "edit" )
+   def switch_( event ):
+      event.app.layout = NinjaLayout( mats[ event.app.layout.current_window ],
+                                      r,
+                                      menu_layout
+                                     )
 
-def highlight_number():
-   try:
-      n = get_app().number
-   except AttributeError:
-      return None
-   return Style.from_dict({
-      # if n is eg. 192, should proeduce styles for 192, 19.192 and 1.19.192
-      ".".join( n[ : j + 1 ] for j in range( i, len( n ))
-               ): "ansiwhite underline"
-      for i in range(len(n))
-   }) if n else None
+   def menu_layout( focus_material = None ):
+      return Layout(
+         HSplit([
+            ScrollablePane(
+               HSplit( all_windows() ),
+               scroll_offsets = ScrollOffsets( top = 1, bottom = 1 )
+            ),
+            Label( bar_tips, style = "class:bottom-toolbar" )
+         ], key_bindings = kb )
+         , focused_element = foci[ focus_material or next( r.materials ) ]
+      )
 
-cc_kb = KeyBindings()
+   def highlight_number():
+      try:
+         n = get_app().number
+      except AttributeError:
+         return None
+      return Style.from_dict({
+         # if n is eg. 192, should proeduce styles for 192, 19.192 and 1.19.192
+         ".".join( n[ : j + 1 ] for j in range( i, len( n ))
+                  ): "ansiwhite underline"
+         for i in range(len(n))
+      }) if n else None
 
-a = Application(
-   key_bindings = cc_kb,
-   layout = menu_layout(),
-   mouse_support = True,
-   style = merge_styles([ Style.from_dict({"number": "ansibrightblack"})
-                          , DynamicStyle( highlight_number )
-                         ])
-)
-
-a.run()
+   return Application(
+      key_bindings = KeyBindings(), # with c-c hacked in above
+      layout = menu_layout(),
+      mouse_support = True,
+      style = merge_styles([ Style.from_dict({"number": "ansibrightblack"})
+                             , DynamicStyle( highlight_number )
+                            ])
+   ).run()
 
