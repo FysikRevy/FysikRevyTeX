@@ -129,9 +129,12 @@ def highlightable_number( ndex, of_number ):
       return None
    return DynamicStyle( style_number )
 
-foci = { mat: FocusableLabel( formatted_control( "w/r/n" ) )
-         for mat in r.materials
+foci = { mat: FocusableLabel(
+                 ( lambda mat: lambda: formatted_control(
+                    "ret/" + ( "del" if mat.ninjaprops != None else "n" )
+                 ) )(mat) ) for mat in r.materials
         }
+mats = { foci[ mat ].window: mat for mat in r.materials }
 controls = { mat: [ foci[ mat ] ] \
              + [ Label( formatted_control( t ), dont_extend_width=True )
                  for t in ( "↑", "↓" )
@@ -253,7 +256,7 @@ def prompt_windows( ninjaprops ):
 
 def bar_tips():
    get_app().layout.update_parents_relations()
-   keys = { k:FormattedText((("",""),)) for k in ( "q", "c-q", "c-s", "c-m", "+", "-" ) }
+   keys = { k:FormattedText((("",""),)) for k in ( "q", "c-q", "c-s", "c-m", "+", "-", "n", "delete" ) }
    focus = get_app().layout.current_window
    while focus:
       for k in keys:
@@ -426,15 +429,34 @@ def update_ninjas( event, new_ninjas ):
                     )
               ] = active_line( mat )
 
-@kb.add('delete')
-@kb.add('x')
+no_ninjas = Condition(
+   lambda: mats[ get_app().layout.current_window ].ninjaprops == None
+)
+   
+@kb.add('delete',
+        filter = ~no_ninjas,
+        annotation = "delete ninjaprops"
+        )
 def delete_( event ):
    update_ninjas( event, [""] )
 
-@kb.add('n')
+@kb.add('n',
+        filter = no_ninjas,
+        annotation = "write template to file"
+        )
 def new_( event ):
-   update_ninjas( event, ["\\ninjas{}"] )
-
+   # TODO: pull template from TeX template?
+   update_ninjas( event, ["""\\ninjas{
+  \prop{    % difficulty on a scale of 1-5
+      }{    % prop name
+      }{    % drawing (in TikZ format, see manual, not required)
+      }{
+        \move{    % time
+            }{    % from/ro
+            }{ \\ninja{ }  % assigned ninjas (one \\ninja{} per)
+      }
+  }
+}"""] )
 
 testprops = next( islice( r.materials, 1, None ) ).props
 @kb.add('d')
