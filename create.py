@@ -25,7 +25,7 @@ import roles_reader
 from pool_output import \
     PoolOutputManager, Output, indices, task_start, \
     text_effect, print_columnized
-from inter import ninja_wizard
+from ninja_wizard import ninja_wizard
 
 from config import configuration as conf
 
