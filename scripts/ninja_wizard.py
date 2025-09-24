@@ -757,80 +757,30 @@ class PropLines( NinjaProp ):
       for n in range( 1, 6 ):
          hard_kb.add( str( n ) )( nt( n ) )
 
-      class PropArea( TextAreaWithBindings ):
-         def __init__( self,
-                       focused_help: Processor | None = None,
-                       *args, **kwargs
-                      ):
-            def_args = ({'pos': 16, 'kw': 'dont_extend_height',
-                         'val': True
-                         },
-                        {'pos': 24, 'kw': 'prompt',
-                         'val': "      }{ ",
-                         }
-                        )
-            while True:
-               try:
-                  super().__init__(
-                     *args,
-                     **( { d['kw']: d['val'] for d in def_args
-                           if d['pos'] >= len( args )
-                          } \
-                         | { k: kwargs[k] for k in kwargs
-                             if k not in [ "input_processors", "completer" ]
-                            }
-                        )
-                  )
-               except TypeError as e:
-                  try:
-                     style_arg = args[1]
-                     args[1] = ""
-                  except IndexError:
-                     try:
-                        style_arg = kwargs["style"]
-                        del kwargs["style"]
-                     except KeyError:
-                        raise e
-               else:
-                  try:
-                     fixed_style = self.window.style
-                     self.window.style = lambda: fixed_style + " " + style_arg()
-                  except NameError:
-                     pass
-                  break
+      def append_processors( conditional_processors, processors, text_area ):
+         condition = has_focus( text_area.buffer ) \
+                      & Condition( lambda: text_area.document.cursor_position \
+                                            == len( text_area.document.text )
+                                  )
+         text_area.control.input_processors \
+          += [ ConditionalProcessor( cp, condition )
+              for cp in conditional_processors
+              ] \
+          +  processors
+         return text_area
 
-            cursor_at_end = Condition(
-               lambda: self.document.cursor_position \
-                         == len( self.document.text )
-            )            
-            def cond_comp( completer ):
-               return ConditionalCompleter( completer, cursor_at_end )
-            try:
-               self.completer = cond_comp( args[5] )
-            except IndexError:
-               try:
-                  self.completer = cond_comp( kwargs['completer'] )
-               except KeyError:
-                  pass
+      def add_selection_style( text_area ):
+         fixed_style = text_area.window.style
+         text_area.window.style = lambda: fixed_style + " " + delete_selected()
+         return text_area
 
-            try:
-               input_processors = args[25] or []
-            except IndexError:
-               try:
-                  input_processors = kwargs['input_processors'] or []
-               except KeyError:
-                  if not focused_help:
-                     return
-                  input_processors = []
-
-            help_processor = [
-               ConditionalProcessor(
-                  focused_help, has_focus( self.buffer ) & cursor_at_end
-               )
-            ] if focused_help else []
-
-            self.control.input_processors += \
-               [ AfterInput( " " ) ] + help_processor + input_processors
+      def add_conditional_completer( completer, text_area ):
+         cursor_at_end = Condition(
+            lambda: text_area.document.cursor_position \
+                       == len( text_area.document.text )
+         )
+         text_area.completer = ConditionalCompleter( completer, cursor_at_end )
+         return text_area
 
       meta_kb = KeyBindings()
       @meta_kb.add('+')
@@ -862,30 +812,42 @@ class PropLines( NinjaProp ):
                 key_bindings = hard_kb,
                 style = delete_selected
                 ),
-            PropArea(
-               ConditionalProcessor(
-                  AfterInput( FormattedText((("italic", "[tab] "),))),
-                  Condition( lambda: not layout.current_buffer.complete_state )
+            add_selection_style(
+               append_processors(
+                  [ ConditionalProcessor(
+                     AfterInput( FormattedText((("italic", "[tab] "),))),
+                     Condition( lambda: not layout.current_buffer.complete_state )
+                  ) ],
+                  [ AfterInput( FormattedText([
+                     ( "ansibrightblack", " % prop nane" )
+                  ]) )],
+
+                  add_conditional_completer(
+                     WordCompleter( layout.updated_propnames,
+                                    ignore_case = True
+                                   ),
+                     TextAreaWithBindings(
+                        text = prop.name,
+                        dont_extend_height = True,
+                        prompt = "      }{ ",
+                        input_processors = [ AfterInput( " " ) ]
+                        )
+                     )
+                  )
                ),
-               text = prop.name,
-               style = delete_selected,
-               input_processors = [ AfterInput( FormattedText([
-                  ( "ansibrightblack", " % prop nane" )
-               ]) )],
-               completer = WordCompleter( layout.updated_propnames,
-                                          ignore_case = True
-                                         )
-            ),
-            PropArea(
-               text = prop.drawing,
-               style = delete_selected,
-               input_processors = [ AfterInput(
-                  FormattedText((
+            add_selection_style(
+               TextAreaWithBindings(
+                  text = prop.drawing,
+                  dont_extend_height = True,
+                  prompt = "      }{ ",
+                  input_processors = [ AfterInput(
+                     FormattedText((
                      ("ansibrightblack",
                       " % drawing (in TikZ format, see manual. Not required)"
-                      ),
+                        ),
                      ))
                   )]
+               )
             )
       ]
 
