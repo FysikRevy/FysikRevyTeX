@@ -1133,7 +1133,7 @@ class TeX:
 
        dsts = { move.destination
                 for scene in self.revue.scenes
-                for prop in scene.ninjaprops
+                for prop in ( scene.ninjaprops or [] )
                 for move in prop.moves
                }
        colors = [ "Thistle", "Goldenrod", "YellowGreen", "Cyan",
@@ -1164,7 +1164,7 @@ class TeX:
           + "&".join( "\\actor{{{}}}".format( actor.name )
                       for actor in self.revue.actors
                      ) \
-          + "\\\\\\toprule\n"
+          + "\\\\\\toprule\n\\endhead\n"
        for an, act in enumerate( self.revue.acts ):
           for mn, mat in enumerate( act.materials ):
              self.tex += \
@@ -1179,10 +1179,12 @@ class TeX:
                          )\
                 + "\\\\"
 
-             movetimes = OrderedSet([ move.time for prop in mat.ninjaprops
-                                      for move in prop.moves
-                                     ])
-             markedprops = [ copy( prop ) for prop in mat.ninjaprops ]
+             movetimes = OrderedSet(
+                [ move.time for prop in ( mat.ninjaprops or [] )
+                  for move in prop.moves
+                 ]
+             )
+             markedprops = [ copy( prop ) for prop in ( mat.ninjaprops or [] ) ]
              for prop, col in zip( markedprops, cycle( colors ) ):
                 prop.colour = col
              for dst in dsts:
@@ -1228,3 +1230,4 @@ class TeX:
                    "\n".join([ "&".join( tp ) + '\\\\' for tp in timeprops ])
              self.tex += "\\midrule\n"
        self.tex += template[1]
+       return self
