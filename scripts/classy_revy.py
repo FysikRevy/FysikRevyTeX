@@ -2,6 +2,7 @@ import os,re
 from time import localtime, strftime
 from datetime import timedelta
 from locale import strxfrm
+from functools import reduce
 
 import base_classes as bc
 from tex import TeX
@@ -67,7 +68,9 @@ class Scene:
                         )
         return cls( tex.info, source_file, source_mtime )
 
-    def __init__(self, info_dict, source_file = None, source_mtime = None ):
+    def __init__(self, info_dict, source_file = None, source_mtime = None,
+                 print = print
+                 ):
         "Extract data from dictionary returned by parsetexfile()."
 
         def info_dict_get_or_empty_string( entry ):
@@ -109,6 +112,8 @@ class Scene:
         if self.responsible not in [ role.actor for role in self.roles ]:
             print("Incorrect TeX responsible for '{}' ({})."
                   .format(self.title, self.responsible or "<unspecified>"))
+
+        self.ninjaprops = info_dict_get_or_empty_string( "ninjaprops" )
 
         self.melody = info_dict_get_or_empty_string( "melody" )
 
@@ -164,25 +169,6 @@ class Scene:
     def __repr__(self):
         return "{} ({} min): {}".format(self.title, self.length, self.status)
 
-    def register_actors(self, list_of_actors):
-        "Takes a list of actors and updates it with the actors in the sketch/song."
-
-        for role in self.roles:
-            for actor in list_of_actors:
-                if role.actor == actor.name:
-                    # If the actor exists in the list, we add this role to him/her:
-                    actor.add_role(role)
-                    if role in self.instructors:
-                        actor.add_instructorship( role )
-                    break
-            else:
-                # If not, we create a new actor and update the list:
-                actor = bc.Actor(role.actor)
-                actor.add_role(role)
-                if role in self.instructors:
-                    actor.add_instructorship( role )
-                list_of_actors.append(actor)
-
 
 class Material( Scene ):
     "A Material is a Scene with an associated TeX file."
@@ -196,12 +182,12 @@ class Material( Scene ):
         info_dict["path"] = filename
         return cls(info_dict)
 
-    def __init__( self, info_dict ):
+    def __init__( self, info_dict, print = print ):
         
         self.path = os.path.abspath(info_dict["path"])
         path, self.file_name = os.path.split(self.path)
 
-        super().__init__( info_dict )
+        super().__init__( info_dict, print = print )
 
         # Meta data
         self.modification_time = info_dict['modification_time']
@@ -283,11 +269,9 @@ class Act:
         return l
 
 
-
 class Revue:
     def __init__(self, acts):
         self.acts = acts
-        self.actors = []
 
         # Load variables from the configuration:
         # FIXME: Maybe just pass the ConfigParser object itself? There shouldn't
@@ -297,9 +281,36 @@ class Revue:
         self.year = self.conf["Revue info"]["revue year"]
 
         # Make a list of all actors:
-        for material in self.materials:
-            material.register_actors(self.actors)
-        self.actors.sort(key=lambda actor: strxfrm(actor.name))
+        actors = {}
+        for scene in self.scenes:
+            for role in scene.roles:
+                actorname = role.actor.strip()
+                actor = actors[ actorname ] if actorname in actors \
+                        else bc.Actor( role.actor )
+                actor.add_role( role )
+                if role in scene.instructors:
+                    actor.add_instructorship( role )
+                actors[ actorname ] = actor
+            try:
+                for prop in scene.ninjaprops:
+                    for move in prop.moves:
+                        for name in move.ninjanames:
+                            name = name.strip()
+                            actor = actors[ name ] if name in actors \
+                                    else bc.Actor( name )
+                            actor.add_ninjamove( move )
+                            actors[ name ] = actor
+            except TypeError:
+                # ninjaprops was None, probably
+                pass
+
+        self.actors, self.ninjas = reduce(
+            lambda a,n: ( a[0] + [ actors[n] ], a[1] )
+                        if actors[n].roles or actors[n].instructorships
+                        else ( a[0], a[1] + [ actors[n] ] ),
+            sorted( actors, key = strxfrm ),
+            ([],[])
+        )
 
 
     @classmethod
@@ -331,6 +342,12 @@ class Revue:
                 if s:
                     for role in s.roles:
                         role.add_material(s)
+                    try:
+                        for prop in s.ninjaprops:
+                            for move in prop.moves:
+                                move.scene = s
+                    except TypeError:
+                        pass
                     act.add_scene(s)
                     continue
                     
@@ -366,6 +383,41 @@ class Revue:
     @property
     def scenes( self ):
         return ( sc for act in self.acts for sc in act.scenes )
+
+    @property
+    def everyone( self ):
+        # could have been `actors + ninjas`, but in stead you want it
+        # to return a generator, not copy the arrays at invocation
+        # time, and filter out duplicates...
+        def everyone_gen( self ):
+            class Department:
+                def __init__(self, pen, up = None ):
+                    self.pen = ( x for x in pen )
+                    self.up = up
+
+            departments = [ Department( self.actors ),
+                            Department( self.ninjas ) ]
+            def next_up( dept ):
+                try:
+                    dept.up = next( dept.pen )
+                except StopIteration:
+                    departments.remove( dept )
+
+            for dept in departments:
+                next_up( dept )
+
+            while len( departments ) > 1:
+                next_dept = min(
+                    departments,
+                    key = lambda dept: strxfrm( dept.up.name )
+                )
+                yield next_dept.up
+                for dept in departments:
+                    if dept.up is next_dept.up:
+                        next_up( dept )
+            yield from departments[0].pen
+
+        return everyone_gen( self )
 
     def write_roles_csv( self, fn = "roles.csv" ):
         fn = Path( fn )
@@ -423,3 +475,22 @@ class Revue:
                   else str(cell) if cell else ''
                   for cell in row
                  ] ) for row in table ] ) )
+
+    def write_ninja_yaml( self, fn="ninjas.yaml" ):
+        from ruamel.yaml import YAML
+        yaml=YAML()
+        summaries = [
+            { 'fil': str( Path( scene.path ) ),
+              'eta': "{}:{:0>2}".format( scene.duration // timedelta(minutes=1),
+                                         scene.duration % timedelta(minutes=1)\
+                                           // timedelta( seconds=1 )
+                                        ),
+              'skuespillere': [ r.actor for r in scene.stage_roles ],
+              'rekvisitter': [ prop.to_serializable()
+                               for prop in scene.ninjaprops
+                              ]
+             }
+            for scene in self.scenes
+        ]
+        with Path( fn ).open( "w", encoding="utf-8" ) as f:
+            yaml.dump( summaries, f )

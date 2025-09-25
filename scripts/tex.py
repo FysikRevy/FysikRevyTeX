@@ -8,9 +8,12 @@ from time import localtime, strftime
 from pathlib import Path
 from functools import cmp_to_key
 from datetime import timedelta
+from copy import copy
+from itertools import cycle
+
 from ordered_set import OrderedSet
 
-from base_classes import Prop, Role
+from base_classes import Prop, Role, NinjaProp
 import converters as cv
 from helpers import rows_from_csv_etc
 # from google_sheets import dump_everything, with_compare
@@ -29,8 +32,105 @@ opt_re = re.compile(r"^[^\[]*\[([^\]]*)\].*$")
 # Regular expression that extracts everything ] and to the end of the line:
 eol_re = re.compile(r"^.*\](.*).*$")
 
+# comments
+cmt_re = re.compile( r"%.*" )
+
 # RegEx til at splitte tekst-lister, fx ( a, b + c og d ):
 text_list_re = re.compile(r'\W*(?:\+|\\&|[oO]g|,)\W*')
+
+class NinjaParser:
+   n_args = 4
+   re_to_open = re.compile(r"^[^{]*")
+   def __init__(self):
+      self.parsing = False
+      self.parsingProp = False
+      self.hardness = ""
+      self.name = ""
+      self.args = []
+      self.bracketDepth = 0
+
+   def parseline(self, line, into):
+      line = cmt_re.sub( "", line )
+      if not self.parsing:
+         if not "\\ninjas" in line:
+            return
+
+         self.parsing = True
+         line = re.sub( r"^.*?\\ninjas\s*{", "", line, count=1)
+
+      if not self.parsingProp:
+         if not "\\prop" in line:
+            self.parsing = not re.match( r"^\s*}", line )
+            return
+         line = re.sub( r"^.*?\\prop\s*{", "", line, count=1 )
+         self.parsingProp = True
+         self.args += [""]
+         self.bracketDepth = 1
+         
+      if re.match( r"\s*$", line ):
+         return
+
+      if self.bracketDepth <= 0:
+         line = self.re_to_open.sub( "", line, count=1 )
+         if not line or line[0] != "{":
+            return
+         line = line[1:]
+         self.bracketDepth = 1
+
+      i = 0
+      while self.bracketDepth > 0 and i < len( line ):
+         match line[i]:
+            case "{":
+               self.bracketDepth += 1
+            case "}":
+               self.bracketDepth -= 1
+         i += 1
+      self.args[-1] += line[: i ]
+      if self.bracketDepth <= 0:
+         # remove newlines and the closing bracket
+         self.args[-1] = self.args[-1].replace("\n", "")[:-1]
+         if len( self.args ) >= self.n_args:
+            self.write_args( into )
+            self.parsingProp = False
+            self.args = []
+         else:
+            self.args += ['']
+         
+      return self.parseline( line[i:], into )
+
+   def parseMove( self, move ):
+      parsedMoves = []
+      while "\\move" in move:
+         parsedMove = []
+         move = re.sub( r"^.*?\\move", "", move, count=1 )
+         while len( parsedMove ) < 3:
+            move = self.re_to_open.sub( "", move, count=1 )
+            bracketDepth = i = 1
+            while bracketDepth > 0 and i < len( move ):
+               match move[i]:
+                  case "{":
+                     bracketDepth += 1
+                  case "}":
+                     bracketDepth -= 1
+               i += 1
+            parsedMove += [ move[1:i-1].strip() ]
+            move = move[i:]
+         parsedMoves += [ parsedMove ]
+
+      for parsedMove in parsedMoves:
+         # print( parsedMove[2] )
+         parsedMove[2] = re.findall( r"\\ninja{([^}]*)}", parsedMove[2] )
+
+      return parsedMoves
+
+   def write_args( self, into ):
+      ninjaProp = NinjaProp(
+         hardness = self.args[0].strip(),
+         name = self.args[1].strip(),
+         drawing = self.args[2].strip(),
+         moves = self.parseMove( self.args[3] )
+      )
+      into["ninjaprops"] += [ ninjaProp ]
 
 def sublist(lst1, lst2):
    ls1 = [element for element in lst1 if element in lst2]
@@ -151,12 +251,14 @@ class TeX:
 
         if isinstance( lines, str ):
            raise TypeError("TeX.parse_lines only accepts an iterable of strings, not a single string.")
+        ninja_parser = NinjaParser()
 
         # Create lists for other stuff:
         self.info["props"] = []
         self.info["roles"] = []
         self.info["appearing_roles"] = set() # How many people/abbreviations that occur in the actual sketch/song.
         self.info["instructors"] = []
+        self.info["ninjaprops"] = None
 
         # List of keywords/commands to ignore, i.e. that are not relevant to extract:
         ignore_list = ["documentclass", "usepackage", "maketitle", "act", "scene", "#"]
@@ -179,7 +281,9 @@ class TeX:
 
         for n,line in enumerate(lines):
             line = line.strip() # Remove leading and trailing whitespaces
-            if len(line) > 0 and line[0] == '\\': # only look for a command
+            if ninja_parser.parsing:
+               ninja_parser.parseline( line, self.info )
+            elif len(line) > 0 and line[0] == '\\': # only look for a command
 
                 if "{" not in line:
                     # If it is a strange line, extract the first part (everything until the
@@ -220,6 +324,10 @@ class TeX:
                         command = ""
 
                     if command not in ignore_list:
+                        if command == "ninjas":
+                           self.info[ "ninjaprops" ] = []
+                           ninja_parser.parseline( line, self.info )
+                           continue
 
                         try:
                             keyword = kw_re.findall(line)[0].strip() # Extract (the first) keyword using regex
@@ -1018,3 +1126,108 @@ class TeX:
         )
 
         return self
+
+    def create_ninja_plan(self, templatefile='templates/ninja_plan_template.tex', encoding='utf-8'):
+
+       self.tex = ""
+
+       dsts = { move.destination
+                for scene in self.revue.scenes
+                for prop in ( scene.ninjaprops or [] )
+                for move in prop.moves
+               }
+       colors = [ "Thistle", "Goldenrod", "YellowGreen", "Cyan",
+                  "VioletRed", "YellowOrange", "SeaGreen", "Orchid" ]
+       basetimes = OrderedSet([ "Før", "Under", "Efter" ])
+       with open(templatefile, 'r', encoding=encoding) as f:
+          template = ( f
+                       .read()
+                       .replace( "<+VERSION+>",
+                                 self.conf["Frontpage"]["version"].
+                                 split(",")[-1].strip()
+                                )
+                       .replace( "<+REVUENAME+>",
+                                 self.conf["Revue info"]["revue name"]
+                                )
+                       .replace( "<+REVUEYEAR+>",
+                                 self.conf["Revue info"]["revue year"]
+                                )
+                       .replace( "<+NACTORS+>", str( len( self.revue.actors )))
+                       .replace( "<+NDSTS+>", str( len( dsts )) )
+                       .split( "<+TABLE+>" )
+                      )
+       self.info[ "modification_time" ] = os.stat( templatefile ).st_mtime
+       self.tex += template[0] \
+          + "&&&&" \
+          + "&".join( "\\actor{{{}}}".format( dst ) for dst in dsts ) \
+          + "&" \
+          + "&".join( "\\actor{{{}}}".format( actor.name )
+                      for actor in self.revue.actors
+                     ) \
+          + "\\\\\\toprule\n\\endhead\n"
+       for an, act in enumerate( self.revue.acts ):
+          for mn, mat in enumerate( act.materials ):
+             self.tex += \
+                "\\multicolumn{{{}}}{{l}}{{({}:{:0>2}) {{\\bfseries {}.{} {}}}}}"\
+                 .format( 4 + len( dsts ) + len( self.revue.actors ),
+                          mat.duration // timedelta( minutes=1 ),
+                          mat.duration % timedelta( minutes=1 ) \
+                                      // timedelta( seconds=1 ),
+                          an + 1,
+                          mn + 1,
+                          mat.title
+                         )\
+                + "\\\\"
+
+             movetimes = OrderedSet(
+                [ move.time for prop in ( mat.ninjaprops or [] )
+                  for move in prop.moves
+                 ]
+             )
+             markedprops = [ copy( prop ) for prop in ( mat.ninjaprops or [] ) ]
+             for prop, col in zip( markedprops, cycle( colors ) ):
+                prop.colour = col
+             for dst in dsts:
+                for n, prop in enumerate(
+                      prop for prop in markedprops
+                           if dst in [ move.destination for move in prop.moves ]
+                ):
+                   setattr( prop, dst, n )
+
+             for time in basetimes & movetimes | movetimes:
+                timeprops = [
+                   [  '&&', prop.name ]
+                   + [ '\\hspace{{{}ex}}'.format( getattr( prop, dst ) )
+                       + '\\tikz[remember picture] \\fill['
+                       + prop.colour
+                       + '] (0,0) rectangle (1ex, 1em)'# coordinate[pos=.5] ('
+                       # + somenumbering ')'
+                       + ';'
+                       if move.destination == dst else ''
+                       for dst in dsts ]
+                   + [ ( '\\anactor{'
+                         if mat in ( rl.material for rl in actor.roles
+                                     if rl not in actor.instructorships )
+                         else '\\nonactor{'
+                        )
+                       + ( prop.colour if actor.name in move.ninjanames else '')
+                       + '}'
+                       for actor in self.revue.actors ]
+                   for prop in markedprops
+                   for move in prop.moves
+                   if move.time == time
+                ]
+                timeprops[0][0] = "&&\\sffamily " + time
+                for i in range( 2 + len( dsts ), len( timeprops[0] ) ):
+                   if len( timeprops ) == 1:
+                      timeprops[0][i] += "\\tpbt"
+                   else:
+                      timeprops[0][i] += "\\top"
+                      timeprops[-1][i] += "\\btm"
+                      for tp in timeprops[1:-1]:
+                         tp[i] += "{}"
+                self.tex += \
+                   "\n".join([ "&".join( tp ) + '\\\\' for tp in timeprops ])
+             self.tex += "\\midrule\n"
+       self.tex += template[1]
+       return self
