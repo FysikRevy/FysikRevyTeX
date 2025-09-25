@@ -191,7 +191,7 @@ def edit_up_(event):
 @nav_kb.add('down')
 def edit_down_(event):
    event.app.layout.focus_next()
-@nav_kb.add('enter')
+
 def accept( event ):
    buffer = event.app.layout.current_buffer
    if buffer.complete_state \
@@ -202,8 +202,14 @@ def accept( event ):
             buffer.complete_state.complete_index
          ]
       )
-
-   end_of_line( event )
+@nav_kb.add('enter')
+def accept_and_down( event ):
+   try:
+      accept( event )
+   except AttributeError:
+      pass
+   edit_down_( event )
+      
 @nav_kb.add('c-s', annotation = "save" )
 def save( event ):
    tex = TeX()
@@ -533,6 +539,13 @@ class NinjasLine(TextArea):
       def down_( event ):
          on_move( ignore_focus = True )
          event.app.layout.focus_next()
+      @kb.add('enter')
+      def ninja_accept( event ):
+         accept( event )
+         if is_true( at_end ):
+            down_( event )
+         else:
+            end_of_line( event )
 
       self.control.key_bindings = merge_key_bindings((
          load_key_bindings(), nav_kb, kb
@@ -620,6 +633,7 @@ class MoveLines(NinjaMove):
 
       meta_kb = KeyBindings()
       @meta_kb.add('+')
+      @meta_kb.add('\\')
       def plus_move( event ):
          index = prop.move_lines.index( self ) + 1
          new_move = MoveLines( layout, prop,
@@ -729,9 +743,6 @@ class PropLines( NinjaProp ):
             except IndexError:
                land = layout.container\
                             .children[0]
-                            # .content\
-                            # .content\
-                            # .get_container()\
          event.app.layout.focus( land )
       delete_spot = ColdSpot( "press again to confirm", del_kb )
       def delete_selected():
@@ -783,6 +794,7 @@ class PropLines( NinjaProp ):
          return text_area
 
       meta_kb = KeyBindings()
+      @meta_kb.add('\\')
       @meta_kb.add('+')
       def plus_prop( event ):
          index = layout.ps.index( self ) + 1
@@ -824,7 +836,8 @@ class PropLines( NinjaProp ):
 
                   add_conditional_completer(
                      WordCompleter( layout.updated_propnames,
-                                    ignore_case = True
+                                    ignore_case = True,
+                                    sentence = True
                                    ),
                      TextAreaWithBindings(
                         text = prop.name,
@@ -853,6 +866,7 @@ class PropLines( NinjaProp ):
 
       move_meta_kb = KeyBindings()
       @move_meta_kb.add('+')
+      @move_meta_kb.add('\\')
       def default_plus_move( event ):
          self.move_lines = [ MoveLines(
             layout, self, NinjaMove( "", "", [] ), self.move_prompt,
@@ -1045,7 +1059,7 @@ class NinjaLayout( Layout ):
       return self.times | OrderedSet(
          sorted( ( m.time for p in self.ps
                    for m in p.move_lines
-                   if m.time
+                   if m.time and not self.has_focus( m[0] )
                   ),
                  key = strxfrm
                 )
@@ -1054,7 +1068,7 @@ class NinjaLayout( Layout ):
       return self.destinations | OrderedSet(
          sorted( ( m.destination for p in self.ps
                    for m in p.move_lines
-                   if m.destination
+                   if m.destination and not self.has_focus( m[1] )
                   ),
                  key = strxfrm
                 )
@@ -1173,7 +1187,9 @@ def ninja_wizard( r ):
    def un_number( event ):
       event.app.number = ""
 
-   kb = KeyBindingsWrapped( un_number )
+   kb = KeyBindingsWrapped(
+      lambda event: ( un_number( event ), reset_toolbar( event ) )
+   )
 
    @kb.add('<any>')
    def default_( event ):
@@ -1182,6 +1198,7 @@ def ninja_wizard( r ):
    @kb.add('q', annotation = "quit" )
    @kb.add('escape')
    @kb.add('c-c')
+   @kb.add('c-q')
    def exit_(event):
       event.app.exit( r )
 
@@ -1310,7 +1327,14 @@ def ninja_wizard( r ):
            annotation = "delete ninjaprops"
            )
    def delete_( event ):
-      update_ninjas( event, [""] )
+      if event.is_repeat:
+         update_ninjas( event, [""] )
+      else:
+         event.app.layout.container.children[1].content.text \
+            = FormattedText((( "ansired", " [" ),
+                             ( "ansired bg:black", "delete" ),
+                             ( "ansired", "]: press again to confirm ")
+                             ))
 
    @kb.add('n',
            filter = no_ninjas,
