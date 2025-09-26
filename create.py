@@ -353,6 +353,13 @@ actions = [ plan ] + [
                                          # unoder med tikZ
                                         ))
               ),
+
+    Argument( "ninjaplan",
+              "Lav en sceneskiftplan, ud fra '\\ninja'-makroer i .tex-filerne.",
+              lambda: tex_queue.append(( TeX( revue ).create_ninja_plan(),
+                                         "ninjaplan.pdf"
+                                        ))
+             ),
     
     Argument( "material",
               "Gen-TeX materialesiderne (hvis de er blevet ændret)",
