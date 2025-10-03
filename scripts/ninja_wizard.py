@@ -23,7 +23,7 @@ from prompt_toolkit.filters import has_focus, Never, Always, is_true, Condition
 from prompt_toolkit.styles import Style, DynamicStyle, merge_styles
 from prompt_toolkit.document import Document
 from prompt_toolkit.utils import Event
-from prompt_toolkit.completion import WordCompleter, ConditionalCompleter
+from prompt_toolkit.completion import WordCompleter, ConditionalCompleter, CompleteEvent
 
 from classy_revy import Revue, Scene
 from base_classes import NinjaProp, NinjaMove
@@ -70,6 +70,17 @@ class KeyBindingsWrapped( KeyBindingsAnn ):
 # Custom elements
 # ===============
 
+def has_completions( completer, document ):
+   def check_for_completions():
+      try:
+         return next( completer.get_completions(
+            document(), CompleteEvent( completion_requested = True )
+         )).text != document().text
+      except StopIteration:
+         return False
+
+   return Condition( check_for_completions )
+
 def highlightable_number( index, of_number ):
    def style_number():
       try:
@@ -85,6 +96,18 @@ def highlightable_number( index, of_number ):
 
 def bar_tips():
    get_app().layout.update_parents_relations()
+
+   tab = []
+   try:
+      buffer = get_app().current_buffer
+      if is_true( has_completions( buffer.completer, lambda: buffer.document )):
+         tab = [ ("", " ["),
+                 ("bg:ansiblack", "tab"),
+                 ("", "]: suggestion ")
+                ]
+   except (AttributeError, TypeError):
+      pass
+
    keys = { k:FormattedText((("",""),)) for k in ( "q", "c-q", "c-s", "c-m", "+", "-", "n", "delete" ) }
    focus = get_app().layout.current_window
    while focus:
@@ -101,7 +124,7 @@ def bar_tips():
             try:
                keys[k] = FormattedText(
                   (("", " ["),
-                   ("bg:ansiblack", k.replace("c-m", "ret")\
+                   ("bg:ansiblack", k.replace("c-m", "enter")\
                                      .replace( "c-", "ctrl+" )
                     ),
                     ("", "]: "),
@@ -112,7 +135,7 @@ def bar_tips():
             except (TypeError,IndexError,AttributeError):
                pass
       focus = get_app().layout.get_parent( focus )
-   return FormattedText([ f for k in keys for f in keys[k] ])
+   return FormattedText([ f for k in keys for f in keys[k] ] + tab )
 
 def reset_toolbar( event ):
    event.app.layout.container.children[1].content.text = bar_tips
@@ -264,7 +287,13 @@ class NinjasLine(TextArea):
          ninjas = ninjas[:-1] + [ ninjas[-1] + " " ]
       except IndexError:
          pass
-      
+
+      ninja_completer = WordCompleter(
+         lambda: layout.updated_ninjanames() - { n for n in self },
+         ignore_case = True,
+         pattern = _NAME_FIELD_RE
+      )
+         
       class ClotheNinjas(Processor):
          def apply_transformation( self, trans_input ):
             if not trans_input.document.text:
@@ -403,9 +432,10 @@ class NinjasLine(TextArea):
                TabHelp(),
                has_focus( self.buffer ) \
                  & cursor_at_field_end \
-                 & Condition(
-                    lambda: not self.buffer.complete_state
-                 )
+                 & Condition( lambda: not self.buffer.complete_state ) \
+                 & Condition( has_completions( ninja_completer,
+                                               lambda: self.document
+                                              ))
             ),
             ClotheNinjas(),
             ConditionalProcessor( AfterInput([ ("italic", " [+]" ) ]),
@@ -416,12 +446,7 @@ class NinjasLine(TextArea):
          ]
 
       self.completer = ConditionalCompleter(
-         WordCompleter(
-            lambda: layout.updated_ninjanames() - { n for n in self },
-            ignore_case = True,
-            pattern = _NAME_FIELD_RE# ,
-            # meta_dict = CompleteSelectionHelp()
-         ),
+         ninja_completer,
          cursor_at_field_end
       )
       
@@ -568,13 +593,22 @@ class MoveLines(NinjaMove):
                        == len( text_area.document.text )
          )
          
+         if text_area.completer:
+            text_area.completer = ConditionalCompleter(
+               text_area.completer, cursor_at_end
+            )
          text_area.control.input_processors += [
             AfterInput( " " ),
             ConditionalProcessor(
-               AfterInput( FormattedText((("italic", "[tab] "),)) ),
-               has_focus( text_area ) & cursor_at_end & Condition(
-                  lambda: not text_area.buffer.complete_state
-               )
+               AfterInput( FormattedText((("italic", " [tab] "),)) ),
+               has_focus( text_area ) \
+                 & cursor_at_end \
+                 & Condition( lambda: not text_area.buffer.complete_state ) \
+                 & Condition(
+                    has_completions( text_area.completer,
+                                     lambda: text_area.document
+                                    )
+                 )
             ),
             AfterInput( FormattedText([
                ( "ansibrightblack", cmt )
@@ -582,10 +616,6 @@ class MoveLines(NinjaMove):
          fixed_style = text_area.window.style
          text_area.window.style \
             = lambda: fixed_style + " " + self._delete_selection()
-         if text_area.completer:
-            text_area.completer = ConditionalCompleter(
-               text_area.completer, cursor_at_end
-            )
          return text_area
 
       del_kb = KeyBindings()
@@ -757,6 +787,10 @@ class PropLines( NinjaProp ):
          condition = has_focus( text_area.buffer ) \
                       & Condition( lambda: text_area.document.cursor_position \
                                             == len( text_area.document.text )
+                                  )\
+                      & Condition( has_completions(
+                         text_area.completer, lambda: text_area.document
+                      ) if text_area.completer else lambda: True
                                   )
          text_area.control.input_processors \
           += [ ConditionalProcessor( cp, condition )
@@ -813,7 +847,9 @@ class PropLines( NinjaProp ):
                append_processors(
                   [ ConditionalProcessor(
                      AfterInput( FormattedText((("italic", "[tab] "),))),
-                     Condition( lambda: not layout.current_buffer.complete_state )
+                     Condition(
+                        lambda: not layout.current_buffer.complete_state
+                     )
                   ) ],
                   [ AfterInput( FormattedText([
                      ( "ansibrightblack", " % prop nane" )
