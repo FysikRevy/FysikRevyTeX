@@ -415,21 +415,6 @@ class NinjasLine(TextArea):
                         ])
          ]
 
-      class CompleteSelectionHelp():
-         def get( _, key, fallback = "" ): # don't shadow outer self
-            index = self.buffer.complete_state.complete_index
-            count = len( self.buffer.complete_state.completions )
-            try:
-               prev_index, next_index = ( (index + s) for s in (-1,1) )
-            except TypeError:
-               prev_index, next_index = -1, 0
-
-            breakpoint()
-            return FormattedText((("italic", "[tab]"),)) \
-               if count == next_index \
-               else FormattedText((("italic", "[s-tab]"),)) \
-               if count == prev_index \
-               else fallback
       self.completer = ConditionalCompleter(
          WordCompleter(
             lambda: layout.updated_ninjanames() - { n for n in self },
