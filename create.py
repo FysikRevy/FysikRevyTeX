@@ -623,7 +623,7 @@ def create( *arguments ):
                     print( "Some target pdfs may not have been created." )
                     return
     	
-    print("Nothing seems to have gone wrong!")
+    print("Everything went FINE!")
 
 if __name__ == "__main__":
     try:
