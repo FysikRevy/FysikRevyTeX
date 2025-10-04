@@ -2,6 +2,7 @@
 import re
 from itertools import chain, dropwhile, islice
 from locale import strxfrm
+from collections import defaultdict
 
 from more_itertools import stagger, intersperse
 from ordered_set import OrderedSet
@@ -48,6 +49,7 @@ class KeyBindingsAnn( KeyBindings ):
       def decorator( func ):
          if annotation:
             func.annotation = annotation
+            func.actual_annotation = annotation
          handler( *args, **kwargs )( func )
          return func
       return decorator
@@ -94,6 +96,22 @@ def highlightable_number( index, of_number ):
       return None
    return DynamicStyle( style_number )
 
+def highlight_number():
+   try:
+      n = get_app().number
+   except AttributeError:
+      return None
+   return Style.from_dict({
+      # if n is eg. 192, should proeduce styles for 192, 19.192 and 1.19.192
+      ".".join( n[ : j + 1 ] for j in range( i, len( n ))
+               ): "ansiwhite underline"
+      for i in range(len(n))
+   }) if n else None
+
+base_style = merge_styles([ Style.from_dict({"number": "ansibrightblack"})
+                            , DynamicStyle( highlight_number )
+                           ])
+
 def bar_tips():
    get_app().layout.update_parents_relations()
 
@@ -109,6 +127,9 @@ def bar_tips():
       pass
 
    keys = { k:FormattedText((("",""),)) for k in ( "q", "c-q", "c-s", "c-m", "+", "-", "n", "delete" ) }
+   classes = defaultdict( str, {"c-s": "class:save ",
+                                "c-q": "class:alert "
+                                })
    focus = get_app().layout.current_window
    while focus:
       for k in keys:
@@ -122,15 +143,16 @@ def bar_tips():
             bindings = []
          else:
             try:
+               c = keys[k][0][0]
                keys[k] = FormattedText(
-                  (("", " ["),
-                   ("bg:ansiblack", k.replace("c-m", "enter")\
+                  ((classes[k] + "", " ["),
+                   (classes[k] + "bg:ansiblack", k.replace("c-m", "enter")\
                                      .replace( "c-", "ctrl+" )
                     ),
-                    ("", "]: "),
-                    ("", bindings[-1].handler.annotation),
-                    ("", " ")
-                    )
+                   (classes[k] + "", "]: "),
+                   (classes[k] + "", bindings[-1].handler.annotation),
+                   (classes[k] + "", " ")
+                   )
                )
             except (TypeError,IndexError,AttributeError):
                pass
@@ -138,7 +160,13 @@ def bar_tips():
    return FormattedText([ f for k in keys for f in keys[k] ] + tab )
 
 def reset_toolbar( event ):
+   for b in nav_kb.bindings:
+      try:
+         b.handler.annotation = b.handler.actual_annotation
+      except AttributeError:
+         pass
    event.app.layout.container.children[1].content.text = bar_tips
+   event.app.style = base_style
    
 number_style = Style.from_dict({"number": "ansibrightblack" })
 def formatted_control( text ):
@@ -249,7 +277,11 @@ def save( event ):
    event.app.layout.material.__init__(
       updated_tex.info, lambda *args, **kwargs: None
    )
-   
+   event.app.style = merge_styles([ event.app.style,
+                                    Style.from_dict({"save": "ansigreen"})
+                                   ])
+   nav_kb.get_bindings_for_keys(('c-s',))[0].handler.annotation = "saved!"
+
 @nav_kb.add('c-q', annotation = "quit to list" )
 def menu( event ):
    if event.is_repeat \
@@ -258,15 +290,11 @@ def menu( event ):
       event.app.layout \
          = event.app.layout.menu_layout( event.app.layout.material )
    else:
-      event.app.layout.container.children[1].content.text \
-         = FormattedText((("red", " ["),
-                          ("red bg:ansiblack", "ctrl+q"),
-                          ("red", "]: press again to quit without saving "),
-                          ("", " ["),
-                          ("bg:ansiblack", "ctrl+s"),
-                          ("", "]: save")
-                        ))
-
+      event.app.style = merge_styles([ event.app.style,
+                                       Style.from_dict({"alert": "ansired"})
+                                      ])
+      nav_kb.get_bindings_for_keys(('c-q',))[0].handler.annotation \
+         = "press again to quit without saving"
 
 class TextAreaWithBindings( TextArea ):
    def __init__( self, *args, **kwargs ):
@@ -819,8 +847,7 @@ class PropLines( NinjaProp ):
          index = layout.ps.index( self ) + 1
          new_prop_lines = PropLines(
             layout,
-            NinjaProp( "", "", "", [ # NinjaMove( "", "", [] )
-                                    ] )
+            NinjaProp( "", "", "", [] )
          )
          layout.ps = layout.ps[:index] + [ new_prop_lines ] + layout.ps[index:]
          event.app.layout.focus( new_prop_lines[0] )
@@ -1108,7 +1135,7 @@ def ninja_wizard( r ):
 
    foci = { mat: FocusableLabel(
                     ( lambda mat: lambda: formatted_control(
-                       "ret/" + ( "del" if mat.ninjaprops is not None else "n" )
+                       "ent/" + ( "del" if mat.ninjaprops is not None else "n" )
                     ) )(mat) ) for mat in r.materials
            }
    mats = { foci[ mat ].window: mat for mat in r.materials }
@@ -1309,18 +1336,6 @@ def ninja_wizard( r ):
       except (AttributeError, IndexError):
          pass
 
-   def highlight_number():
-      try:
-         n = get_app().number
-      except AttributeError:
-         return None
-      return Style.from_dict({
-         # if n is eg. 192, should proeduce styles for 192, 19.192 and 1.19.192
-         ".".join( n[ : j + 1 ] for j in range( i, len( n ))
-                  ): "ansiwhite underline"
-         for i in range(len(n))
-      }) if n else None
-
    # Update key bindings
    # -------------------
 
@@ -1401,8 +1416,6 @@ def ninja_wizard( r ):
       key_bindings = KeyBindings(), # with c-c hacked in above
       layout = menu_layout(),
       mouse_support = True,
-      style = merge_styles([ Style.from_dict({"number": "ansibrightblack"})
-                             , DynamicStyle( highlight_number )
-                            ])
+      style = base_style
    ).run()
 
