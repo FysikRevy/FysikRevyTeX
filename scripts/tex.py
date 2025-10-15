@@ -1196,7 +1196,10 @@ class TeX:
 
              for time in basetimes & movetimes | movetimes:
                 timeprops = [
-                   [  '&&', prop.name ]
+                   [  '&&', '{} \\ninjadif{{{}}}'.format( prop.name,
+                                                          prop.hardness
+                                                         )
+                    ]
                    + [ '\\hspace{{{}ex}}'.format( getattr( prop, dst ) )
                        + '\\tikz[remember picture] \\fill['
                        + prop.colour

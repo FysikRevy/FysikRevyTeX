@@ -68,6 +68,21 @@
   }\endgroup\ignorespaces
 }
 
+\def\ninjadif#1{
+  \begingroup
+  \newcount\left \left=#1
+  \ifnum\left>0
+    \loop
+      \ifnum\left>1
+        \ifodd\left*\else\raisebox{-.4em}{*}\fi
+        \hspace*{-.6ex}%
+        \advance\left by -1
+      \repeat
+    *%
+  \fi
+  \endgroup
+}
+
 \title{Ninjaplan}
 \version{<+VERSION+>}
 \revyname{<+REVUENAME+>}
@@ -81,8 +96,6 @@
 \begin{longtable}{lcrl*{<+NDSTS+>}{c}|*{<+NACTORS+>}{c}}
 <+TABLE+>
 \end{longtable}
-  
-  % \bottomrule
 \end{document}
 %%% Local Variables:
 %%% mode: LaTeX
