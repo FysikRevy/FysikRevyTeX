@@ -67,7 +67,8 @@ class TeXProcess():
       else:
           self.job_name = []
 
-      self.searchdirs = [ cdir / d for d in ( searchdirs or [] ) ]
+      self.searchdirs = [ Path.cwd() ] \
+          + [ cdir / d for d in ( searchdirs or [] ) ]
       self.runmode = [ "-interaction=nonstopmode" ] if not interactive\
           else []
       self.encoding = encoding

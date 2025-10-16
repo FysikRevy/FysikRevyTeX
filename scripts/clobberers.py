@@ -508,6 +508,24 @@ class RemoveNinjas( ClobberInstructions ):
         return replace_ninjas( tex, [ "" ] )
 
 def replace_ninjas( tex, prop_cmd ):
+    if not any( "ninjascene" in l and "\\usepackage" in l
+                for l in tex.info["tex"]
+               ):
+        try:
+            preamble_index, preamble = next(
+                (i,t) for i,t in enumerate( tex.info["tex"] )
+                if "\\usepackage" in t
+            )
+            pi = preamble.find( "\\usepackage" )
+            tex.info["tex"][preamble_index] = \
+                preamble[:pi] + "\\usepackage{ninjascene}\n" + preamble[pi:]
+        except StopIteration:
+            print(
+                "Couldn't locate preamble in {}.".format(
+                    clobber_path.relative_to( Path.cwd() )
+                ) + "You should insert '\\usepackage{ninjascene}' yourself."
+            )
+
     lines = ( n_l for n_l in enumerate(tex.info['tex']) )
     # men hvad hvis der ikke er nogen!?!
     try:
