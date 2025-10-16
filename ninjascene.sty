@@ -1,0 +1,422 @@
+\RequirePackage{xstring}
+\RequirePackage{booktabs}
+\RequirePackage{tikz}
+\usetikzlibrary{spath3}
+\usetikzlibrary{intersections}
+
+\newcommand*{\bagT}{Bagtæppet}
+\newcommand*{\sideT}{Sidetæppet}
+\newcommand*{\before}{Før}
+\newcommand*{\during}{Under}
+\newcommand*{\after}{Efter}
+
+% 6.5 4 
+\newdimen\m
+\m=.7cm
+\newdimen\midshift
+\def\scene#1{
+  \begin{tikzpicture}[x=1\m,y=-1\m,baseline={(0,0)},remember picture]
+    \coordinate (bagtæppe-konge) at (0,0);
+    \coordinate (bagtæppe-dame) at (4,0);
+    \coordinate (forkant-konge) at (-1.25,3);
+    \coordinate (forkant-dame) at (5.25,3);
+    \coordinate (forkant-midt) at (2,4);
+    \path [spath/save=bagtæppe] (bagtæppe-konge) -- (bagtæppe-dame)
+          coordinate[pos=.5] (bagtæppe-midt);
+    \path [spath/save=kant-dame] (bagtæppe-dame) -- (forkant-dame);
+    % \path (forkant-midt) +(-6.5/5,0) coordinate (@fc1)
+    %       +(6.5/4,0) coordinate (@fc2);
+    \path [spath/save=forkant]
+          (forkant-konge) to[out=-30,in=180]
+          (forkant-midt) to[out=0,in=180+30] (forkant-dame);
+    \path [spath/save=kant-konge] (bagtæppe-konge) -- (forkant-konge);
+    \draw[green,spath/use=kant-dame]
+         [spath/use={forkant,reverse,weld}]
+         [spath/use={kant-konge,weld,reverse}]
+         [spath/use={bagtæppe,weld}]
+         [spath/close=current];
+    \path[spath/use=kant-dame] coordinate[pos=.25] (bag-skrå-kant) coordinate[pos=.5] (for-skrå-kant);
+    \foreach \skraa in {bag-skrå,for-skrå} {
+      \draw (\skraa-kant) +(160:.75) -- +(-20:.75) +(-65:.5)
+            coordinate (trekant-\skraa);
+    }
+    \path[spath/save=konge-side]
+          (spath cs:forkant .25) -- (spath cs:bagtæppe .25);
+    \path[spath/save=midt-side] (forkant-midt) -- (bagtæppe-midt);
+    \path[spath/save=dame-side]
+          (spath cs:forkant .75) -- (spath cs:bagtæppe .75);
+    \path[spath/save=mid@comp] (forkant-konge) |- (spath cs:midt-side .5) -| (forkant-dame);
+    \path[spath/.cd,
+          split at intersections with={mid@comp}{kant-konge},
+          split at intersections with={mid@comp}{kant-dame},
+          get components of={mid@comp}\midComponents,
+          use=\getComponentOf\midComponents{2},
+          save=tværs-midt];
+    % \draw[spath/save=tværs-midt]
+    %       (spath cs:kant-konge .5) -- (spath cs:kant-dame .5);
+    \path[spath/save=tværs-bund]
+          (spath cs:kant-konge .2) -- (spath cs:kant-dame .2);
+    \foreach \side in {konge,midt,dame} {
+      \foreach \tvaers in {midt,bund} {
+        \path [name intersections={of=\side-side and tværs-\tvaers,
+                                   by={\side-\tvaers}}];
+      }
+      \path[spath/shorten at start={\side-side}{1\m},spath/use=\side-side] coordinate[pos=0] (\side-front);
+    }
+    \path (bagtæppe-konge) ++(.5,-.5) coordinate (bagscene-konge)
+          (bagtæppe-dame) ++(0,-.5) coordinate (bagscene-dame);
+    \path [spath/save=bagscene] (bagscene-konge) -- (bagscene-dame);
+    \path (bagscene-konge) -| (bagtæppe-midt)
+          coordinate[pos=.5] (bagscene-midt);
+    \def\withpoints{
+    \foreach \tvaer in {bund,midt,front} {
+      \foreach \side in {konge,midt,dame} {
+        \path (\side-\tvaer) node {+};
+      } \foreach \side in {konge,dame} {
+        \path (\side-\tvaer) node[anchor=north] {\texttt{\side-\tvaer}};
+      }
+      \path (midt-\tvaer) +(0,-1.2ex) node[anchor=north] {\texttt{midt-\tvaer}};
+      
+    }
+    \foreach \side in {konge,dame} {
+      \path (bagscene-\side) node {+} node[anchor=south] {\texttt{bagscene-\side}};
+    }
+    \path (bagscene-midt) node {+} +(0,1.2ex) node[anchor=south] {\texttt{bagscene-midt}};
+    \foreach \dybde in {for,bag}{
+      \path (trekant-\dybde-skrå) node {+} node[anchor=south west] {\texttt{trekant-\dybde-skrå}};
+    }
+    }
+    \def\withlines{
+      \foreach \dyb in {bund,midt}{
+        \draw[spath/use=tværs-\dyb] node[pos=0,anchor=east] {\texttt{tværs-\dyb}};
+      }
+      \draw[spath/use=bagscene] node[pos=0,anchor=east] {\texttt{bagscene}};
+      \node[anchor=east] at (bagtæppe-konge) {\texttt{bagtæppe}};
+      \node[anchor=east,rotate=70] at (forkant-konge) {\texttt{konge-kant}};
+      \draw[spath/use=konge-side] node[pos=0,anchor=east,rotate=70] {\texttt{konge-side}};
+      \draw[spath/use=midt-side] node[pos=0,anchor=east,rotate=90] {\texttt{midt-side}};
+      \draw[spath/use=dame-side] node[pos=0,anchor=west,rotate=-70] {\texttt{dame-side}};
+      \node[anchor=west,rotate=-70] at (forkant-dame) {\texttt{dame-kant}};
+    }
+    \def\withcorners{
+      \foreach \tp in {bagtæppe,forkant}{
+        \path (\tp-konge) node[anchor=east]  {\texttt{\tp-konge}} node {+};
+        \path (\tp-midt) node[anchor=north] {\texttt{\tp-midt}} node {+};
+        \path (\tp-dame) node[anchor=west]  {\texttt{\tp-dame}} node {+};
+      } \foreach \tp in {bag,for} {
+        \path (\tp-skrå-kant) node[anchor=west]  {\texttt{\tp-skrå-kant}} node {+};
+      }
+    }
+    #1
+  \end{tikzpicture}
+}
+
+\def\ninjadif#1{
+  \begingroup
+  \newcount\left \left=#1
+  \ifnum\left>0
+    \loop
+      \ifnum\left>1
+        \ifodd\left*\else\raisebox{-.4em}{*}\fi
+        \hspace*{-.6ex}%
+        \advance\left by -1
+      \repeat
+    *%
+  \fi
+  \endgroup
+}
+
+% \ninja{hard}{what}{where}{moves}{ninjas}
+\long\def\ninjas#1{
+  \section*{Ninjaplan:}
+  \begingroup
+    \centering
+    \small
+    \def\expandFiHere##1\fi{\fi##1}
+    \edef\timeorder{,\before,\during,\after,}
+    \newcount\anchors  \anchors=0
+    \long\def\countanchors##1{
+      % \let\stop=\countanchors   %reckognizable
+      \ifx##1\anchor
+        \advance\anchors 1
+      \fi
+      \ifx##1\relax\else
+        \expandafter\countanchors
+      \fi
+    }
+    \newcount\repdanchors \repdanchors=0
+    \long\def\insertanchors##1\anchor{
+      \toks1={##1}
+      \edef\act{\noexpand\toks0={\the\toks0 \the\toks1}}\act
+      \ifnum\repdanchors=\anchors \the\toks0 \else
+        \advance\repdanchors by 1%
+        \edef\achnm{\romannumeral\repdanchors}
+        \edef\act{\noexpand\toks0={\the\toks0 \achnm}}\act
+        \expandafter\insertanchors
+      \fi
+    }
+    \def\prop##1##2##3##4{%
+      \anchors=0%
+      \repdanchors=0%
+      \toks0={}
+      \countanchors##3\relax
+      \insertanchors##3\anchor
+    }
+    % \noindent\hspace*{-1in}\scene{#1}
+    \newtoks\rowtoks \rowtoks={}
+    \def\appendrow##1{
+      \toks0={##1}
+      \edef\act{\noexpand\rowtoks={\the\rowtoks \the\toks0}}\act
+    }
+    \def\ninja{}
+    \def\move##1##2##3{
+      \edef\seentimes{\seentimes##1,}
+    }
+    % \filter##1##2{
+    %   \edef\filtered{,}
+    %   \def\fin####1,{
+    %     \ifx####1\fin\relax\else
+    %       \ifx####1\relax\relax\else
+    %         \edef\teststr{,####1,}
+    %         \IfSubStr{##2}{\teststr}{}{
+    %           \edef\filtered{\filtered####1,}
+    %         }
+    %       \fi
+    %       \expandafter\fin
+    %     \fi
+    %   }
+    %   \filtered
+    % }
+    \def\intersectinto##1##2\and##3,{
+      \ifx##3\intersectinto\relax\else
+        \ifx##3\relax\relax\else
+          \IfSubStr{##2}{,##3,}{\edef##1{##1##3,}}{}
+        \fi
+        \expandFiHere
+        \intersectinto##1##2\and
+      \fi
+    }
+    \def\union##1\and##2,{
+      \ifx##2\union\relax\else
+        \ifx##2\relax\relax\else
+          \IfSubStr{##1}{,##2,}{}{\edef##1{##1##2,}}
+        \fi
+        \expandFiHere
+        \union##1\and
+      \fi
+    }
+    \edef\movetimes{,}
+    \def\prop##1##2##3##4{
+      \edef\seentimes{,}
+      ##4
+      \edef\seentimes{\movetimes\seentimes}
+      \edef\filteredtimeorder{,}
+      \def\i{\intersectinto\filteredtimeorder\seentimes\and}
+      \expandafter\i\timeorder\intersectinto,
+      \def\u{\union\filteredtimeorder\and}
+      \expandafter\u\seentimes\union,
+      \edef\movetimes{\filteredtimeorder}
+    }
+    \ignorespaces #1
+    \StrCount{\movetimes}{,}[\commas]
+    \newcount\timecols
+    \timecols=\commas
+    \advance\timecols by -1
+    \multiply\timecols by 2
+    \advance\timecols by 1
+    % \def\move##1##2##3{
+    %   \def\ninja####1{
+    %     \writeincolumn{##1}{####1}
+    %   }
+    %   \writeincolumn{##1}{##2}##3
+    % }
+    % \def\prop##1##2##3##4{
+    %   \multicolumn{3}{l}{\bfseries ##2}\\##4
+    % }
+    \edef\headerdiv{&}
+    \def\timeheaders##1,{
+      \ifx##1\timeheaders\relax\else
+        \ifx##1\relax\relax\else
+          \headerdiv\multicolumn{2}{c}{\sffamily ##1}
+        \fi
+      \expandafter\timeheaders\fi
+    }
+    \def\appendtoksone##1{
+      \toks0={##1}
+      \edef\act{\noexpand\toks1={\the\toks1 \the\toks0}}\act
+    }
+
+    \newcount\rounds \rounds=1%
+    \rowtoks={\\}%
+    \loop\ifnum\rounds<\timecols
+      \advance\rounds by 1%
+      \count255=\rounds%
+      \advance\rounds by 1%
+      \appendrow{\cmidrule(rl)}%
+      \edef\act{\noexpand\rowtoks={\the\rowtoks {\the\count255 -\the\rounds}}}%
+      \act
+    \repeat
+    \appendrow{\\[-1.5em]}%
+    \rounds=1%
+    \loop\ifnum\rounds<\timecols%
+      \appendrow{%
+        & {\tiny\sffamily\bfseries Til/fra}%
+        & {\tiny\sffamily\bfseries Af}%
+      }%
+      % \typeout{ rounds \the\rounds  timecols \the\timecols}
+      \advance\rounds 2%
+    \repeat%
+    \appendrow{\\[-.3em]}
+    % \showthe\toks1
+    % \catcode`\ =12
+    % \the\toks1
+    % \catcode`\ =10
+        
+    % \def\writeincolumn##1##2{
+    %   \edef\coldiv{}
+    %   \def\proptimes####1,{
+    %     \ifx####1\proptimes\relax\else
+    %       \ifx####1\relax\relax\else
+    %         \coldiv\IfStrEql{####1}{##1}{##2}{}\edef\coldiv{&}\fi
+    %       \expandafter\proptimes\fi
+    %   }
+    %   \expandafter\proptimes\movetimes\proptimes,\\
+    % }
+    % \def\move##1##2##3{
+    %   \IfStrEq{\curcol}{##1}{##2}{}
+    % }
+    \newif\ifnotfirstcol
+    \newif\ifwasmove
+    \newif\ifnoninjas
+    \newcount\ninjacount
+    \newcount\moveninja
+    \newcount\maxninja
+    \def\ninja##1{
+      \ifnum\ninjacount=\moveninja
+        \appendtoksone{##1}
+        \noninjasfalse
+      \fi
+      \advance\ninjacount 1
+    }
+    \newcount\timecolsless \timecolsless=\timecols \advance\timecolsless by -1
+    \def\propname##1##2\done{%
+      \midrule
+      \multicolumn{\the\timecols}{l}{\bfseries \ninjadif##1 ##2}\\% [-.4em]
+      % &\multicolumn{\the\timecolsless}{l}{
+      %   \tiny\sffamily\bfseries Flyttes til/fra:
+      % }\\[-.2em]\cline{2-\the\timecols}\\[-1em]
+    }
+    % \def\ninjadiv{&\multicolumn{\the\timecolsless}{l}{
+    %     \tiny\sffamily\bfseries Af:
+    %   }\\[-.2em]\cline{2-\the\timecols}\\[-1em]
+    %   }
+
+    \def\prop##1##2##3##4{%
+      \toks0={\propname ##1 ##2 \done}
+      \edef\act{\noexpand\rowtoks={\the\rowtoks \the\toks0}}\act
+      \notfirstcolfalse
+      \moveninja=0
+      \maxninja=0
+
+      \def\printmovetime####1,{
+        \ifx####1\printmovetimes\relax\else
+          \ifx####1\relax\relax\else
+            \def\move########1########2########3{
+              \IfStrEq{####1}{########1}{
+                \wasmovetrue
+                \appendtoksone{&}
+                \ifnum\moveninja=0
+                  \appendtoksone{ {\sffamily\footnotesize ########2} }
+                  \noninjasfalse
+                \fi
+                \appendtoksone{&}
+                \ninjacount=0
+                ########3
+              }{}
+            }
+            \wasmovefalse
+            ##4
+            \ifwasmove\else\appendtoksone{&&}\fi
+          \fi
+          \expandafter\printmovetime
+        \fi
+      }
+
+      \loop
+        \noninjastrue
+        \toks1={}
+        \expandafter\printmovetime\movetimes\primtmovetime,
+        \advance\moveninja 1
+        \ifnoninjas\else
+          \edef\act{\noexpand\rowtoks={\the\rowtoks \the\toks1}}\act
+          \appendrow{\\}
+        \repeat
+      
+      % % \edef\coldiv{}
+      % \def\printdsts####1,{%
+      %   \ifx####1\printdsts\relax\else
+      %     \ifx####1\relax\relax\else
+      %       \def\move########1########2########3{
+      %         \IfStrEq{####1}{########1}{
+      %           \toks0={########2}
+      %           \edef\act{\noexpand\rowtoks={\the\rowtoks \the\toks0}}\act
+      %         }{}
+      %       }
+      %       % \edef\curcol{####1}%
+      %       \edef\act{\noexpand\rowtoks={\the\rowtoks &}}\act
+      %       ##4
+      %       \notfirstcoltrue
+      %     \fi
+      %     % \edef\coldiv{!}
+      %     \expandafter\printdsts
+      %   \fi
+      % }
+      % \expandafter\printdsts\movetimes\printdsts,
+      % \toks0={}
+      % \edef\act{\noexpand\rowtoks={\the\rowtoks \\ \the\toks0}}\act
+      % \loop
+      % \advance\ninjacount by 1
+      % \notfirstcolfalse
+      % \def\printninjas########1,{
+      %   \ifx########1\printninjas\relax\else
+      %     \ifx########1\relax\relax\else
+      %       \def\move################1################2################3{
+      %         \moveninja=0
+      %         \IfStrEq{########1}{################1}{
+      %           ################3
+      %           \edef\act{\noexpand\rowtoks={\the\rowtoks \the\toks0}}\act
+      %         }{}
+      %       }
+      %       \edef\act{\noexpand\rowtoks={\the\rowtoks &}}\act
+      %       ##4
+      %       \notfirstcoltrue
+      %     \fi
+      %     \expandafter\printninjas
+      %   \fi
+      % }
+      % \expandafter\printninjas\movetimes\printninjas,
+      % \edef\act{\noexpand\rowtoks={\the\rowtoks \\}}\act
+      % % \typeout{\number\maxninja\ \number\ninjacount}
+      % \ifnum\ninjacount<\maxninja  \repeat
+    }
+    % \def\prop##1##2##3##{4
+    % \multicolumn{3}{l}{\bfseries ##2}\\
+    % }
+    \ignorespaces #1
+
+    \begin{tabular}{*{\the\timecols}{r}}%
+      \expandafter\timeheaders\movetimes\timeheaders,\\[-1.3em]%
+      %                                                 ^^^^
+      % det er noget med, at multicolumn skal kunne se den næste \\,
+      % men \cmidrule vil ikke have, at du er begyndt at evaluere en anden makro
+      % imellem den og den seneste \\
+      % \cmidrule (rl){2- 3}\cmidrule(rl){4-5}% \cmidrule(rl){6-7}
+      % \subheaders
+      \the\rowtoks
+      \bottomrule
+    \end{tabular}
+    
+    \bigskip
+  \endgroup
+}
+
