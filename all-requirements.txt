@@ -2,4 +2,3 @@
 -r cal-requirements.txt
 -r dist-requirements.txt
 -r sheets-requirements.txt
--r ninja-requirements.txt
