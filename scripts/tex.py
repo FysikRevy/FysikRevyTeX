@@ -1137,8 +1137,8 @@ class TeX:
                 for move in prop.moves
                }
        colors = [ "Thistle", "Goldenrod", "YellowGreen", "Cyan",
-                  "VioletRed", "YellowOrange", "SeaGreen", "Orchid" ]
-       basetimes = OrderedSet([ "Før", "Under", "Efter" ])
+                  "Red", "YellowOrange", "SeaGreen", "Salmon" ]
+       basetimes = OrderedSet([ "\\before", "\\during", "\\after" ])
        with open(templatefile, 'r', encoding=encoding) as f:
           template = ( f
                        .read()
@@ -1152,7 +1152,10 @@ class TeX:
                        .replace( "<+REVUEYEAR+>",
                                  self.conf["Revue info"]["revue year"]
                                 )
-                       .replace( "<+NACTORS+>", str( len( self.revue.actors )))
+                       .replace( "<+NACTORS+>",
+                                 str( len( self.revue.actors ) \
+                                      + len( self.revue.ninjas) )
+                                )
                        .replace( "<+NDSTS+>", str( len( dsts )) )
                        .split( "<+TABLE+>" )
                       )
@@ -1162,7 +1165,7 @@ class TeX:
           + "&".join( "\\actor{{{}}}".format( dst ) for dst in dsts ) \
           + "&" \
           + "&".join( "\\actor{{{}}}".format( actor.name )
-                      for actor in self.revue.actors
+                      for actor in self.revue.actors + self.revue.ninjas
                      ) \
           + "\\\\\\toprule\n\\endhead\n"
        for an, act in enumerate( self.revue.acts ):
@@ -1194,11 +1197,13 @@ class TeX:
                 ):
                    setattr( prop, dst, n )
 
+             hackbreak = 4
              for time in basetimes & movetimes | movetimes:
                 timeprops = [
-                   [  '&&', '{} \\ninjadif{{{}}}'.format( prop.name,
-                                                          prop.hardness
-                                                         )
+                   [  '\\nopagebreak[3] &&',
+                      '{} \\ninjadif{{{}}}'.format( prop.name,
+                                                    prop.hardness
+                                                   )
                     ]
                    + [ '\\hspace{{{}ex}}'.format( getattr( prop, dst ) )
                        + '\\tikz[remember picture] \\fill['
@@ -1215,12 +1220,16 @@ class TeX:
                         )
                        + ( prop.colour if actor.name in move.ninjanames else '')
                        + '}'
-                       for actor in self.revue.actors ]
+                       for actor in self.revue.actors + self.revue.ninjas ]
                    for prop in markedprops
                    for move in prop.moves
                    if move.time == time
                 ]
-                timeprops[0][0] = "&&\\sffamily " + time
+                timeprops[0][0] = "".join([
+                   "\\cmidrule[.1pt](rl){{{0}-{0}}}".format(i+5)
+                   for i in range( 0, len( dsts ) )
+                ])\
+                + "\\nopagebreak[{}] &&\\sffamily ".format( hackbreak ) + time
                 for i in range( 2 + len( dsts ), len( timeprops[0] ) ):
                    if len( timeprops ) == 1:
                       timeprops[0][i] += "\\tpbt"
@@ -1231,6 +1240,7 @@ class TeX:
                          tp[i] += "{}"
                 self.tex += \
                    "\n".join([ "&".join( tp ) + '\\\\' for tp in timeprops ])
+                hackbreak = 1
              self.tex += "\\midrule\n"
        self.tex += template[1]
        return self
