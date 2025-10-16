@@ -1,0 +1,103 @@
+\documentclass{ucph-revy}
+
+\usepackage[danish]{babel}
+\usepackage[a2paper,landscape,lmargin=1cm,rmargin=1cm,bmargin=1cm]{geometry}
+\usepackage{multirow,longtable}
+\usepackage{booktabs}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{tikz}
+
+\newcommand*{\bagT}{Bagtæppet}
+\newcommand*{\sideT}{Sidetæppet}
+\newcommand*{\before}{Før}
+\newcommand*{\during}{Under}
+\newcommand*{\after}{Efter}
+\newcommand*{\actor}[1]{\rotatebox{90}{#1\ }}
+% \newtoks\actors
+% \actors={{Trine}{Søren}\relax}
+\def\actors{\actor{Anders}&\actor{Ania}&\actor{Astrid}&\actor{Cecilia}&\actor{Diana}&\actor{Emilie}&\actor{Felix}&\actor{Flora}&\actor{Freja}&\actor{Frigg}&\actor{Julian}&\actor{Julie}&\actor{Karoline}&\actor{Line}&\actor{Marie}&\actor{Mathilde}&\actor{Michelle}&\actor{Oscar}&\actor{Sari}&\actor{Sejer}&\actor{Søren}&\actor{Tobias}&\actor{Trine}}
+\newcount\nacts \nacts=23
+% \newcommand{\nacts}{22}
+% \def\Pop#1(into:)#2{%
+% \edef\act{\noexpand\SplitOff\the#1%
+% (head:)\noexpand#2(tail:)\noexpand#1}%
+% \act}
+% \def\SplitOff#1#2(head:)#3(tail:)#4{\def#3{#1}#4={#2}}
+% \let\first\relax
+% \def\actorTitles#1{
+%   \Pop\actors(into:)\first
+%   \if\relax\first\else #1\actor{\first}\actorTitles\fi
+% }
+\def\nonactor#1#2{
+  \begingroup
+  \tikz{
+    \let\tpbt=\top
+    \ifx#2\top
+      \draw (0,0) +(3pt,0) -| +(0,-1em) ++(1em,0) +(-3pt,0) -| +(0,-1em);
+    \fi
+    \let\tpbt=\btm
+    \ifx#2\btm
+      \draw (0,0) |- (2pt,-1em) (1em,-1em) +(-2pt,0) -| (1em,0);
+    \else
+      \ifx#2\top\relax\else
+        \draw (0,0) -- +(0,-1em) ++(1em,0) -- +(0,-1em);
+      \fi
+    \fi
+    \ifx\relax#1\relax\else
+      \fill[#1] (1em,-1em) ++(-2pt,2pt) rectangle (2pt,-2pt);
+    \fi
+  }\endgroup\ignorespaces
+}
+\def\anactor#1#2{
+  \begingroup
+  \tikz{
+    \draw[fill] (.5em,0) ++(-.5pt,0) rectangle ++(-.2em+.5pt,-1em)
+    (.5em,0) ++(.5pt,0) rectangle ++(.2em-.5pt,-1em);
+    \let\tpbt=\btm
+    \ifx#2\btm
+      \draw (0,-1em) -- ++(.4em,0) (1em,-1em) -- ++(-.4em,0);
+    \fi
+    \let\tpbt=\top
+    \ifx#2\top
+      \draw (0,0) -- ++(.4em,0) (1em,0) -- ++(-.4em,0);
+    \fi
+    \ifx\relax#1\relax\else
+      \fill[#1] (.4em,-1em) ++(-2pt,1pt) rectangle (0,-1pt)
+      (1em,-1em) ++(0,1pt) rectangle (.8em,-1pt);
+    \fi
+  }\endgroup\ignorespaces
+}
+
+\def\ninjadif#1{
+  \begingroup
+  \newcount\left \left=#1
+  \ifnum\left>0
+    \loop
+      \ifnum\left>1
+        \ifodd\left*\else\raisebox{-.4em}{*}\fi
+        \hspace*{-.6ex}%
+        \advance\left by -1
+      \repeat
+    *%
+  \fi
+  \endgroup
+}
+
+\title{Ninjaplan}
+\version{<+VERSION+>}
+\revyname{<+REVUENAME+>}
+\revyyear{<+REVUEYEAR+>}
+
+\begin{document}
+\maketitle
+
+\centering
+
+\begin{longtable}{lcrl*{<+NDSTS+>}{c}|*{<+NACTORS+>}{c}}
+<+TABLE+>
+\end{longtable}
+\end{document}
+%%% Local Variables:
+%%% mode: LaTeX
+%%% TeX-master: t
+%%% End:

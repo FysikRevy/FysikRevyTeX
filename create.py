@@ -25,6 +25,7 @@ import roles_reader
 from pool_output import \
     PoolOutputManager, Output, indices, task_start, \
     text_effect, print_columnized
+from ninja_wizard import ninja_wizard
 
 from config import configuration as conf
 
@@ -352,6 +353,13 @@ actions = [ plan ] + [
                                          # unoder med tikZ
                                         ))
               ),
+
+    Argument( "ninjaplan",
+              "Lav en sceneskiftplan, ud fra '\\ninja'-makroer i .tex-filerne.",
+              lambda: tex_queue.append(( TeX( revue ).create_ninja_plan(),
+                                         "ninjaplan.pdf"
+                                        ))
+             ),
     
     Argument( "material",
               "Gen-TeX materialesiderne (hvis de er blevet ændret)",
@@ -409,7 +417,12 @@ actions = [ plan ] + [
     Argument( "google-forms-signup",
               "Skriv roller og revydage ind i en Google Forms tilmeldingsformular.",
               google_forms_signup
-             )
+             ),
+
+    Argument( "ninja-wizard",
+              "Interaktiv hjælp til at skrive ninjaplaner.",
+              lambda: ninja_wizard( revue )
+             ),
     ]
 
 def execute_commands(revue, args):
@@ -474,20 +487,26 @@ role_settings = [
              ) for form in roles_reader.formats
 ]
 
-roles_sheet_filename = Argument(
-    "--roles-sheet-fn",
-    "Filnavn til output af rolle-oversigts-regneark fra roles-sheet.",
-    lambda fn: conf.conf.set( "Files", "roles sheet output", str( Path( fn ) ) )
-)
-
-latex_command = Argument(
-    "--latex-command",
-    "Brug en anden latex-kommando (end pdflatex).",
-    lambda fn: conf.conf.set( "TeXing", "latex command", fn.strip() )
-)
-
-settings = role_settings + [ roles_sheet_filename, latex_command ]
-
+settings = role_settings + [
+    Argument(
+        "--roles-sheet-fn",
+        "Filnavn til output af rolle-oversigts-regneark fra roles-sheet.",
+        lambda fn: conf.conf.set( "Files", "roles sheet output",
+                                  str( Path( fn ) )
+                                 )
+    ),
+    Argument(
+        "--latex-command",
+        "Brug en anden latex-kommando (end pdflatex).",
+        lambda fn: conf.conf.set( "TeXing", "latex command", fn.strip() )
+    ),
+    Argument(
+        "--ninja-yaml",
+        "Filnavn til ninja-yaml-filen.",
+        lambda fn: conf.conf.set( "Files", "ninja yaml", str( Path( fn ) ) )
+    )
+]
+ 
 all_possible_args = actions + toggles + flags + settings
 
 default_commands = (tuple() if conf.getboolean("TeXing","skip thumbindex")

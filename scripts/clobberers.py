@@ -1,8 +1,12 @@
+# encoding: utf-8
 import re
 import os
+import string
 from operator import itemgetter
 from pathlib import Path
-from base_classes import Role
+from enum import Flag, auto
+
+from base_classes import Role, NinjaProp
 from tex import TeX
 
 stoptext = """
@@ -413,6 +417,234 @@ i din planfil.
                   outf.write( "".join( out ) )
                                 
         return tex
+
+class InsertNinjas( ClobberInstructions ):
+    cmd = "insert-ninjas"
+    doc = "Overfør ninjaplan fra yaml-fil til tex-filerne."
+
+    def init( revue ):
+        from ruamel.yaml import YAML
+        yaml=YAML()
+        with open( revue.conf["Files"]["ninja yaml"], "r", encoding="utf-8" )\
+             as f:
+            ninja_info = yaml.load( f )
+        mat_paths = {
+            str( Path.cwd() / mat.path ): mat
+            for mat in revue.materials
+        }
+        changed_ninjas = [
+            info for info in ninja_info
+            if info['rekvisitter'] != \
+              ([ prop.to_serializable()
+                 for prop in \
+                 mat_paths[ str( Path.cwd() / info['fil'] ) ].ninjaprops
+                ] if mat_paths[ str( Path.cwd() / info['fil'] ) ].ninjaprops\
+                     != None \
+                  else None
+               )
+        ]
+        print( [([ prop.to_serializable()
+                 for prop in \
+                 mat_paths[ str( Path.cwd() / info['fil'] ) ].ninjaprops
+                ] if mat_paths[ str( Path.cwd() / info['fil'] ) ].ninjaprops\
+                     != None \
+                  else None
+               ) for info in ninja_info ] )
+        print( [ info['rekvisitter'] for info in ninja_info ] )
+
+        if not changed_ninjas:
+            print( "" )
+            print( "No changes detected in {}. The step `insert-ninjas` "
+                   "will be skipped."\
+                   .format( revue.conf["Files"]["ninja yaml"] )
+                  )
+            clobber_steps[ "insert-ninjas" ] = ClobberInstructions
+            return
+
+        if any( info['rekvisitter'] for info in changed_ninjas ):
+            print( "" )
+            print("These materials will have ninja information "
+                  "added or changed:")
+            print("-----------------------------------------------\n")
+            for info in changed_ninjas:
+                if info['rekvisitter']:
+                    print( "  " + info['fil'] )
+
+        if any( not info['rekvisitter'] for info in changed_ninjas ):
+            print( "" )
+            print("These materials will have their ninja information removed:")
+            print("-----------------------------------------------\n")
+            for info in changed_ninjas:
+                if not info['rekvisitter']:
+                    print( "  " + info['fil'] )
+
+        return changed_ninjas
+
+    def clobber( tex, changed_ninjas ):
+        clobber_path = Path( tex.fullpath )
+        try:
+            prop_cmd = next(
+                [ "\\ninjas{" ] \
+                + [ "  " + line
+                    for prop in info['rekvisitter']
+                    for line in  NinjaProp.from_deserialized( prop ).tex_cmd()
+                   ] \
+                + [ "}" ]
+                for info in changed_ninjas
+                if Path.cwd() / info['fil'] == clobber_path
+            )
+            return replace_ninjas( tex, prop_cmd )
+        except StopIteration:
+            if tex.info['ninjaprops']:
+                return replace_ninjas( tex, [ "" ] )
+            else:
+                return tex
+
+class RemoveNinjas( ClobberInstructions ):
+    cmd = "remove-ninjas"
+    doc = "Fjern \\ninjas-kommandoer i alle .tex-filer"
+
+    def clobber( tex, _ ):
+        return replace_ninjas( tex, [ "" ] )
+
+def replace_ninjas( tex, prop_cmd ):
+    if not any( "ninjascene" in l and "\\usepackage" in l
+                for l in tex.info["tex"]
+               ):
+        try:
+            preamble_index, preamble = next(
+                (i,t) for i,t in enumerate( tex.info["tex"] )
+                if "\\usepackage" in t
+            )
+            pi = preamble.find( "\\usepackage" )
+            tex.info["tex"][preamble_index] = \
+                preamble[:pi] + "\\usepackage{ninjascene}\n" + preamble[pi:]
+        except StopIteration:
+            print(
+                "Couldn't locate preamble in {}.".format(
+                    clobber_path.relative_to( Path.cwd() )
+                ) + "You should insert '\\usepackage{ninjascene}' yourself."
+            )
+
+    lines = ( n_l for n_l in enumerate(tex.info['tex']) )
+    # men hvad hvis der ikke er nogen!?!
+    try:
+        ninjal, ninjaline = next( (n,l) for (n,l) in lines
+                                  if "\\ninjas" in l
+                                 )
+    except StopIteration:
+        # ingen `\ninjas` i forvejen. Sæt ind efter `\maketitle`
+        # eller `\begin{document}`
+        def look_for_spaces():
+            nonlocal bookends, ninjac, ninjal
+            whiterun = re.match( r"\s*", l[ ninjac : ] )
+            bookends += whiterun[0]
+            ninjac += whiterun.end()
+            if ninjac == len( l ):
+                # keep looking in the next line
+                ninjac = 0
+                return looking_for
+            ninjal = n
+            return looking_for & ~LookingFor.NONSPACE
+        class LookingFor( Flag ):
+            BEGIN = auto()
+            MAKETITLE = auto()
+            NONSPACE = auto()
+
+        looking_for = LookingFor.BEGIN | LookingFor.MAKETITLE
+        for (n,l) in enumerate( tex.info['tex'] ):
+            if LookingFor.NONSPACE in looking_for:
+                looking_for = look_for_spaces()
+                if LookingFor.NONSPACE in looking_for:
+                    continue
+            if LookingFor.BEGIN in looking_for:
+                try:
+                    ninjac = l.index( "\\begin{document}" ) \
+                           + len( "\\begin{document}" )
+                except ValueError:
+                    pass
+                else:
+                    try:
+                        indent = (
+                            re.search(
+                                r"\\begin{document}[^\S\n]*\s*?([^\S\n]*)\S", l
+                            ) or next( re.search( r"^([^\S\n]*)\S", l, re.M )
+                                       for l in tex.info['tex'][ n : ]
+                                       if re.search( r"\S", l )
+                                      )
+                        )[1]
+                    except StopIteration:
+                        indent = ""
+                    ninjal = n
+                    looking_for = \
+                        looking_for & ~LookingFor.BEGIN | LookingFor.NONSPACE
+            if LookingFor.MAKETITLE in looking_for and "\\maketitle" in l:
+                mt_re = re.search( r"((?:^[^\S\n]*)?)\\maketitle", l, re.M )
+                indent = mt_re[1]
+                ninjac = mt_re.end()
+                ninjal = n
+                looking_for = \
+                    looking_for & ~LookingFor.MAKETITLE | LookingFor.NONSPACE
+            if LookingFor.NONSPACE in looking_for:
+                bookends = ""
+                looking_for = look_for_spaces()
+            if not looking_for:
+                break
+        try:
+            endc = ninjac
+            endl = ninjal
+        except NameError:
+            print( "Couldn't find `document` environment. Skipping file:" )
+            print( "  {}".format( clobber_path.relative_to( Path.cwd() ) ) )
+            return tex
+    else:
+        ninjac = ninjaline.find( "\\ninjas" )
+        endl = ninjal
+        endc = ninjaline.find( "{", ninjac )
+        line = ' ' * endc + ninjaline[ endc + 1 : ]
+        bookends = ""
+        indent = re.search( r"((?:^[^\S\n]*)?)\\ninjas", ninjaline,
+                            flags = re.MULTILINE
+                           )[1]
+        try:
+            if endc > 0:
+                depth = 1
+            else:
+                raise StopIteration
+
+            while True:
+                for (i,c) in enumerate( line ):
+                    endc = i
+                    if depth <= 0:
+                        if c in string.whitespace:
+                            bookends += c
+                        else:
+                            break
+                    elif c == "{":
+                        depth += 1
+                    elif c == "}":
+                        depth -= 1
+                else:           # didn't hit break
+                    endl, line = next( lines )
+                    continue
+                break
+        except StopIteration:
+            print("Couldn't find end of `\\ninjas` command. Skipping file:")
+            print("  {}".format( clobber_path.relative_to( Path.cwd() ) ) )
+            return tex
+
+    if prop_cmd == [""]:
+        bookends = ""
+
+    new_tex = tex.info['tex'][0:ninjal]
+    new_tex += [ tex.info['tex'][ninjal][:ninjac] + prop_cmd[0] + "\n" ]
+    for cmd_l in prop_cmd[1:]:
+        new_tex += [ indent + cmd_l + "\n" ]
+    new_tex[-1] = new_tex[-1][:-1] + bookends + tex.info['tex'][endl][ endc : ]
+    new_tex += tex.info['tex'][ endl + 1 : ]
+
+    tex.info['tex'] = new_tex
+    return tex
 
 clobber_steps = {
     # måske de er en bedre måde at strukturere det her på, efter cmd
