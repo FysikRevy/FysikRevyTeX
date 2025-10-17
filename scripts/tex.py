@@ -9,7 +9,7 @@ from pathlib import Path
 from functools import cmp_to_key
 from datetime import timedelta
 from copy import copy
-from itertools import cycle
+from itertools import cycle, chain
 
 from ordered_set import OrderedSet
 
@@ -1139,6 +1139,9 @@ class TeX:
        colors = [ "Thistle", "Goldenrod", "YellowGreen", "Cyan",
                   "Red", "YellowOrange", "SeaGreen", "Salmon" ]
        basetimes = OrderedSet([ "\\before", "\\during", "\\after" ])
+       ninjas = [ n for n in chain( self.revue.actors, self.revue.ninjas )
+                  if "\\allstage" not in n.name
+                 ]
        with open(templatefile, 'r', encoding=encoding) as f:
           template = ( f
                        .read()
@@ -1153,22 +1156,20 @@ class TeX:
                                  self.conf["Revue info"]["revue year"]
                                 )
                        .replace( "<+NACTORS+>",
-                                 str( len( self.revue.actors ) \
-                                      + len( self.revue.ninjas) )
+                                 str( len( ninjas ) )
                                 )
                        .replace( "<+NDSTS+>", str( len( dsts )) )
                        .split( "<+TABLE+>" )
                       )
        columncount = 4 + len( dsts ) \
-                       + len( self.revue.actors ) \
-                       + len( self.revue.ninjas )
+                       + len( ninjas )
        self.info[ "modification_time" ] = os.stat( templatefile ).st_mtime
        self.tex += template[0] \
           + "&&&&" \
           + "&".join( "\\actor{{{}}}".format( dst ) for dst in dsts ) \
           + "&" \
           + "&".join( "\\actor{{{}}}".format( actor.name )
-                      for actor in self.revue.actors + self.revue.ninjas
+                      for actor in ninjas
                      ) \
           + "\\\\\\toprule\n\\endhead\n"
        for an, act in enumerate( self.revue.acts ):
@@ -1224,9 +1225,15 @@ class TeX:
                                      if rl not in actor.instructorships )
                          else '\\nonactor{'
                         )
-                       + ( prop.colour if actor.name in move.ninjanames else '')
+                       + ( prop.colour
+                           if actor.name in move.ninjanames
+                           or "\\allstage" in move.ninjanames
+                           and mat in ( rl.material for rl in actor.roles
+                                        if rl not in actor.instructorships )
+                           else ''
+                          )
                        + '}'
-                       for actor in self.revue.actors + self.revue.ninjas ]
+                       for actor in ninjas ]
                    for prop in markedprops
                    for move in prop.moves
                    if move.time == time

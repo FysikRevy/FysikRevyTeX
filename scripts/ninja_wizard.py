@@ -1037,6 +1037,7 @@ class NinjaLayout( Layout ):
       self.ninjanames = OrderedSet( n.name for n in r.ninjas
          if material in ( nm.scene for nm in n.ninjamoves )
       ) \
+      | OrderedSet( ("\\allstage",) ) \
       | OrderedSet(
          a.name for a in r.actors if material in (
             rl.material for rl in a.roles + a.instructorships
