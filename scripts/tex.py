@@ -516,7 +516,7 @@ class TeX:
             self.tex += "\\begin{enumerate}\n"
 
             ms = act.scenes \
-               if conf["TeXing"].getboolean("stubs in outline") \
+               if conf["Outline"].getboolean("stubs in outline") \
                else act.materials
             for m in ms:
                 self.tex += "\t\\item"
