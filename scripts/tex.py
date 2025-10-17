@@ -1159,6 +1159,9 @@ class TeX:
                        .replace( "<+NDSTS+>", str( len( dsts )) )
                        .split( "<+TABLE+>" )
                       )
+       columncount = 4 + len( dsts ) \
+                       + len( self.revue.actors ) \
+                       + len( self.revue.ninjas )
        self.info[ "modification_time" ] = os.stat( templatefile ).st_mtime
        self.tex += template[0] \
           + "&&&&" \
@@ -1169,10 +1172,13 @@ class TeX:
                      ) \
           + "\\\\\\toprule\n\\endhead\n"
        for an, act in enumerate( self.revue.acts ):
+          self.tex += "\\rowcolor{black}" \
+             + "\\multicolumn{{{}}}{{l}}{{".format( columncount ) \
+             + "\\color{{white}}\\bfseries {}}}\\\\".format( act.name.upper() )
           for mn, mat in enumerate( act.materials ):
              self.tex += \
                 "\\multicolumn{{{}}}{{l}}{{({}:{:0>2}) {{\\bfseries {}.{} {}}}}}"\
-                 .format( 4 + len( dsts ) + len( self.revue.actors ),
+                 .format( columncount,
                           mat.duration // timedelta( minutes=1 ),
                           mat.duration % timedelta( minutes=1 ) \
                                       // timedelta( seconds=1 ),
@@ -1240,7 +1246,7 @@ class TeX:
                          tp[i] += "{}"
                 self.tex += \
                    "\n".join([ "&".join( tp ) + '\\\\' for tp in timeprops ])
-                hackbreak = 1
+                hackbreak = 2
              self.tex += "\\midrule\n"
        self.tex += template[1]
        return self
