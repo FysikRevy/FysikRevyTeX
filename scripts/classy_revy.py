@@ -139,7 +139,7 @@ class Scene:
                                   ""
             )]
 
-        self.category = info_dict_get_or_empty_string( "category" )
+        self.category = info_dict_get_or_empty_string( "category" ).lower()
 
         # To be deprecated (most likely):
         self.author = info_dict_get_or_empty_string( "author" )
@@ -194,7 +194,7 @@ class Material( Scene ):
         self.has_been_texed = False
 
         # Extract the category (which is the directory):
-        self.category = Path( info_dict["path"] ).parts[0]
+        self.category = Path( info_dict["path"] ).parts[0].lower()
 
     def write(self, fname, encoding='utf-8'):
         "Write to a TeX file."

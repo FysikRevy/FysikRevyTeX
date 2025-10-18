@@ -38,6 +38,10 @@ cmt_re = re.compile( r"%.*" )
 # RegEx til at splitte tekst-lister, fx ( a, b + c og d ):
 text_list_re = re.compile(r'\W*(?:\+|\\&|[oO]g|,)\W*')
 
+class Everything:
+   def __contains__( self, _ ):
+      return True
+
 class NinjaParser:
    n_args = 4
    re_to_open = re.compile(r"^[^{]*")
@@ -1142,6 +1146,11 @@ class TeX:
        ninjas = [ n for n in chain( self.revue.actors, self.revue.ninjas )
                   if "\\allstage" not in n.name
                  ]
+       numbered_categories = [
+          c.lower().strip()
+          for c in conf["Outline"]["numbered categories"].split(",")
+       ] or Everything()
+       print( numbered_categories )
        with open(templatefile, 'r', encoding=encoding) as f:
           template = ( f
                        .read()
@@ -1176,15 +1185,20 @@ class TeX:
           self.tex += "\\rowcolor{black}" \
              + "\\multicolumn{{{}}}{{l}}{{".format( columncount ) \
              + "\\color{{white}}\\bfseries {}}}\\\\".format( act.name.upper() )
-          for mn, mat in enumerate( act.materials ):
+          mn = 0
+          for mat in act.scenes:
+             if mat.category in numbered_categories:
+                mn += 1
+                place = "\\textbf{{{}.{}}}".format( an + 1, mn )
+             else:
+                place = "\\textsc{{{}}}".format( mat.category )
              self.tex += \
-                "\\multicolumn{{{}}}{{l}}{{({}:{:0>2}) {{\\bfseries {}.{} {}}}}}"\
+                "\\multicolumn{{{}}}{{l}}{{({}:{:0>2}) {} {{\\bfseries {}}}}}"\
                  .format( columncount,
                           mat.duration // timedelta( minutes=1 ),
                           mat.duration % timedelta( minutes=1 ) \
                                       // timedelta( seconds=1 ),
-                          an + 1,
-                          mn + 1,
+                          place,
                           mat.title
                          )\
                 + "\\\\"
@@ -1207,7 +1221,7 @@ class TeX:
              hackbreak = 4
              for time in basetimes & movetimes | movetimes:
                 timeprops = [
-                   [  '\\nopagebreak[3] &&',
+                   [  '\\nopagebreak[4] &&',
                       '{} \\ninjadif{{{}}}'.format( prop.name,
                                                     prop.hardness
                                                    )
