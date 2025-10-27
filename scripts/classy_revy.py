@@ -285,21 +285,23 @@ class Revue:
         for scene in self.scenes:
             for role in scene.roles:
                 actorname = role.actor.strip()
-                actor = actors[ actorname ] if actorname in actors \
+                actor = actors[ actorname.lower() ] \
+                        if actorname.lower() in actors \
                         else bc.Actor( role.actor )
                 actor.add_role( role )
                 if role in scene.instructors:
                     actor.add_instructorship( role )
-                actors[ actorname ] = actor
+                actors[ actorname.lower() ] = actor
             try:
                 for prop in scene.ninjaprops:
                     for move in prop.moves:
                         for name in move.ninjanames:
                             name = name.strip()
-                            actor = actors[ name ] if name in actors \
+                            actor = actors[ name.lower() ] \
+                                    if name.lower() in actors \
                                     else bc.Actor( name )
                             actor.add_ninjamove( move )
-                            actors[ name ] = actor
+                            actors[ name.lower() ] = actor
             except TypeError:
                 # ninjaprops was None, probably
                 pass
