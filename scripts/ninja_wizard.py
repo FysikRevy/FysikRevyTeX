@@ -126,7 +126,9 @@ def bar_tips():
    except (AttributeError, TypeError):
       pass
 
-   keys = { k:FormattedText((("",""),)) for k in ( "q", "c-q", "c-s", "c-m", "+", "-", "n", "delete" ) }
+   keys = { k:FormattedText((("",""),))
+            for k in ( "q", "c-q", "c-s", "c-m", "+", "-", "n", "delete" )
+           }
    classes = defaultdict( str, {"c-s": "class:save ",
                                 "c-q": "class:alert "
                                 })
@@ -461,9 +463,7 @@ class NinjasLine(TextArea):
                has_focus( self.buffer ) \
                  & cursor_at_field_end \
                  & Condition( lambda: not self.buffer.complete_state ) \
-                 & Condition( has_completions( ninja_completer,
-                                               lambda: self.document
-                                              ))
+                 & has_completions( ninja_completer, lambda: self.document )
             ),
             ClotheNinjas(),
             ConditionalProcessor( AfterInput([ ("italic", " [+]" ) ]),
@@ -632,11 +632,9 @@ class MoveLines(NinjaMove):
                has_focus( text_area ) \
                  & cursor_at_end \
                  & Condition( lambda: not text_area.buffer.complete_state ) \
-                 & Condition(
-                    has_completions( text_area.completer,
-                                     lambda: text_area.document
-                                    )
-                 )
+                 & has_completions( text_area.completer,
+                                    lambda: text_area.document
+                                   )
             ),
             AfterInput( FormattedText([
                ( "ansibrightblack", cmt )
