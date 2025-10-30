@@ -127,7 +127,7 @@ def bar_tips():
       pass
 
    keys = { k:FormattedText((("",""),))
-            for k in ( "q", "c-q", "c-s", "c-m", "+", "-", "n", "delete", "9" )
+            for k in ( "q", "c-q", "c-s", "9", "c-m", "+", "-", "n", "delete" )
            }
    classes = defaultdict( str, {"c-s": "class:save ",
                                 "c-q": "class:alert "
