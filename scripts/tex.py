@@ -76,7 +76,7 @@ class NinjaParser:
 
       if self.bracketDepth <= 0:
          line = self.re_to_open.sub( "", line, count=1 )
-         if not line or line[0] != "{":
+         if not line:
             return
          line = line[1:]
          self.bracketDepth = 1

@@ -148,7 +148,7 @@ def bar_tips():
                c = keys[k][0][0]
                keys[k] = FormattedText(
                   ((classes[k] + "", " ["),
-                   (classes[k] + "bg:ansiblack", k.replace("c-m", "enter")\
+                   (classes[k] + "bg:ansiblue", k.replace("c-m", "enter")\
                                      .replace( "c-", "ctrl+" )
                     ),
                    (classes[k] + "", "]: "),
