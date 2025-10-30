@@ -104,7 +104,7 @@ def highlight_number():
    return Style.from_dict({
       # if n is eg. 192, should proeduce styles for 192, 19.192 and 1.19.192
       ".".join( n[ : j + 1 ] for j in range( i, len( n ))
-               ): "ansiwhite underline"
+               ): "underline"
       for i in range(len(n))
    }) if n else None
 
@@ -127,7 +127,7 @@ def bar_tips():
       pass
 
    keys = { k:FormattedText((("",""),))
-            for k in ( "q", "c-q", "c-s", "c-m", "+", "-", "n", "delete" )
+            for k in ( "q", "c-q", "c-s", "c-m", "+", "-", "n", "delete", "9" )
            }
    classes = defaultdict( str, {"c-s": "class:save ",
                                 "c-q": "class:alert "
@@ -149,7 +149,8 @@ def bar_tips():
                keys[k] = FormattedText(
                   ((classes[k] + "", " ["),
                    (classes[k] + "bg:ansiblue", k.replace("c-m", "enter")\
-                                     .replace( "c-", "ctrl+" )
+                                     .replace( "c-", "ctrl+" )\
+                                     .replace( "9", "0-9" )
                     ),
                    (classes[k] + "", "]: "),
                    (classes[k] + "", bindings[-1].handler.annotation),
@@ -1321,6 +1322,7 @@ def ninja_wizard( r ):
                break
             except StopIteration:
                event.app.number = ns
+      number_key_.annotation = "pick by number"
       return number_key_
 
    for n in range(10):
