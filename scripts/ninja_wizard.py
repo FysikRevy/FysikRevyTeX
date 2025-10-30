@@ -108,7 +108,9 @@ def highlight_number():
       for i in range(len(n))
    }) if n else None
 
-base_style = merge_styles([ Style.from_dict({"number": "ansibrightblack"})
+base_style = merge_styles([ Style.from_dict({"number": "ansibrightblack",
+                                             "buttonname": "ansiblue"
+                                             })
                             , DynamicStyle( highlight_number )
                            ])
 
@@ -120,7 +122,7 @@ def bar_tips():
       buffer = get_app().current_buffer
       if is_true( has_completions( buffer.completer, lambda: buffer.document )):
          tab = [ ("", " ["),
-                 ("bg:ansiblack", "tab"),
+                 ("class:buttonname", "tab"),
                  ("", "]: suggestion ")
                 ]
    except (AttributeError, TypeError):
@@ -148,7 +150,7 @@ def bar_tips():
                c = keys[k][0][0]
                keys[k] = FormattedText(
                   ((classes[k] + "", " ["),
-                   (classes[k] + "bg:ansiblue", k.replace("c-m", "enter")\
+                   (classes[k] + "class:buttonname", k.replace("c-m", "enter")\
                                      .replace( "c-", "ctrl+" )\
                                      .replace( "9", "0-9" )
                     ),
