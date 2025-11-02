@@ -44,14 +44,25 @@ class Everything:
 
 class NinjaParser:
    n_args = 4
-   re_to_open = re.compile(r"^[^{]*")
+   re_to_open = re.compile(r"^[^[{]*")
    def __init__(self):
       self.parsing = False
       self.parsingProp = False
+      self.note = None
       self.hardness = ""
       self.name = ""
       self.args = []
       self.bracketDepth = 0
+
+   @property
+   def parseinto( self ):
+      return self.note if isinstance( self.note, str ) else self.args[-1]
+   @parseinto.setter
+   def parseinto( self, new ):
+      if isinstance( self.note, str ):
+         self.note = new
+      else:
+         self.args[-1] = new
 
    def parseline(self, line, into):
       line = cmt_re.sub( "", line )
@@ -62,16 +73,26 @@ class NinjaParser:
          self.parsing = True
          line = re.sub( r"^.*?\\ninjas\s*{", "", line, count=1)
 
-      if not self.parsingProp:
-         if not "\\prop" in line:
-            self.parsing = not re.match( r"^\s*}", line )
-            return
-         line = re.sub( r"^.*?\\prop\s*{", "", line, count=1 )
-         self.parsingProp = True
-         self.args += [""]
-         self.bracketDepth = 1
+      if not self.parsingProp and not isinstance( self.note, str ):
+         if "\\prop" in line:
+            line = re.sub( r"^.*?\\prop\s*{", "", line, count=1 )
+            self.parsingProp = True
+            self.args += [""]
+            self.bracketDepth = 1
+         else:
+            closeMatch = re.match( r"\s*}(\s*\[)?", line )
+            if closeMatch:
+               if closeMatch[1]:
+                  self.note = ""
+                  line = line[ closeMatch.end() : ]
+                  self.bracketDepth = 1
+               else:
+                  self.__init__()
+                  return
          
       if re.match( r"\s*$", line ):
+         if isinstance( self.note, str ):
+            self.note += "\n"
          return
 
       if self.bracketDepth <= 0:
@@ -84,21 +105,26 @@ class NinjaParser:
       i = 0
       while self.bracketDepth > 0 and i < len( line ):
          match line[i]:
-            case "{":
+            case "{" | "[":
                self.bracketDepth += 1
-            case "}":
+            case "}" | "]":
                self.bracketDepth -= 1
          i += 1
-      self.args[-1] += line[: i ]
+      self.parseinto += line[: i ]
       if self.bracketDepth <= 0:
-         # remove newlines and the closing bracket
-         self.args[-1] = self.args[-1].replace("\n", "")[:-1]
-         if len( self.args ) >= self.n_args:
-            self.write_args( into )
-            self.parsingProp = False
-            self.args = []
+         # remove the closing bracket
+         self.parseinto = self.parseinto[:-1]
+         if not isinstance( self.note, str ):
+            if len( self.args ) >= self.n_args:
+               self.write_args( into )
+               self.parsingProp = False
+               self.args = []
+            else:
+               self.args += ['']
          else:
-            self.args += ['']
+            into["ninjanote"] = self.note
+            self.__init__()
+            return
          
       return self.parseline( line[i:], into )
 
@@ -1150,7 +1176,6 @@ class TeX:
           c.lower().strip()
           for c in conf["Outline"]["numbered categories"].split(",")
        ] or Everything()
-       print( numbered_categories )
        with open(templatefile, 'r', encoding=encoding) as f:
           template = ( f
                        .read()
@@ -1268,6 +1293,9 @@ class TeX:
                 self.tex += \
                    "\n".join([ "&".join( tp ) + '\\\\' for tp in timeprops ])
                 hackbreak = 2
+             if mat.ninjanote:
+                self.tex += "\\multicolumn{{{}}}{{p{{60ex}}}}{{{}}}\\\\"\
+                   .format( columncount, mat.ninjanote )
              self.tex += "\\midrule\n"
        self.tex += template[1]
        return self

@@ -114,6 +114,7 @@ class Scene:
                   .format(self.title, self.responsible or "<unspecified>"))
 
         self.ninjaprops = info_dict_get_or_empty_string( "ninjaprops" )
+        self.ninjanote = info_dict_get_or_empty_string( "ninjanote" )
 
         self.melody = info_dict_get_or_empty_string( "melody" )
 
