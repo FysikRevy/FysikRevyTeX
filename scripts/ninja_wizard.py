@@ -274,6 +274,9 @@ def save( event ):
       tex,
       [ "\\ninjas{" ] \
       + [ "  " + line for p in event.app.layout.ps for line in p.tex_cmd() ] \
+      + [ "  " + line for task in event.app.layout.material.ninjatasks \
+                      for line in task.tex_cmd()
+         ] \
       + [ "}" ]
    )
    updated_tex.write( event.app.layout.material.path )
@@ -1382,11 +1385,11 @@ def ninja_wizard( r ):
    def new_( event ):
       # TODO: pull template from TeX template?
       update_ninjas( event, ["""\\ninjas{
-  \prop{    % difficulty on a scale of 1-5
+  \\prop{    % difficulty on a scale of 1-5
       }{    % prop name
       }{    % drawing (in TikZ format, see manual, not required)
       }{
-        \move{    % time
+        \\move{    % time
             }{    % from/ro
             }{ \\ninja{ }  % assigned ninjas (one \\ninja{} per)
       }

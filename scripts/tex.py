@@ -10,10 +10,12 @@ from functools import cmp_to_key
 from datetime import timedelta
 from copy import copy
 from itertools import cycle, chain
+from dataclasses import dataclass
+from enum import Enum
 
 from ordered_set import OrderedSet
 
-from base_classes import Prop, Role, NinjaProp
+from base_classes import Prop, Role, NinjaProp, NinjaTask
 import converters as cv
 from helpers import rows_from_csv_etc
 # from google_sheets import dump_everything, with_compare
@@ -43,56 +45,58 @@ class Everything:
       return True
 
 class NinjaParser:
-   n_args = 4
-   re_to_open = re.compile(r"^[^[{]*")
+   re_to_open = re.compile( r"^[^[{]*" )
+   re_ninjaname = re.compile( r"\\ninja{\s*([^}]*?)\s*}" )
+
+   @dataclass
+   class ParseMode():
+      args: int
+      info_name: str
+
+   class Modes( ParseMode, Enum ):
+      ninjas = ( 0, "" )
+      prop = ( 4, "ninjaprops" )
+      task = ( 2, "ninjatasks" )
+      note = ( 1, "ninjanote" )
+      
    def __init__(self):
-      self.parsing = False
-      self.parsingProp = False
-      self.note = None
+      self.parsing = None
       self.hardness = ""
       self.name = ""
       self.args = []
       self.bracketDepth = 0
 
-   @property
-   def parseinto( self ):
-      return self.note if isinstance( self.note, str ) else self.args[-1]
-   @parseinto.setter
-   def parseinto( self, new ):
-      if isinstance( self.note, str ):
-         self.note = new
-      else:
-         self.args[-1] = new
-
    def parseline(self, line, into):
       line = cmt_re.sub( "", line )
+      # breakpoint()
       if not self.parsing:
          if not "\\ninjas" in line:
             return
 
-         self.parsing = True
+         self.parsing = self.Modes.ninjas
          line = re.sub( r"^.*?\\ninjas\s*{", "", line, count=1)
 
-      if not self.parsingProp and not isinstance( self.note, str ):
-         if "\\prop" in line:
-            line = re.sub( r"^.*?\\prop\s*{", "", line, count=1 )
-            self.parsingProp = True
+      if self.parsing == self.Modes.ninjas:
+         if "\\prop" in line or "\\task" in line:
+            _, mode, line = re.split( r"\\(prop|task)\s*{", line, maxsplit=1 )
+            self.parsing = self.Modes[ mode ]
             self.args += [""]
             self.bracketDepth = 1
          else:
             closeMatch = re.match( r"\s*}(\s*\[)?", line )
             if closeMatch:
                if closeMatch[1]:
-                  self.note = ""
+                  self.parsing = self.Modes.note
                   line = line[ closeMatch.end() : ]
+                  self.args += [""]
                   self.bracketDepth = 1
                else:
                   self.__init__()
                   return
          
       if re.match( r"\s*$", line ):
-         if isinstance( self.note, str ):
-            self.note += "\n"
+         if self.parsing == self.Modes.note:
+            self.args[-1] += "\n"
          return
 
       if self.bracketDepth <= 0:
@@ -110,22 +114,26 @@ class NinjaParser:
             case "}" | "]":
                self.bracketDepth -= 1
          i += 1
-      self.parseinto += line[: i ]
+      self.args[-1] += line[: i ]
       if self.bracketDepth <= 0:
-         # remove the closing bracket
-         self.parseinto = self.parseinto[:-1]
-         if not isinstance( self.note, str ):
-            if len( self.args ) >= self.n_args:
-               self.write_args( into )
-               self.parsingProp = False
-               self.args = []
-            else:
-               self.args += ['']
+
+         self.args[-1] = self.args[-1][:-1] # remove the closing bracket
+         if len( self.args ) >= self.parsing.args:
+            match self.parsing:
+               case self.Modes.prop:
+                  self.write_prop( into )
+               case self.Modes.task:
+                  self.write_task( into )
+               case self.Modes.note:
+                  into[ self.Modes.note.info_name ] = self.args[-1]
+                  self.__init__()
+                  return
+               
+            self.parsing = self.Modes.ninjas
+            self.args = []
          else:
-            into["ninjanote"] = self.note
-            self.__init__()
-            return
-         
+            self.args += ['']
+
       return self.parseline( line[i:], into )
 
    def parseMove( self, move ):
@@ -149,18 +157,31 @@ class NinjaParser:
 
       for parsedMove in parsedMoves:
          # print( parsedMove[2] )
-         parsedMove[2] = re.findall( r"\\ninja{([^}]*)}", parsedMove[2] )
+         parsedMove[2] = self.re_ninjaname.findall( parsedMove[2] )
 
       return parsedMoves
 
-   def write_args( self, into ):
+   def write_prop( self, into ):
       ninjaProp = NinjaProp(
          hardness = self.args[0].strip(),
          name = self.args[1].strip(),
          drawing = self.args[2].strip(),
          moves = self.parseMove( self.args[3] )
       )
-      into["ninjaprops"] += [ ninjaProp ]
+      try:
+         into[ self.Modes.prop.info_name ] += [ ninjaProp ]
+      except KeyError:
+         into[ self.Modes.prop.info_name ] = [ ninjaProp ]
+
+   def write_task( self, into ):
+      task = NinjaTask(
+         description = self.args[0].strip(),
+         ninjanames = self.re_ninjaname.findall( self.args[1] )
+      )
+      try:
+         into[ self.Modes.task.info_name ] += [ task ]
+      except KeyError:
+         into[ self.Modes.task.info_name ] = [ task ]
 
 def sublist(lst1, lst2):
    ls1 = [element for element in lst1 if element in lst2]
@@ -1169,6 +1190,7 @@ class TeX:
        colors = [ "Thistle", "Goldenrod", "YellowGreen", "Cyan",
                   "Red", "YellowOrange", "SeaGreen", "Salmon" ]
        basetimes = OrderedSet([ "\\before", "\\during", "\\after" ])
+       taskname = r"\tikz[overlay] (0,-.1em) node[anchor=west,rotate=90,fill=white] {{{}}};"
        ninjas = [ n for n in chain( self.revue.actors, self.revue.ninjas )
                   if "\\allstage" not in n.name
                  ]
@@ -1243,7 +1265,7 @@ class TeX:
                 ):
                    setattr( prop, dst, n )
 
-             hackbreak = 4
+             hackbreak = ""
              for time in basetimes & movetimes | movetimes:
                 timeprops = [
                    [  '\\nopagebreak[4] &&',
@@ -1262,7 +1284,22 @@ class TeX:
                    + [ ( '\\anactor{'
                          if mat in ( rl.material for rl in actor.roles
                                      if rl not in actor.instructorships )
-                         else '\\nonactor{'
+                         else '\\nonactor{' \
+                         if not any( mat in task.scenes \
+                                     for task in actor.ninjatasks ) \
+                         else (( # TODO: nooooo....
+                           taskname.format(
+                              next( task.description
+                                    for task in actor.ninjatasks
+                                    if mat in task.scenes
+                                   )
+                           ) if next(
+                              [ m for m in task.scenes if m.ninjaprops ]
+                              for task in actor.ninjatasks
+                              if mat in task.scenes
+                           )[0] == mat else ""
+                         ) + '\\tasked{'
+                        )
                         )
                        + ( prop.colour
                            if actor.name in move.ninjanames
@@ -1281,7 +1318,7 @@ class TeX:
                    "\\cmidrule[.1pt](rl){{{0}-{0}}}".format(i+5)
                    for i in range( 0, len( dsts ) )
                 ])\
-                + "\\nopagebreak[{}] &&\\sffamily ".format( hackbreak ) + time
+                + "\\nopagebreak{} &&\\sffamily ".format( hackbreak ) + time
                 for i in range( 2 + len( dsts ), len( timeprops[0] ) ):
                    if len( timeprops ) == 1:
                       timeprops[0][i] += "\\tpbt"
@@ -1292,7 +1329,7 @@ class TeX:
                          tp[i] += "{}"
                 self.tex += \
                    "\n".join([ "&".join( tp ) + '\\\\' for tp in timeprops ])
-                hackbreak = 2
+                hackbreak = "[2]"
              if mat.ninjanote:
                 self.tex += "\\multicolumn{{{}}}{{p{{60ex}}}}{{{}}}\\\\"\
                    .format( columncount, mat.ninjanote )

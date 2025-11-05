@@ -7,6 +7,7 @@
 \usepackage{colortbl}
 \usepackage[dvipsnames]{xcolor}
 \usepackage{tikz}
+\usetikzlibrary{patterns} 
 
 \newcommand*{\bagT}{Bagtæppet}
 \newcommand*{\sideT}{Sidetæppet}
@@ -67,6 +68,9 @@
       (1em,-1em) ++(0,1pt) rectangle (.8em,-1pt);
     \fi
   }\endgroup\ignorespaces
+}
+\def\tasked#1#2{
+  \tikz{ \fill[pattern={north east lines}] (-.51em,0) rectangle (.51em,1em);}
 }
 
 \def\ninjadif#1{

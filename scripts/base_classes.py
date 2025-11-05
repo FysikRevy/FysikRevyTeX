@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 class Prop:
     def __init__(self, prop, responsible, description):
@@ -29,6 +29,7 @@ class Actor:
         self.roles = []
         self.instructorships = []
         self.ninjamoves = []
+        self.ninjatasks = []
 
     def __repr__(self):
         return "{}".format(self.name)
@@ -41,6 +42,9 @@ class Actor:
 
     def add_ninjamove( self, ninja ):
         self.ninjamoves.append( ninja )
+
+    def add_ninjatask( self, task ):
+        self.ninjatasks.append( task )
 
 @dataclass
 class NinjaMove:
@@ -112,3 +116,15 @@ class NinjaProp( NinjaPropData ):
             + [ '}{' ] \
             + [ '  ' + move.tex_cmd() for move in self.moves ] \
             + [ '}' ]
+
+@dataclass
+class NinjaTask():
+    description: str
+    ninjanames: list[ str ]
+    scenes: list = field( default_factory = list )
+
+    def tex_cmd( self ):
+        return [ "\\tash{{{}}}{{{}}}".format(
+            self.description,
+            "".join("\\ninja{{{}}}".format( name ) for name in self.ninjanames)
+        )]
