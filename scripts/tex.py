@@ -1190,7 +1190,7 @@ class TeX:
        colors = [ "Thistle", "Goldenrod", "YellowGreen", "Cyan",
                   "Red", "YellowOrange", "SeaGreen", "Salmon" ]
        basetimes = OrderedSet([ "\\before", "\\during", "\\after" ])
-       taskname = r"\tikz[overlay] (0,-.1em) node[anchor=west,rotate=90,fill=white] {{{}}};"
+       taskname = r"\tikz[overlay] \draw (.6em,.9em) node[anchor=west,rotate=270,fill=white] {{{}}};"
        ninjas = [ n for n in chain( self.revue.actors, self.revue.ninjas )
                   if "\\allstage" not in n.name
                  ]
@@ -1293,7 +1293,7 @@ class TeX:
                                     for task in actor.ninjatasks
                                     if mat in task.scenes
                                    )
-                           ) if next(
+                           ) if prop == markedprops[0] and next(
                               [ m for m in task.scenes if m.ninjaprops ]
                               for task in actor.ninjatasks
                               if mat in task.scenes
