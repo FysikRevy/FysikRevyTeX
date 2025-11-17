@@ -313,7 +313,7 @@ class Revue:
             for name in scene.active_tasks:
                 name = name.strip()
                 actor = actors[ name.lower() ] \
-                        if name.lower in actors \
+                        if name.lower() in actors \
                         else bc.Actor( name )
                 actor.add_ninjatask( scene.active_tasks[ name ] )
                 actors[ name.lower() ] = actor
