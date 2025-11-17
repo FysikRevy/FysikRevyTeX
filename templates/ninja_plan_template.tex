@@ -30,6 +30,7 @@
 %   \Pop\actors(into:)\first
 %   \if\relax\first\else #1\actor{\first}\actorTitles\fi
 % }
+\def\expandFiHere#1\fi{\fi#1}
 \def\nonactor#1#2{
   \begingroup
   \tikz{
@@ -48,7 +49,7 @@
     \ifx\relax#1\relax\else
       \fill[#1] (1em,-1em) ++(-2pt,2pt) rectangle (2pt,-2pt);
     \fi
-  }\endgroup\ignorespaces
+  }\endgroup
 }
 \def\anactor#1#2{
   \begingroup
@@ -67,10 +68,21 @@
       \fill[#1] (.4em,-1em) ++(-2pt,1pt) rectangle (0,-1pt)
       (1em,-1em) ++(0,1pt) rectangle (.8em,-1pt);
     \fi
-  }\endgroup\ignorespaces
+  }\endgroup
 }
 \def\tasked#1#2{
-  \tikz{ \fill[pattern={north east lines}] (-.51em,0) rectangle (.51em,1em);}
+  % \ifx\relax#1\relax
+  %   \expandafter\tikz
+  % \else
+  %   \AddToHookNext{shipout/foreground}{
+  %     \tikz[overlay,remember picture]
+  %       \node[anchor=west,rotate=270,fill=white,inner sep=0pt] at (#1) {#2};
+  %   }%
+  %   \expandFiHere\tikz[remember picture]
+  % \fi
+  \tikz{ \fill[pattern={north east lines}] (-.51em,0) rectangle (.51em,1em)
+    % \ifx\relax#1\relax\else (0em,.9em) coordinate (#1) \fi 
+    ;}
 }
 
 \def\ninjadif#1{

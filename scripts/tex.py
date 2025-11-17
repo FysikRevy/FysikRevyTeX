@@ -1182,6 +1182,9 @@ class TeX:
 
        self.tex = ""
 
+       def charousel( x ):
+          return chr( x % 52 + x // 26 % 2 * 6 + 65 )
+
        dsts = { move.destination
                 for scene in self.revue.scenes
                 for prop in ( scene.ninjaprops or [] )
@@ -1287,27 +1290,31 @@ class TeX:
                          else '\\nonactor{' \
                          if not any( mat in task.scenes \
                                      for task in actor.ninjatasks ) \
-                         else (( # TODO: nooooo....
-                           taskname.format(
-                              next( task.description
-                                    for task in actor.ninjatasks
-                                    if mat in task.scenes
-                                   )
-                           ) if prop == markedprops[0] and next(
-                              [ m for m in task.scenes if m.ninjaprops ]
-                              for task in actor.ninjatasks
-                              if mat in task.scenes
-                           )[0] == mat else ""
-                         ) + '\\tasked{'
-                        )
-                        )
-                       + ( prop.colour
-                           if actor.name in move.ninjanames
-                           or "\\allstage" in move.ninjanames
-                           and mat in ( rl.material for rl in actor.roles
-                                        if rl not in actor.instructorships )
-                           else ''
-                          )
+                         else '\\tasked{' #\
+                       #        + ( re.sub( "[^a-zA-Z]", "",
+                       #                    actor.name + mat.title + \
+                       #                    charousel( an*26 + mn )
+                       #                   )
+                       #            + "}{" \
+                       #            + next( task.description
+                       #                    for task in actor.ninjatasks
+                       #                    if mat in task.scenes
+                       #                   )
+                       #            + "}{" \
+                       #            if ( basetimes & movetimes | movetimes \
+                       #                 & { move.time for move in prop.moves }
+                       #                )[0] == time \
+                       #            and [ m for p in markedprops for m in p.moves
+                       #                 if m.time == time ][0] == move \
+                       #            else "}{}{"
+                       #           )
+                       ) + ( prop.colour
+                             if actor.name in move.ninjanames
+                             or "\\allstage" in move.ninjanames
+                             and mat in ( rl.material for rl in actor.roles
+                                          if rl not in actor.instructorships )
+                             else ''
+                            )
                        + '}'
                        for actor in ninjas ]
                    for prop in markedprops
