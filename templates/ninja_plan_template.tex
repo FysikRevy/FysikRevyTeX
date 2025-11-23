@@ -2,10 +2,12 @@
 
 \usepackage[danish]{babel}
 \usepackage[a2paper,landscape,lmargin=1cm,rmargin=1cm,bmargin=1cm]{geometry}
-\usepackage{multirow,longtable}
+\usepackage{multirow,longtable,makecell}
 \usepackage{booktabs}
+\usepackage{colortbl}
 \usepackage[dvipsnames]{xcolor}
 \usepackage{tikz}
+\usetikzlibrary{patterns} 
 
 \newcommand*{\bagT}{Bagtæppet}
 \newcommand*{\sideT}{Sidetæppet}
@@ -15,8 +17,8 @@
 \newcommand*{\actor}[1]{\rotatebox{90}{#1\ }}
 % \newtoks\actors
 % \actors={{Trine}{Søren}\relax}
-\def\actors{\actor{Anders}&\actor{Ania}&\actor{Astrid}&\actor{Cecilia}&\actor{Diana}&\actor{Emilie}&\actor{Felix}&\actor{Flora}&\actor{Freja}&\actor{Frigg}&\actor{Julian}&\actor{Julie}&\actor{Karoline}&\actor{Line}&\actor{Marie}&\actor{Mathilde}&\actor{Michelle}&\actor{Oscar}&\actor{Sari}&\actor{Sejer}&\actor{Søren}&\actor{Tobias}&\actor{Trine}}
-\newcount\nacts \nacts=23
+% \def\actors{\actor{Anders}&\actor{Ania}&\actor{Astrid}&\actor{Cecilia}&\actor{Diana}&\actor{Emilie}&\actor{Felix}&\actor{Flora}&\actor{Freja}&\actor{Frigg}&\actor{Julian}&\actor{Julie}&\actor{Karoline}&\actor{Line}&\actor{Marie}&\actor{Mathilde}&\actor{Michelle}&\actor{Oscar}&\actor{Sari}&\actor{Sejer}&\actor{Søren}&\actor{Tobias}&\actor{Trine}}
+% \newcount\nacts \nacts=23
 % \newcommand{\nacts}{22}
 % \def\Pop#1(into:)#2{%
 % \edef\act{\noexpand\SplitOff\the#1%
@@ -28,6 +30,7 @@
 %   \Pop\actors(into:)\first
 %   \if\relax\first\else #1\actor{\first}\actorTitles\fi
 % }
+\def\expandFiHere#1\fi{\fi#1}
 \def\nonactor#1#2{
   \begingroup
   \tikz{
@@ -46,7 +49,7 @@
     \ifx\relax#1\relax\else
       \fill[#1] (1em,-1em) ++(-2pt,2pt) rectangle (2pt,-2pt);
     \fi
-  }\endgroup\ignorespaces
+  }\endgroup
 }
 \def\anactor#1#2{
   \begingroup
@@ -65,7 +68,21 @@
       \fill[#1] (.4em,-1em) ++(-2pt,1pt) rectangle (0,-1pt)
       (1em,-1em) ++(0,1pt) rectangle (.8em,-1pt);
     \fi
-  }\endgroup\ignorespaces
+  }\endgroup
+}
+\def\tasked#1#2{
+  % \ifx\relax#1\relax
+  %   \expandafter\tikz
+  % \else
+  %   \AddToHookNext{shipout/foreground}{
+  %     \tikz[overlay,remember picture]
+  %       \node[anchor=west,rotate=270,fill=white,inner sep=0pt] at (#1) {#2};
+  %   }%
+  %   \expandFiHere\tikz[remember picture]
+  % \fi
+  \tikz{ \fill[pattern={north east lines}] (-.51em,0) rectangle (.51em,1em)
+    % \ifx\relax#1\relax\else (0em,.9em) coordinate (#1) \fi 
+    ;}
 }
 
 \def\ninjadif#1{
@@ -93,9 +110,11 @@
 
 \centering
 
-\begin{longtable}{lcrl*{<+NDSTS+>}{c}|*{<+NACTORS+>}{c}}
+\begin{longtable}{lcrl*{<+NDSTS+>}{c}*{<+NACTORS+>}{c}}
 <+TABLE+>
 \end{longtable}
+  
+  % \bottomrule
 \end{document}
 %%% Local Variables:
 %%% mode: LaTeX

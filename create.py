@@ -225,6 +225,27 @@ class SMP(Callable):
         self.do( n )
 set_max_parallel = SMP()
 
+def backstage_ticker():
+    for act in revue.acts:
+        print( "Pause før " + act.name )
+        for s in act.scenes:
+            print( ";".join(
+                [ s.title,
+                  "{}:{}".format( s.duration.seconds // 60,
+                                  s.duration.seconds % 60
+                                 )
+                 ] \
+                + ["actors"] \
+                + [ role.actor for role in s.roles ] \
+                + ["ninjas"] \
+                + list( { ninja for prop in s.ninjaprops
+                          for move in prop.moves
+                          for ninja in move.ninjanames
+                         } - { role.actor for role in s.roles }
+                        if s.ninjaprops else []
+                       )
+            ))
+
 @dataclass
 class Argument:
     cmd: str
@@ -417,6 +438,11 @@ actions = [ plan ] + [
     Argument( "google-forms-signup",
               "Skriv roller og revydage ind i en Google Forms tilmeldingsformular.",
               google_forms_signup
+             ),
+
+    Argument( "backstage-ticker",
+              "Skriv teksten til backstage-ticker. Giv den til din AV.",
+              backstage_ticker
              ),
 
     Argument( "ninja-wizard",
@@ -642,7 +668,7 @@ def create( *arguments ):
                     print( "Some target pdfs may not have been created." )
                     return
     	
-    print("Nothing seems to have gone wrong!")
+    print("Everything went FINE!")
 
 if __name__ == "__main__":
     try:

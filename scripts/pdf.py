@@ -11,6 +11,7 @@ from pypdf import PdfWriter,PdfReader
 from ordered_set import OrderedSet
 
 from config import configuration as conf
+from base_classes import Actor
 from pool_output import \
     PoolOutputManager, Output, text_effect, indices, task_start
 
@@ -54,11 +55,12 @@ på en verso-side i dobbeltsidet layout.
                 if len(args) == 0:
                     return tuple()
 
-                f, bookmark, verso = args + ( "", None, False )[len(args):]
+                f, bookmark, verso, pages = \
+                    args + ( "", None, False, None )[len(args):]
 
                 if isinstance( f, Path ) \
                    or type( f ) == str and f[-3:] == "pdf":
-                    return (( f, bookmark, verso ),)
+                    return (( f, bookmark, verso, pages ),)
 
                 if type( f ).__name__ == "Material":
                     return ((
@@ -68,7 +70,8 @@ på en verso-side i dobbeltsidet layout.
                             os.path.splitext( f.file_name )[0] + ".pdf"
                         ),
                         ( bookmark or f.title or None ),
-                        verso
+                        verso,
+                        pages
                     ),)
 
                 if type( f ).__name__ == "Scene":
@@ -76,24 +79,35 @@ på en verso-side i dobbeltsidet layout.
 
                 if type( f ).__name__ == "Revue":
                     return (
-                        gen_arg_list(( m, bookmark, verso ))[0]
+                        gen_arg_list(( m, bookmark, verso, pages ))[0]
                         for m in f.materials
                     )
 
                 if type( f ).__name__ == "Actor":
+                    materials = {}
+                    for is_in in f.is_in:
+                        try:
+                            materials[ is_in.scene ] = min(
+                                materials[ is_in.scene ], is_in.doing
+                            )
+                        except KeyError:
+                            materials[ is_in.scene ] = is_in.doing
                     return (
-                        gen_arg_list(( material, bookmark, verso ))[0]
-                        for material in OrderedSet(
-                                role.material for role in f.roles
-                        )
+                        gen_arg_list(
+                            ( scene, bookmark, verso,
+                              [0] if materials[ scene ] is Actor.As.NINJA \
+                              else None
+                             )
+                        )[0]
+                        for scene in materials
                     )
 
                 if isinstance( f, list ):
-                    return ( gen_arg_list(( el, bookmark, verso ))[0]
+                    return ( gen_arg_list(( el, bookmark, verso, pages ))[0]
                              for el in f )
 
                 # otherwise...
-                print( f, bookmark, verso, args )
+                print( f, bookmark, verso, pages, args )
                 raise TypeError("List must only contain PDF file paths, "
                                 "a Revue object or an Actor object.")
 
@@ -102,7 +116,7 @@ på en verso-side i dobbeltsidet layout.
 
             if not self.conf.getboolean( "TeXing", "force TeXing of all files" )\
                and not any( Path( f ).stat().st_mtime > output_modtime
-                            for f,_,_ in arg_list ):
+                            for f,*_ in arg_list ):
                 output.skipped( os.getpid() )
                 return              # intet nyt ind = intet nyt ud
 
@@ -118,7 +132,7 @@ på en verso-side i dobbeltsidet layout.
                                  "''": "“",
                                  "``": "”"
                                 }
-            for filename, bookmark, verso in arg_list:
+            for filename, bookmark, verso, pages in arg_list:
                 pagenum = len(writer.pages)
                 if pagenum % 2 == 1 and not verso and\
                    self.conf.getboolean( "Collation",
@@ -126,14 +140,12 @@ på en verso-side i dobbeltsidet layout.
                     writer.add_blank_page()
                     pagenum += 1
 
-                inpdf = PdfReader( filename )
-                writer.append_pages_from_reader( inpdf )
-
                 if bookmark:
                     for t in tex_translations:
                         bookmark = bookmark.replace( t, tex_translations[t] )
 
-                    writer.add_outline_item( bookmark, pagenum )
+                inpdf = PdfReader( filename )
+                writer.append( inpdf, outline_item = bookmark, pages = pages )
 
                 output.activity( os.getpid(), 1 )            
 
