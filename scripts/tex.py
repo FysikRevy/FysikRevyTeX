@@ -68,7 +68,6 @@ class NinjaParser:
 
    def parseline(self, line, into):
       line = cmt_re.sub( "", line )
-      # breakpoint()
       if not self.parsing:
          if not "\\ninjas" in line:
             return
