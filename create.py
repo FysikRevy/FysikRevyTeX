@@ -29,6 +29,11 @@ from ninja_wizard import ninja_wizard
 
 from config import configuration as conf
 
+if os.name == 'nt': # tænd for farver i den gamle Windows-terminal
+    from ctypes import windll
+    k = windll.kernel32
+    k.SetConsoleMode(k.GetStdHandle(-11), 7)
+
 class ExitOnStopArgument( Exception ):
     pass
 
@@ -642,7 +647,7 @@ def create( *arguments ):
                     print( "Some target pdfs may not have been created." )
                     return
     	
-    print("Nothing seems to have gone wrong!")
+    print("Everything went FINE!")
 
 if __name__ == "__main__":
     try:
