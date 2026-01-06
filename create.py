@@ -29,6 +29,11 @@ from ninja_wizard import ninja_wizard
 
 from config import configuration as conf
 
+if os.name == 'nt': # tænd for farver i den gamle Windows-terminal
+    from ctypes import windll
+    k = windll.kernel32
+    k.SetConsoleMode(k.GetStdHandle(-11), 7)
+
 class ExitOnStopArgument( Exception ):
     pass
 
