@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from enum import IntEnum, auto
 
 class Prop:
     def __init__(self, prop, responsible, description):
@@ -24,23 +25,43 @@ class Role:
         self.material = material
 
 class Actor:
+    class As( IntEnum ):
+        ROLE = auto()
+        INSTRUCTOR = auto()
+        NINJA = auto()
+        TASKED = auto()         # no point...?
+    @dataclass
+    class Appearance():
+        scene: object
+        doing: IntEnum
+        
     def __init__(self, name):
         self.name = name
+        self.is_in = []
         self.roles = []
         self.instructorships = []
         self.ninjamoves = []
+        self.ninjatasks = []
 
     def __repr__(self):
         return "{}".format(self.name)
 
     def add_role(self, role):
         self.roles.append(role)
+        self.is_in.append( self.Appearance( role.material, self.As.ROLE ) )
 
     def add_instructorship( self, instructorship ):
         self.instructorships.append( instructorship )
+        self.is_in.append(
+            self.Appearance( instructorship.material, self.As.INSTRUCTOR )
+        )
 
     def add_ninjamove( self, ninja ):
         self.ninjamoves.append( ninja )
+        self.is_in.append( self.Appearance( ninja.scene, self.As.NINJA ) )
+
+    def add_ninjatask( self, task ):
+        self.ninjatasks.append( task )
 
 @dataclass
 class NinjaMove:
@@ -112,3 +133,15 @@ class NinjaProp( NinjaPropData ):
             + [ '}{' ] \
             + [ '  ' + move.tex_cmd() for move in self.moves ] \
             + [ '}' ]
+
+@dataclass
+class NinjaTask():
+    description: str
+    ninjanames: list[ str ]
+    scenes: list = field( default_factory = list )
+
+    def tex_cmd( self ):
+        return [ "\\tash{{{}}}{{{}}}".format(
+            self.description,
+            "".join("\\ninja{{{}}}".format( name ) for name in self.ninjanames)
+        )]

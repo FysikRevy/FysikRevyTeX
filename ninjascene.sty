@@ -9,8 +9,10 @@
 \newcommand*{\before}{Før}
 \newcommand*{\during}{Under}
 \newcommand*{\after}{Efter}
+\newcommand*{\allstage}{Alle på scenen}
 
-% 6.5 4 
+% 6.5 4
+\planfileAllowMacros{\ninjas}   %ehhhhh?
 \newdimen\m
 \m=.7cm
 \newdimen\midshift
@@ -162,6 +164,7 @@
       \countanchors##3\relax
       \insertanchors##3\anchor
     }
+    \def\task##1##2{}
     % \noindent\hspace*{-1in}\scene{#1}
     \newtoks\rowtoks \rowtoks={}
     \def\appendrow##1{
@@ -291,7 +294,7 @@
     \newcount\ninjacount
     \newcount\moveninja
     \newcount\maxninja
-    \def\ninja##1{
+    \def\countninja##1{
       \ifnum\ninjacount=\moveninja
         \appendtoksone{##1}
         \noninjasfalse
@@ -317,9 +320,10 @@
       \notfirstcolfalse
       \moveninja=0
       \maxninja=0
+      \let\ninja=\countninja
 
       \def\printmovetime####1,{
-        \ifx####1\printmovetimes\relax\else
+        \ifx####1\printmovetime\relax\else
           \ifx####1\relax\relax\else
             \def\move########1########2########3{
               \IfStrEq{####1}{########1}{
@@ -345,7 +349,7 @@
       \loop
         \noninjastrue
         \toks1={}
-        \expandafter\printmovetime\movetimes\primtmovetime,
+        \expandafter\printmovetime\movetimes\printmovetime,
         \advance\moveninja 1
         \ifnoninjas\else
           \edef\act{\noexpand\rowtoks={\the\rowtoks \the\toks1}}\act
@@ -398,10 +402,20 @@
       % \edef\act{\noexpand\rowtoks={\the\rowtoks \\}}\act
       % % \typeout{\number\maxninja\ \number\ninjacount}
       % \ifnum\ninjacount<\maxninja  \repeat
+      \let\ninja=\relax
     }
-    % \def\prop##1##2##3##{4
-    % \multicolumn{3}{l}{\bfseries ##2}\\
-    % }
+    \newtoks\tasks \tasks={}
+    \def\writetasks{}
+    \def\task##1##2{
+      \def\ninja{ % <- important space
+        \def\ninja{, }%
+      }
+      \def\writetasks{\begin{itemize}\the\tasks\end{itemize}}
+      \toks0={\item{\bfseries ##2} har fra nu af opgaven {\bfseries ##1}}
+      \edef\act{\noexpand\tasks={\the\tasks \the\toks0}}
+      \act
+    }
+      
     \ignorespaces #1
 
     \begin{tabular}{*{\the\timecols}{r}}%
@@ -415,8 +429,24 @@
       \the\rowtoks
       \bottomrule
     \end{tabular}
-    
-    \bigskip
-  \endgroup
+
+    \writetasks
+
+    \def\maybeopt{
+      \def\maybeitem####1{\ifx####1\item\else\item\fi####1}
+      \long\def\note[####1]{%
+        \itemize\expandafter\maybeitem####1
+        \enditemize
+        \hfil\rule{6cm}{0.1mm}\medskip\par
+      }
+      \def\finalact{%
+        \ifx[\testchar \let\next\note %]
+          \else \let\next\bigskip
+        \fi
+        \next
+      }
+      \futurelet\testchar\finalact
+    }
+    \expandafter\endgroup\maybeopt
 }
 

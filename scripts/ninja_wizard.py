@@ -104,11 +104,13 @@ def highlight_number():
    return Style.from_dict({
       # if n is eg. 192, should proeduce styles for 192, 19.192 and 1.19.192
       ".".join( n[ : j + 1 ] for j in range( i, len( n ))
-               ): "ansiwhite underline"
+               ): "underline"
       for i in range(len(n))
    }) if n else None
 
-base_style = merge_styles([ Style.from_dict({"number": "ansibrightblack"})
+base_style = merge_styles([ Style.from_dict({"number": "ansibrightblack",
+                                             "buttonname": "ansiblue"
+                                             })
                             , DynamicStyle( highlight_number )
                            ])
 
@@ -120,13 +122,15 @@ def bar_tips():
       buffer = get_app().current_buffer
       if is_true( has_completions( buffer.completer, lambda: buffer.document )):
          tab = [ ("", " ["),
-                 ("bg:ansiblack", "tab"),
+                 ("class:buttonname", "tab"),
                  ("", "]: suggestion ")
                 ]
    except (AttributeError, TypeError):
       pass
 
-   keys = { k:FormattedText((("",""),)) for k in ( "q", "c-q", "c-s", "c-m", "+", "-", "n", "delete" ) }
+   keys = { k:FormattedText((("",""),))
+            for k in ( "q", "c-q", "c-s", "9", "c-m", "+", "-", "n", "delete" )
+           }
    classes = defaultdict( str, {"c-s": "class:save ",
                                 "c-q": "class:alert "
                                 })
@@ -146,8 +150,9 @@ def bar_tips():
                c = keys[k][0][0]
                keys[k] = FormattedText(
                   ((classes[k] + "", " ["),
-                   (classes[k] + "bg:ansiblack", k.replace("c-m", "enter")\
-                                     .replace( "c-", "ctrl+" )
+                   (classes[k] + "class:buttonname", k.replace("c-m", "enter")\
+                                     .replace( "c-", "ctrl+" )\
+                                     .replace( "9", "0-9" )
                     ),
                    (classes[k] + "", "]: "),
                    (classes[k] + "", bindings[-1].handler.annotation),
@@ -269,6 +274,9 @@ def save( event ):
       tex,
       [ "\\ninjas{" ] \
       + [ "  " + line for p in event.app.layout.ps for line in p.tex_cmd() ] \
+      + [ "  " + line for task in event.app.layout.material.ninjatasks \
+                      for line in task.tex_cmd()
+         ] \
       + [ "}" ]
    )
    updated_tex.write( event.app.layout.material.path )
@@ -461,9 +469,7 @@ class NinjasLine(TextArea):
                has_focus( self.buffer ) \
                  & cursor_at_field_end \
                  & Condition( lambda: not self.buffer.complete_state ) \
-                 & Condition( has_completions( ninja_completer,
-                                               lambda: self.document
-                                              ))
+                 & has_completions( ninja_completer, lambda: self.document )
             ),
             ClotheNinjas(),
             ConditionalProcessor( AfterInput([ ("italic", " [+]" ) ]),
@@ -632,11 +638,9 @@ class MoveLines(NinjaMove):
                has_focus( text_area ) \
                  & cursor_at_end \
                  & Condition( lambda: not text_area.buffer.complete_state ) \
-                 & Condition(
-                    has_completions( text_area.completer,
-                                     lambda: text_area.document
-                                    )
-                 )
+                 & has_completions( text_area.completer,
+                                    lambda: text_area.document
+                                   )
             ),
             AfterInput( FormattedText([
                ( "ansibrightblack", cmt )
@@ -1037,6 +1041,7 @@ class NinjaLayout( Layout ):
       self.ninjanames = OrderedSet( n.name for n in r.ninjas
          if material in ( nm.scene for nm in n.ninjamoves )
       ) \
+      | OrderedSet( ("\\allstage",) ) \
       | OrderedSet(
          a.name for a in r.actors if material in (
             rl.material for rl in a.roles + a.instructorships
@@ -1322,6 +1327,7 @@ def ninja_wizard( r ):
                break
             except StopIteration:
                event.app.number = ns
+      number_key_.annotation = "pick by number"
       return number_key_
 
    for n in range(10):
@@ -1379,11 +1385,11 @@ def ninja_wizard( r ):
    def new_( event ):
       # TODO: pull template from TeX template?
       update_ninjas( event, ["""\\ninjas{
-  \prop{    % difficulty on a scale of 1-5
+  \\prop{    % difficulty on a scale of 1-5
       }{    % prop name
       }{    % drawing (in TikZ format, see manual, not required)
       }{
-        \move{    % time
+        \\move{    % time
             }{    % from/ro
             }{ \\ninja{ }  % assigned ninjas (one \\ninja{} per)
       }

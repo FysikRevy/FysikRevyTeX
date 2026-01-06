@@ -5,7 +5,7 @@ from locale import strxfrm
 from functools import reduce
 
 import base_classes as bc
-from tex import TeX
+from tex import TeX, NinjaParser
 from base_classes import Role
 from converters import Converter
 
@@ -54,10 +54,7 @@ def extract_duration( eta, fn, property="eta" ):
 class Scene:
     "A Scene is a thing that (possibly) gets an entry in\n"\
     "the outline (aktoversigten)."
-    # TODO: This class should perhaps inherit from the completely general
-    # TeX class, as this is basically just a special case of a TeX file.
-    # This would make functions easier, as they can treat TeX and
-    # Material in the same way.
+
     @classmethod
     def fromstring( cls, string, source_file = None, source_mtime = None ):
         tex = TeX()
@@ -114,6 +111,9 @@ class Scene:
                   .format(self.title, self.responsible or "<unspecified>"))
 
         self.ninjaprops = info_dict_get_or_empty_string( "ninjaprops" )
+        self.ninjatasks = info_dict_get_or_empty_string( "ninjatasks" )
+        self.ninjanote = info_dict_get_or_empty_string( "ninjanote" )
+        self.active_tasks = {}
 
         self.melody = info_dict_get_or_empty_string( "melody" )
 
@@ -139,7 +139,7 @@ class Scene:
                                   ""
             )]
 
-        self.category = info_dict_get_or_empty_string( "category" )
+        self.category = info_dict_get_or_empty_string( "category" ).lower()
 
         # To be deprecated (most likely):
         self.author = info_dict_get_or_empty_string( "author" )
@@ -172,6 +172,10 @@ class Scene:
 
 class Material( Scene ):
     "A Material is a Scene with an associated TeX file."
+    # TODO: This class should perhaps inherit from the completely general
+    # TeX class, as this is basically just a special case of a TeX file.
+    # This would make functions easier, as they can treat TeX and
+    # Material in the same way.
     
     @classmethod
     def fromfile(cls, filename):
@@ -194,7 +198,7 @@ class Material( Scene ):
         self.has_been_texed = False
 
         # Extract the category (which is the directory):
-        self.category = Path( info_dict["path"] ).parts[0]
+        self.category = Path( info_dict["path"] ).parts[0].lower()
 
     def write(self, fname, encoding='utf-8'):
         "Write to a TeX file."
@@ -221,6 +225,7 @@ class Act:
     def __init__(self):
         self.name = ""
         self.scenes = []
+        self.active_tasks = {}
 
     def __repr__(self):
         desc = "{}: {} songs/sketches; {} min in total.\n".format(self.name, len(self.materials), self.get_length())
@@ -285,24 +290,33 @@ class Revue:
         for scene in self.scenes:
             for role in scene.roles:
                 actorname = role.actor.strip()
-                actor = actors[ actorname ] if actorname in actors \
+                actor = actors[ actorname.lower() ] \
+                        if actorname.lower() in actors \
                         else bc.Actor( role.actor )
                 actor.add_role( role )
                 if role in scene.instructors:
                     actor.add_instructorship( role )
-                actors[ actorname ] = actor
+                actors[ actorname.lower() ] = actor
             try:
                 for prop in scene.ninjaprops:
                     for move in prop.moves:
                         for name in move.ninjanames:
                             name = name.strip()
-                            actor = actors[ name ] if name in actors \
+                            actor = actors[ name.lower() ] \
+                                    if name.lower() in actors \
                                     else bc.Actor( name )
                             actor.add_ninjamove( move )
-                            actors[ name ] = actor
+                            actors[ name.lower() ] = actor
             except TypeError:
                 # ninjaprops was None, probably
                 pass
+            for name in scene.active_tasks:
+                name = name.strip()
+                actor = actors[ name.lower() ] \
+                        if name.lower() in actors \
+                        else bc.Actor( name )
+                actor.add_ninjatask( scene.active_tasks[ name ] )
+                actors[ name.lower() ] = actor
 
         self.actors, self.ninjas = reduce(
             lambda a,n: ( a[0] + [ actors[n] ], a[1] )
@@ -321,9 +335,17 @@ class Revue:
         # Hust modifikations-tid for aktoversigten
         modification_time = filename.stat().st_mtime
 
-        re_tex_cmd = re.compile( r"\\\w+[[{]" )
+        re_tex_cmd = re.compile( r"\\(\w+)[[{]" )
+        taskcommands = ( "ninjas", "task", "ninja" )
         acts = []
         act = Act()
+
+        def tasks_by_ninja( tasks ):
+            active_tasks = {}
+            for task in tasks:
+                for name in task.ninjanames:
+                    active_tasks[ name ] = task
+            return active_tasks
 
         with open(filename, mode='r', encoding=encoding) as f:
             for line in f.readlines():
@@ -331,14 +353,35 @@ class Revue:
                 if len(line) == 0 or line[0] == "#":
                     continue
                 s = None
+                cmds = re_tex_cmd.findall( line )
                 if line[-4:] == '.tex':
                     s = Material.fromfile( filename.parent / line )
-                elif re_tex_cmd.search( line ):
+                elif not cmds:
+                    # must be the name of the new act:
+                    if act.is_empty():
+                        # If the Act is empty, we give it a name:
+                        act.add_name(line)
+                    else:
+                        # If not, we store the current act and create a new:
+                        acts.append(act)
+                        act = Act()
+                        act.add_name(line)
+
+                elif any( cmd not in taskcommands for cmd in cmds ):
                     # stub scene
                     s = Scene.fromstring( line,
                                           filename.name,
                                           modification_time
                                          )
+                else:
+                    # ninjatask
+                    parser = NinjaParser()
+                    into = {}
+                    parser.parseline( line, into )
+                    # do not use |= ; it will edit the NinjaTask
+                    act.active_tasks = act.active_tasks \
+                        | tasks_by_ninja( into["ninjatasks"] )
+
                 if s:
                     for role in s.roles:
                         role.add_material(s)
@@ -348,18 +391,17 @@ class Revue:
                                 move.scene = s
                     except TypeError:
                         pass
+                    s.active_tasks = dict( [
+                        pair for pair in
+                        ( act.active_tasks | tasks_by_ninja( s.ninjatasks ) )\
+                          .items()
+                        if pair[1].description
+                    ] )
+                    for task in s.active_tasks.values():
+                        task.scenes += [ s ]                    
+                    act.active_tasks = s.active_tasks
                     act.add_scene(s)
-                    continue
                     
-                # otherwise, it must be the name of the new act:
-                if act.is_empty():
-                    # If the Act is empty, we give it a name:
-                    act.add_name(line)
-                else:
-                    # If not, we store the current act and create a new:
-                    acts.append(act)
-                    act = Act()
-                    act.add_name(line)
         
             # Store the very last act:
             acts.append(act)
