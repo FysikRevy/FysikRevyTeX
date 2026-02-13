@@ -383,7 +383,7 @@ actions = [ plan ] + [
     Argument( "ninjaplan",
               "Lav en sceneskiftplan, ud fra '\\ninja'-makroer i .tex-filerne.",
               lambda: tex_queue.append(( TeX( revue ).create_ninja_plan(),
-                                         "ninjaplan.pdf"
+                                         "ninjaplan.pdf","",3
                                         ))
              ),
     
