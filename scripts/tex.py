@@ -1248,7 +1248,15 @@ class TeX:
                           mat.duration % timedelta( minutes=1 ) \
                                       // timedelta( seconds=1 ),
                           place,
-                          mat.title
+                          mat.title\
+                          + ( "\\hfill---{}---\\hfill"
+                              .format(
+                                 mat.category.upper()
+                              )
+                              if not mat.ninjaprops
+                              and mat.category not in numbered_categories
+                              else ""
+                             )
                          )\
                 + "\\\\"
 
