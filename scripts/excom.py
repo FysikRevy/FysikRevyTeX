@@ -19,7 +19,7 @@ class PopenGen( subprocess.Popen ):
       while True:
          try:
             yield self.communicate( timeout = .2 )
-         except subprocess.TimeoutExpired:
+         except (subprocess.TimeoutExpired, UnicodeDecodeError):
             yield "",""
          if self.returncode != None:
             return
