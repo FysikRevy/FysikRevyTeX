@@ -337,7 +337,7 @@ Se også enforce-class.
         except AttributeError:
             planpath = Path( "aktoversigt.plan" ).resolve()
         planpath = planpath\
-            .relative_to( Path( tex.fullpath ).parent )\
+            .relative_to( Path( tex.fullpath ).parent, walk_up=True )\
             .as_posix()
         try:
             i,line = find_documentclass( tex.info['tex'] )
