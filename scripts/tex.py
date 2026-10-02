@@ -113,6 +113,7 @@ class NinjaParser:
             case "}" | "]":
                self.bracketDepth -= 1
          i += 1
+      self.args = self.args or [""]
       self.args[-1] += line[: i ]
       if self.bracketDepth <= 0:
 
