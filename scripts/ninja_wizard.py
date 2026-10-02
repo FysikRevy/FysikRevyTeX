@@ -109,7 +109,7 @@ def highlight_number():
    }) if n else None
 
 base_style = merge_styles([ Style.from_dict({"number": "ansibrightblack",
-                                             "buttonname": "ansiblue"
+                                             "buttonname": "ansibrightblue"
                                              })
                             , DynamicStyle( highlight_number )
                            ])
@@ -315,6 +315,124 @@ class TextAreaWithBindings( TextArea ):
 # ---------------
 
 class NinjasLine(TextArea):
+   
+   class ClotheNinjas(Processor):
+      def apply_transformation( self, trans_input ):
+         if not trans_input.document.text:
+            return Transformation( trans_input.fragments )
+
+         inter = FormattedText([ ("", " } "),
+                                 ("ansicyan", "\\ninja"),
+                                 ("", "{ ")
+                                ])
+         trans_fragments = (
+            frag for frag in explode_text_fragments( trans_input.fragments )
+         )
+         fragments = [
+            frag for frag in islice( trans_fragments,
+                                     trans_input.source_to_display(0) )
+         ]
+
+         separator_positions = [ ( 0,0 ),
+                                 ( fragment_list_len( fragments ) - 1,
+                                   fragment_list_len( inter[1:] )
+                                  )
+                                ]
+         fragments += inter[1:]
+         for i, fragment in enumerate(
+               islice( trans_fragments,
+                       trans_input.source_to_display(
+                          len( trans_input.document.text )
+                       ) \
+                       - trans_input.source_to_display(0)
+                      ),
+               start = trans_input.source_to_display(0) + 1
+         ):
+            if fragment[1] == "\x1e":
+               fragments += inter
+               separator_positions += [( i,
+                                         fragment_list_len( inter ) \
+                                         + separator_positions[-1][1] \
+                                         - 1
+                                        )
+                                       ]
+            else:
+               fragments += [ fragment ]
+         separator_positions += [
+            ( trans_input.source_to_display(
+               len( trans_input.document.text )
+              ),
+              separator_positions[-1][1] + 1
+             )]
+         fragments += [ ("", "}") ]
+         fragments += [ frag for frag in trans_fragments ]
+
+         active_positions = [
+            j + m
+            for j,m in enumerate(
+               ( n
+                 for i in range( len( separator_positions ) - 1 )
+                 for n in ( separator_positions[i][1], ) \
+                          * ( separator_positions[i+1][0]
+                              - separator_positions[i][0]
+                             )
+                )
+            )
+         ]
+         # breakpoint()
+         def display_to_source( display_pos ):
+            try:
+               return active_positions.index( display_pos )
+            except ValueError:
+               return next( ( i for i,pos in enumerate( active_positions )
+                              if pos > display_pos
+                             ),
+                            len( fragments ) + 1
+                           )
+
+         def source_to_display( position ):
+            try:
+               return active_positions[ position ]
+            except IndexError:
+               # q = trans_input,fragments
+               # breakpoint()
+               return position + separator_positions[-1][1]
+
+         return Transformation(
+            fragments,
+            source_to_display = source_to_display,
+            display_to_source = display_to_source
+         )
+
+   class TabHelp( Processor ):
+      def apply_transformation( self, trans_input ):
+         if not trans_input.document.text:
+            return Transformation( trans_input.fragments )
+
+         # breakpoint()
+
+         tab_help = FormattedText([("italic", " [tab]")])
+         shift = fragment_list_len( tab_help )
+
+         help_spot = trans_input.document.text.find(
+            "\x1e", trans_input.document.cursor_position
+         )
+         if help_spot < 0:
+            help_spot = len( trans_input.document.text ) - 1
+         help_spot = trans_input.source_to_display( help_spot )
+
+         fragments = explode_text_fragments( trans_input.fragments )
+         return Transformation(
+            fragments[:help_spot] + tab_help + fragments[help_spot:],
+            source_to_display = lambda p: p + (
+               shift if p > help_spot else 0
+            ),
+            display_to_source = \
+              lambda p: p if p <= help_spot \
+                          else help_spot if p <= help_spot + shift \
+                          else p + shift
+         )
+
    def __init__( self, layout, ninjas, style = lambda: "" ):
       try:
          # the final space is where the command to add a ninja is active.
@@ -330,123 +448,6 @@ class NinjasLine(TextArea):
          pattern = _NAME_FIELD_RE
       )
          
-      class ClotheNinjas(Processor):
-         def apply_transformation( self, trans_input ):
-            if not trans_input.document.text:
-               return Transformation( trans_input.fragments )
-            
-            inter = FormattedText([ ("", " } "),
-                                    ("ansicyan", "\\ninja"),
-                                    ("", "{ ")
-                                   ])
-            trans_fragments = (
-               frag for frag in explode_text_fragments( trans_input.fragments )
-            )
-            fragments = [
-               frag for frag in islice( trans_fragments,
-                                        trans_input.source_to_display(0) )
-            ]
-            
-            separator_positions = [ ( 0,0 ),
-                                    ( fragment_list_len( fragments ) - 1,
-                                      fragment_list_len( inter[1:] )
-                                     )
-                                   ]
-            fragments += inter[1:]
-            for i, fragment in enumerate(
-                  islice( trans_fragments,
-                          trans_input.source_to_display(
-                             len( trans_input.document.text )
-                          ) \
-                          - trans_input.source_to_display(0)
-                         ),
-                  start = trans_input.source_to_display(0) + 1
-            ):
-               if fragment[1] == "\x1e":
-                  fragments += inter
-                  separator_positions += [( i,
-                                            fragment_list_len( inter ) \
-                                            + separator_positions[-1][1] \
-                                            - 1
-                                           )
-                                          ]
-               else:
-                  fragments += [ fragment ]
-            separator_positions += [
-               ( trans_input.source_to_display(
-                  len( trans_input.document.text )
-                 ),
-                 separator_positions[-1][1] + 1
-                )]
-            fragments += [ ("", "}") ]
-            fragments += [ frag for frag in trans_fragments ]
-
-            active_positions = [
-               j + m
-               for j,m in enumerate(
-                  ( n
-                    for i in range( len( separator_positions ) - 1 )
-                    for n in ( separator_positions[i][1], ) \
-                             * ( separator_positions[i+1][0]
-                                 - separator_positions[i][0]
-                                )
-                   )
-               )
-            ]
-            # breakpoint()
-            def display_to_source( display_pos ):
-               try:
-                  return active_positions.index( display_pos )
-               except ValueError:
-                  return next( ( i for i,pos in enumerate( active_positions )
-                                 if pos > display_pos
-                                ),
-                               len( fragments ) + 1
-                              )
-
-            def source_to_display( position ):
-               try:
-                  return active_positions[ position ]
-               except IndexError:
-                  # q = trans_input,fragments
-                  # breakpoint()
-                  return position + separator_positions[-1][1]
-               
-            return Transformation(
-               fragments,
-               source_to_display = source_to_display,
-               display_to_source = display_to_source
-            )
-
-      class TabHelp( Processor ):
-         def apply_transformation( self, trans_input ):
-            if not trans_input.document.text:
-               return Transformation( trans_input.fragments )
-
-            # breakpoint()
-
-            tab_help = FormattedText([("italic", " [tab]")])
-            shift = fragment_list_len( tab_help )
-
-            help_spot = trans_input.document.text.find(
-               "\x1e", trans_input.document.cursor_position
-            )
-            if help_spot < 0:
-               help_spot = len( trans_input.document.text ) - 1
-            help_spot = trans_input.source_to_display( help_spot )
-
-            fragments = explode_text_fragments( trans_input.fragments )
-            return Transformation(
-               fragments[:help_spot] + tab_help + fragments[help_spot:],
-               source_to_display = lambda p: p + (
-                  shift if p > help_spot else 0
-               ),
-               display_to_source = \
-                 lambda p: p if p <= help_spot \
-                             else help_spot if p <= help_spot + shift \
-                             else p + shift
-            )
-
       TextArea.__init__(
          self,
          text = "\x1e".join( ninjas ),
@@ -465,13 +466,13 @@ class NinjasLine(TextArea):
       )
       self.control.input_processors += [
             ConditionalProcessor(
-               TabHelp(),
+               self.TabHelp(),
                has_focus( self.buffer ) \
                  & cursor_at_field_end \
                  & Condition( lambda: not self.buffer.complete_state ) \
                  & has_completions( ninja_completer, lambda: self.document )
             ),
-            ClotheNinjas(),
+            self.ClotheNinjas(),
             ConditionalProcessor( AfterInput([ ("italic", " [+]" ) ]),
                                   has_focus( self.buffer )
                                  ),
@@ -621,34 +622,6 @@ class MoveLines(NinjaMove):
       self.pre_prompt = pre_prompt
       self.scene = move.scene
       self.layout = layout
-      def attach_processors( text_area, cmt ):
-         cursor_at_end = Condition(
-            lambda: text_area.document.cursor_position \
-                       == len( text_area.document.text )
-         )
-         
-         if text_area.completer:
-            text_area.completer = ConditionalCompleter(
-               text_area.completer, cursor_at_end
-            )
-         text_area.control.input_processors += [
-            AfterInput( " " ),
-            ConditionalProcessor(
-               AfterInput( FormattedText((("italic", " [tab] "),)) ),
-               has_focus( text_area ) \
-                 & cursor_at_end \
-                 & Condition( lambda: not text_area.buffer.complete_state ) \
-                 & has_completions( text_area.completer,
-                                    lambda: text_area.document
-                                   )
-            ),
-            AfterInput( FormattedText([
-               ( "ansibrightblack", cmt )
-            ]))]
-         fixed_style = text_area.window.style
-         text_area.window.style \
-            = lambda: fixed_style + " " + self._delete_selection()
-         return text_area
 
       del_kb = KeyBindings()
       @del_kb.add("-")
@@ -700,7 +673,7 @@ class MoveLines(NinjaMove):
       self.ninjanames = move.ninjanames # sets ninjas_line,
                                         # requires self._delete_selection
       self.array = [
-         attach_processors(
+         self.attach_processors(
             TextAreaWithBindings(
                text = t,
                prompt = FormattedText([
@@ -736,6 +709,35 @@ class MoveLines(NinjaMove):
                )
             ])
            ]
+
+   def attach_processors( self, text_area, cmt ):
+      cursor_at_end = Condition(
+         lambda: text_area.document.cursor_position \
+                    == len( text_area.document.text )
+      )
+
+      if text_area.completer:
+         text_area.completer = ConditionalCompleter(
+            text_area.completer, cursor_at_end
+         )
+      text_area.control.input_processors += [
+         AfterInput( " " ),
+         ConditionalProcessor(
+            AfterInput( FormattedText((("italic", " [tab] "),)) ),
+            has_focus( text_area ) \
+              & cursor_at_end \
+              & Condition( lambda: not text_area.buffer.complete_state ) \
+              & has_completions( text_area.completer,
+                                 lambda: text_area.document
+                                )
+         ),
+         AfterInput( FormattedText([
+            ( "ansibrightblack", cmt )
+         ]))]
+      fixed_style = text_area.window.style
+      text_area.window.style \
+         = lambda: fixed_style + " " + self._delete_selection()
+      return text_area
 
    @property
    def time( self ):
@@ -820,10 +822,9 @@ class PropLines( NinjaProp ):
                       & Condition( lambda: text_area.document.cursor_position \
                                             == len( text_area.document.text )
                                   )\
-                      & Condition( has_completions(
+                      & ( has_completions(
                          text_area.completer, lambda: text_area.document
-                      ) if text_area.completer else lambda: True
-                                  )
+                      ) if text_area.completer else Always() )
          text_area.control.input_processors \
           += [ ConditionalProcessor( cp, condition )
               for cp in conditional_processors

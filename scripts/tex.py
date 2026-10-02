@@ -113,6 +113,7 @@ class NinjaParser:
             case "}" | "]":
                self.bracketDepth -= 1
          i += 1
+      self.args = self.args or [""]
       self.args[-1] += line[: i ]
       if self.bracketDepth <= 0:
 
@@ -1248,7 +1249,15 @@ class TeX:
                           mat.duration % timedelta( minutes=1 ) \
                                       // timedelta( seconds=1 ),
                           place,
-                          mat.title
+                          mat.title\
+                          + ( "\\hfill---{}---\\hfill"
+                              .format(
+                                 mat.category.upper()
+                              )
+                              if not mat.ninjaprops
+                              and mat.category not in numbered_categories
+                              else ""
+                             )
                          )\
                 + "\\\\"
 
