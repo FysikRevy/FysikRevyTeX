@@ -476,6 +476,11 @@ help_arg = Argument( "--help",
                      flag = "h"
                     )
 
+skip_errs = False
+def set_skip():
+    global skip_errs
+    skip_errs = True
+
 toggles = [ help_arg ] + [
     Argument( "--tex-all",
               "TeX alt! (ligesom indstillingen i revytex.conf)",
@@ -485,6 +490,11 @@ toggles = [ help_arg ] + [
               "Brug ikke parallelkørsel.",
               lambda: set_max_parallel( 1 ),
               "s"
+             ),
+    Argument( "--skip-errors",
+              "Hop videre, hvis der sker fejl (i enkelt-trådet kørsel).",
+              set_skip,
+              "c"
              )
     ]
 
@@ -637,22 +647,18 @@ def create( *arguments ):
                      max( len( tex_queue ), len( merge_queue ) )
                     )
     if processes <= 1:
-        rs = [ cv.tex_to_pdf( *tex_args ) for tex_args in tex_queue ]
-        if any( isinstance( r, Exception ) for r in rs ):
-            print("Some TeX files failed to compile. "\
-                      "Can't create manuscripts.")
-            print("Find TeX logfiles in {}".format(conf["Paths"]["tex cache"]) )
-            return
-        rs = []
+        for tex_args in tex_queue:
+            try:
+                cv.tex_to_pdf( *tex_args )
+            except Exception as e:
+                if not skip_errs:
+                    raise e
         for merge_arg in merge_queue:
             try:
                 rs += [ PDF().pdfmerge( *merge_arg ) ]
             except Exception as e:
-                rs += [ e ]
-        if any( isinstance( r, Exception ) for r in rs ):
-            print( "There was an error compiling or optimizing some pdfs." )
-            print( "Some target pdfs may not have been created." )
-            return
+                if not skip_errs:
+                    raise e
     else:
         with Pool( processes = processes ) as pool:
             if tex_queue:

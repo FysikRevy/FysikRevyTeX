@@ -1,5 +1,7 @@
 #  coding; utf-8
-import os, subprocess, uuid
+import os
+import uuid
+from asyncio import create_subprocess_exec, new_event_loop, subprocess, timeout
 from pathlib import Path
 
 from config import configuration as conf
@@ -13,16 +15,6 @@ try:
 except ImportError:
     def portable_dir_link( source, target ):
         os.symlink( source, target )
-
-class PopenGen( subprocess.Popen ):
-   def __iter__( self ):
-      while True:
-         try:
-            yield self.communicate( timeout = .2 )
-         except subprocess.TimeoutExpired:
-            yield "",""
-         if self.returncode != None:
-            return
 
 class TeXProcess():
    def __init__( self, texfile, cdir=None, cachedir=None, outputname=None,
@@ -85,17 +77,43 @@ class TeXProcess():
       else:
          env = None
 
-      self.p = PopenGen(
-         [ conf["TeXing"]["tex command"] ] + self.runmode \
-         + self.job_name + [ str( self.texfile ) ],
+      subproc = create_subprocess_exec(
+         *[ conf["TeXing"]["tex command"] ] \
+            + self.runmode \
+            + self.job_name \
+            + [ str( self.texfile ) ],
          cwd = str( self.exec_dir ),
          env = env,
          stdin = subprocess.PIPE,
          stdout = subprocess.PIPE,
          stderr = subprocess.STDOUT,
-         text = True
+         text = False
       )
-      return self.p
+
+      class ProcOut:
+         def __iter__( ss ):
+             async def try_read():
+                 self.p = await subproc
+                 while self.p.returncode == None:
+                     try:
+                         async with timeout(1):
+                             yield await self.p.stdout.readline()
+                     except TimeoutError:
+                         continue
+                 ss.returncode = self.p.returncode
+
+             loop = new_event_loop()
+             reader = try_read()
+             while True:
+                 try:
+                     yield loop.run_until_complete( reader.__anext__() )\
+                               .decode('utf-8')
+                 except StopAsyncIteration:
+                     break
+                 except UnicodeDecodeError:
+                     yield ""
+
+      return ProcOut()
 
    def __exit__( self, *_ ):
       try:
