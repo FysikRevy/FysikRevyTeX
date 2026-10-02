@@ -1291,13 +1291,22 @@ class TeX:
                        + ';'
                        if move.destination == dst else ''
                        for dst in dsts ]
-                   + [ ( '\\anactor{'
-                         if mat in ( rl.material for rl in actor.roles
-                                     if rl not in actor.instructorships )
-                         else '\\nonactor{' \
-                         if not any( mat in task.scenes \
-                                     for task in actor.ninjatasks ) \
-                         else '\\tasked{' #\
+                   + [ ( next( '\\tasked{{\\{}}}{{{}'.format(
+                                  task.tex_id 
+                                    + re.sub( "[^a-zA-Z]", "", actor.name ),
+                                  task.description
+                               ) for task in actor.ninjatasks
+                                 if mat in task.scenes
+                              ) if any( mat in task.scenes
+                                        for task in actor.ninjatasks )
+                         else ((
+                               '\\anactor{'
+                               if mat in ( rl.material for rl in actor.roles
+                                           if rl not in actor.instructorships )
+                               else '\\nonactor{' \
+                         # if not any( mat in task.scenes \
+                         #             for task in actor.ninjatasks ) \
+                         # else '\\tasked{' #\
                        #        + ( re.sub( "[^a-zA-Z]", "",
                        #                    actor.name + mat.title + \
                        #                    charousel( an*26 + mn )
@@ -1321,7 +1330,7 @@ class TeX:
                              and mat in ( rl.material for rl in actor.roles
                                           if rl not in actor.instructorships )
                              else ''
-                            )
+                            )))
                        + '}'
                        for actor in ninjas ]
                    for prop in markedprops

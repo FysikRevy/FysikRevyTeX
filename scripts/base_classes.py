@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from enum import IntEnum, auto
+from itertools import count
 
 class Prop:
     def __init__(self, prop, responsible, description):
@@ -135,10 +136,24 @@ class NinjaProp( NinjaPropData ):
             + [ '}' ]
 
 @dataclass
-class NinjaTask():
+class NinjaTaskData():
     description: str
     ninjanames: list[ str ]
     scenes: list = field( default_factory = list )
+
+class NinjaTask( NinjaTaskData ):
+    counter = count( 1 )
+
+    def __init__( self, *args, **kwargs ):
+        super().__init__( *args, **kwargs )
+
+        self.tex_id = ""
+        id_num = next( self.counter )
+        while id_num > 0:
+            self.tex_id += chr(
+                id_num % 52 + 65 + ( id_num % 52 // 26 * 6 )
+            )
+            id_num //= 52
 
     def tex_cmd( self ):
         return [ "\\tash{{{}}}{{{}}}".format(

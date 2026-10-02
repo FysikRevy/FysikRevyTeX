@@ -1,11 +1,12 @@
 \documentclass{ucph-revy}
 
-\usepackage[danish]{babel}
+%\usepackage[danish]{babel}
 \usepackage[a2paper,landscape,lmargin=1cm,rmargin=1cm,bmargin=1cm]{geometry}
 \usepackage{multirow,longtable,makecell}
 \usepackage{booktabs}
 \usepackage{colortbl}
 \usepackage[dvipsnames]{xcolor}
+\usepackage{everyshi}
 \usepackage{tikz}
 \usetikzlibrary{patterns} 
 
@@ -15,6 +16,7 @@
 \newcommand*{\during}{Under}
 \newcommand*{\after}{Efter}
 \newcommand*{\actor}[1]{\rotatebox{90}{#1\ }}
+\makeatletter
 % \newtoks\actors
 % \actors={{Trine}{Søren}\relax}
 % \def\actors{\actor{Anders}&\actor{Ania}&\actor{Astrid}&\actor{Cecilia}&\actor{Diana}&\actor{Emilie}&\actor{Felix}&\actor{Flora}&\actor{Freja}&\actor{Frigg}&\actor{Julian}&\actor{Julie}&\actor{Karoline}&\actor{Line}&\actor{Marie}&\actor{Mathilde}&\actor{Michelle}&\actor{Oscar}&\actor{Sari}&\actor{Sejer}&\actor{Søren}&\actor{Tobias}&\actor{Trine}}
@@ -70,7 +72,11 @@
     \fi
   }\endgroup
 }
-\def\tasked#1#2{
+\newtoks\taskhangers \taskhangers={\done}
+\def\taskbox{
+  \fill[pattern={north east lines}] (-.51em,0) rectangle (.51em,1em)
+}
+\def\tasked#1#2#3{
   % \ifx\relax#1\relax
   %   \expandafter\tikz
   % \else
@@ -80,9 +86,20 @@
   %   }%
   %   \expandFiHere\tikz[remember picture]
   % \fi
-  \tikz{ \fill[pattern={north east lines}] (-.51em,0) rectangle (.51em,1em)
     % \ifx\relax#1\relax\else (0em,.9em) coordinate (#1) \fi 
-    ;}
+  \expandafter\ifx\csname\expandafter\@gobble\string#1\endcsname\relax
+    \begin{tikzpicture}[remember picture]
+      \taskbox;
+      \coordinate (\expandafter\@gobble\string#1) at (0,1em);
+    \end{tikzpicture}%
+    \xdef#1{#2}%
+    \toks256={#1}%
+    \edef\act{\global\taskhangers={\the\toks256 \the\taskhangers}}%
+    \act
+  \else
+    \begin{tikzpicture}\taskbox;\end{tikzpicture}%
+    \typeout{A \csname\expandafter\@gobble\string#1\endcsname}
+  \fi
 }
 
 \def\ninjadif#1{
@@ -100,6 +117,32 @@
   \endgroup
 }
 
+\def\taskdesc#1{
+  \ifx#1\done\relax\else
+    \typeout{\string#1 #1}
+    \ifx#1\relax\relax\else
+      \typeout{PING}
+      \tikz[overlay,remember picture]{
+        \node[anchor=west,rotate=270,fill=white,inner sep=0pt]
+        at (\expandafter\@gobble\string#1)
+        {\sffamily #1};
+      }
+      \global\let#1=\relax
+    \fi
+    \expandFiHere
+    \taskdesc
+  \fi
+}
+
+\def\taskdescs{%
+  \expandafter\taskdesc\the\taskhangers
+}
+
+% \let\@oddfoot=\taskdescs
+% \let\@evenfoot=\taskdescs
+
+\AddToHook{shipout/foreground}{\taskdescs}
+
 \title{Ninjaplan}
 \version{<+VERSION+>}
 \revyname{<+REVUENAME+>}
@@ -111,7 +154,20 @@
 \centering
 
 \begin{longtable}{lcrl*{<+NDSTS+>}{c}*{<+NACTORS+>}{c}}
-<+TABLE+>
+  % \global\let\old@LTout=\LT@output
+  % \global\def\LT@output{%
+  %   \old@LTout
+  %   % \tikz[remember picture,overlay]{
+  %   %   \node[anchor=west,rotate=270,fill=white,inner sep=0pt]
+  %   %   at (BCaitlin) {Brandvagt};
+  %   % }
+  %   %   \global\let\BCaitlin=\relax
+  %   \taskdescs
+  % }%
+  %   \EveryShipout{\taskdescs}
+  % \noexpand\taskdescs\endfoot
+  <+TABLE+>
+  %\ClearEveryShipout{\taskdescs}
 \end{longtable}
   
   % \bottomrule

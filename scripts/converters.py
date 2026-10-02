@@ -159,7 +159,7 @@ def tex_to_pdf( tex, pdfname="", outputdir="", repetitions=2,
                                    cdir = cdir,
                                    encoding = encoding
                                   ) as tex_proc:
-                for o,e in tex_proc:
+                for o in tex_proc:
                     if o:
                         output.activity( getpid(),
                                          sum( 1 for c in o if c == "\n" )
@@ -168,7 +168,7 @@ def tex_to_pdf( tex, pdfname="", outputdir="", repetitions=2,
                         if conf.conf.getboolean(
                                 "TeXing", "verbose output"
                         ):
-                            print( o )
+                            print( o, end="" )
                 t = tex_proc
         return t
 
