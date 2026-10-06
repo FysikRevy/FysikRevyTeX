@@ -7,9 +7,9 @@ import re
 from time import localtime, strftime
 from pathlib import Path
 from functools import cmp_to_key
-from datetime import timedelta
+from datetime import timedelta, datetime
 from copy import copy
-from itertools import cycle, chain
+from itertools import cycle, chain, groupby, zip_longest
 from dataclasses import dataclass
 from enum import Enum
 
@@ -1359,4 +1359,92 @@ class TeX:
                    .format( columncount, mat.ninjanote )
              self.tex += "\\midrule\n"
        self.tex += template[1]
+       return self
+
+    def create_ninja_prop_summary( self, templatefile = "templates/ninja_prop_summary_template.tex", encoding="utf-8" ):
+       self.info["modification_time"] = datetime.now()
+       with open(templatefile, 'r', encoding=encoding) as f:
+          template =  f.read()\
+                       .replace( "<+VERSION+>",
+                                 self.conf["Frontpage"]["version"].
+                                 split(",")[-1].strip()
+                                )\
+                       .replace( "<+REVUENAME+>",
+                                 self.conf["Revue info"]["revue name"]
+                                )\
+                       .replace( "<+REVUEYEAR+>",
+                                 self.conf["Revue info"]["revue year"]
+                                )\
+                       .split( "<+PROPS+>" )
+
+       tex = ""
+   
+       numbered_categories = [
+          c.lower().strip()
+          for c in conf["Outline"]["numbered categories"].split(",")
+       ] or Everything()
+
+       for propname, moves in\
+       { propname: [ prop.moves for prop in props ]
+         for propname, props in
+         groupby(
+            sorted([ props for scene in self.revue.scenes
+                           for props in scene.ninjaprops or [] ],
+                   key = lambda prop : prop.name ),
+            key = lambda prop : prop.name )
+        }.items():
+          tex += "\\section*{{{}}}".format( propname )
+          for an, act in enumerate( self.revue.acts ):
+             sn = 0
+             for scene in act.scenes:
+                sc_num = ""
+                if scene.category in numbered_categories:
+                   sn += 1
+                   sc_num = "({}.{}): ".format( an+1, sn )
+
+                scenemoves = [ moveset for moveset in
+                               [[ move for move in moveset
+                                  if move.scene is scene ]
+                                for moveset in moves
+                                ] if moveset
+                              ]
+
+                if not scenemoves:
+                   continue
+
+                tex += "\\subsubsection*{{{}}}".format( sc_num + scene.title )\
+                    +  "\n\n"
+
+                if any( len( moveset ) % 2 != 0 for moveset in scenemoves ):
+                   tex += "\\noindent\\varsel{Ulige antal flytninger.}\n\n"
+
+                if any( moveset[-1].destination not in ["\\bagT","\\sideT"]
+                        for moveset in scenemoves if moveset ):
+                   tex += "\\noindent\\varsel{Sidste flytning er ikke til en udgang.}\n\n"
+                   
+                tex += "\\begin{tabular}{"\
+                     + "l"*( len( scenemoves ) + 1 )\
+                     + "}\n\n"
+
+                times_seen = OrderedSet( move.time for moveset in scenemoves
+                                                   for move in moveset
+                                        )
+                tiems_seen = ( times_seen & { "\\before" } )\
+                             | ( times_seen - { "\\before", "\\after" } )\
+                             | ( times_seen & { "\\after" } )
+
+                for time in times_seen:
+
+                   tex += "{{\\sffamily {}}}&".format( time )
+                   for moveset in scenemoves:
+                      try:
+                         tex += next( move.destination for move in moveset
+                                      if move.time == time
+                                     )
+                      except StopIteration:
+                         tex += "&"
+                      tex += "\\\\\n"
+                tex += "\\end{tabular}"
+
+       self.tex = template[0] + tex + template[1]
        return self

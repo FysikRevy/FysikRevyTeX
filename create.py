@@ -387,6 +387,15 @@ actions = [ plan ] + [
                                         ))
              ),
     
+    Argument( "ninja_rekvisit_oversigt",
+              "Oprems alle ninja-rekvisitter og deres flytninger.",
+              lambda: tex_queue.append(
+                  ( TeX( revue ).create_ninja_prop_summary(),
+                    "rekvisitoversigt.pdf","",2
+                   )
+              )
+             ),
+    
     Argument( "material",
               "Gen-TeX materialesiderne (hvis de er blevet ændret)",
               lambda: tex_queue.extend( (mat,) for mat in revue.materials )
