@@ -1394,6 +1394,7 @@ class TeX:
             key = lambda prop : prop.name )
         }.items():
           tex += "\\subsection*{{{}}}".format( propname )
+          tex += "\\begin{itemize}\n"
           for an, act in enumerate( self.revue.acts ):
              sn = 0
              for scene in act.scenes:
@@ -1412,19 +1413,20 @@ class TeX:
                 if not scenemoves:
                    continue
 
-                tex += "\\subsubsection*{{{}}}".format( sc_num + scene.title )\
-                    +  "\n\n"
+                # tex += "\\subsubsection*{{{}}}".format( sc_num + scene.title )\
+                #     +  "\n\n"
 
-                if any( len( moveset ) % 2 != 0 for moveset in scenemoves ):
-                   tex += "\\noindent\\varsel{Ulige antal flytninger.}\n\n"
+                # if any( len( moveset ) % 2 != 0 for moveset in scenemoves ):
+                #    tex += "\\noindent\\varsel{Ulige antal flytninger.}\n\n"
 
-                if any( moveset[-1].destination not in ["\\bagT","\\sideT"]
-                        for moveset in scenemoves if moveset ):
-                   tex += "\\noindent\\varsel{Sidste flytning er ikke til en udgang.}\n\n"
-                   
-                tex += "\\begin{tabular}{"\
-                     + "l"*( len( scenemoves ) + 1 )\
-                     + "}\n\n"
+                # if any( moveset[-1].destination not in ["\\bagT","\\sideT"]
+                #         for moveset in scenemoves if moveset ):
+                #    tex += "\\noindent\\varsel{Sidste flytning er ikke til en udgang.}\n\n"
+
+                tex += "\\item {{\\bfseries {}}}".format( sc_num )
+                # tex += "\\begin{tabular}{" \
+                     # + "l"*( len( scenemoves ) + 1 )\
+                     # + "}\n\n"
 
                 times_seen = OrderedSet( move.time for moveset in scenemoves
                                                    for move in moveset
@@ -1433,18 +1435,25 @@ class TeX:
                              | ( times_seen - { "\\before", "\\after" } )\
                              | ( times_seen & { "\\after" } )
 
+                bet = ""
                 for time in times_seen:
 
-                   tex += "{{\\sffamily {}}}&".format( time )
+                   tex += bet + "{{\\sffamily {}}}: ".format( time )
                    for moveset in scenemoves:
                       try:
                          tex += next( move.destination for move in moveset
                                       if move.time == time
                                      )
+                         bet += ", "
                       except StopIteration:
-                         tex += "&"
-                      tex += "\\\\\n"
-                tex += "\\end{tabular}"
+                         pass
+                if len( moveset ) % 2 != 0:
+                   tex += "{} \\varsel{Ulige antal flytninger.}"
+                if moveset[-1].destination not in ["\\bagT","\\sideT"]:
+                   tex += "{} \\varsel{Sidste flytning er ikke til en udgang.}"
+                tex += "\n\n"
+                # tex += "\\end{tabular}"
+          tex += "\\end{itemize}\n"
 
        self.tex = template[0] + tex + template[1]
        return self
