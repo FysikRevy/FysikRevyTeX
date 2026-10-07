@@ -1362,7 +1362,7 @@ class TeX:
        return self
 
     def create_ninja_prop_summary( self, templatefile = "templates/ninja_prop_summary_template.tex", encoding="utf-8" ):
-       self.info["modification_time"] = datetime.now()
+       self.info["modification_time"] = self.revue.modification_time
        with open(templatefile, 'r', encoding=encoding) as f:
           template =  f.read()\
                        .replace( "<+VERSION+>",
@@ -1393,7 +1393,7 @@ class TeX:
                    key = lambda prop : prop.name ),
             key = lambda prop : prop.name )
         }.items():
-          tex += "\\section*{{{}}}".format( propname )
+          tex += "\\subsection*{{{}}}".format( propname )
           for an, act in enumerate( self.revue.acts ):
              sn = 0
              for scene in act.scenes:
